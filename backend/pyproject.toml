@@ -34,6 +34,27 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["ALL"]
+ignore = [
+    "D203", "D212", "COM812",     # 不兼容的 pydocstyle 规则
+    "RUF001", "RUF002", "RUF003", # 中文全角符号
+    "TC001", "TC003",              # import 移入 type-checking 块（过度）
+    "RUF012",                      # mutable class attrs (FORMAT_MAP dict)
+    "ANN001",                      # 函数参数类型注解（mock 参数）
+    "ARG002",                      # 未使用的参数（mock 参数）
+    "D107",                        # __init__ 需要 docstring
+    "D400", "D415",                # 中文 docstring 结尾句号
+    "D104",                        # __init__.py 包 docstring
+    "TRY003",                      # 异常消息过长
+    "EM101", "EM102",              # 异常字符串必须赋值给变量（过度）
+    "ASYNC240",                    # 异步函数中用 pathlib（内部有 try）
+]
+per-file-ignores."tests/**" = [
+    "D", "S101", "PLR2004", "PLC0415", "RUF012", "TC003", "ANN", "ARG",
+    "FBT", "PT011", "PGH004",
+]
+per-file-ignores."**/conftest.py" = [
+    "F401",
+]
 
 [tool.ruff.format]
 quote-style = "double"

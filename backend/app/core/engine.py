@@ -1,0 +1,134 @@
+"""Pandoc 转换引擎实现"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from pathlib import Path
+from uuid import UUID
+
+import pypandoc
+
+from app.core.interfaces import ConversionEngine, ProgressCallback
+from app.models import ConversionResult, OutputFormat
+from app.utils.config import AppSettings
+from app.utils.exceptions import ConversionError, PandocNotFoundError, UnsupportedFormatError
+
+logger = logging.getLogger(__name__)
+
+
+class PandocEngine(ConversionEngine):
+    """基于 Pandoc 的转换引擎（适配器模式）"""
+
+    # OutputFormat → Pandoc -t 格式名
+    FORMAT_MAP: dict[OutputFormat, str] = {
+        OutputFormat.DOCX: "docx",
+        OutputFormat.PDF: "pdf",
+        OutputFormat.HTML: "html",
+        OutputFormat.EPUB: "epub",
+        OutputFormat.LATEX: "latex",
+        OutputFormat.MARKDOWN: "gfm",
+        OutputFormat.ODT: "odt",
+        OutputFormat.RTF: "rtf",
+    }
+
+    def __init__(self, settings: AppSettings | None = None) -> None:
+        self.settings = settings or AppSettings()
+        self._validate_pandoc()
+
+    def _validate_pandoc(self) -> None:
+        """启动时验证 Pandoc 是否可用"""
+        try:
+            path = pypandoc.get_pandoc_path()
+            logger.info("Pandoc 路径: %s", path)
+        except OSError as e:
+            raise PandocNotFoundError(
+                "Pandoc 未安装或不在 PATH 中，请先安装 Pandoc",
+                detail={"error": str(e)},
+            ) from e
+
+    async def convert(
+        self,
+        input_path: Path,
+        output_format: OutputFormat,
+        extra_args: list[str] | None = None,
+        on_progress: ProgressCallback | None = None,
+    ) -> ConversionResult:
+        """执行 Pandoc 转换"""
+        pandoc_target = self.FORMAT_MAP.get(output_format)
+        if pandoc_target is None:
+            raise UnsupportedFormatError(f"不支持的格式: {output_format.value}")
+
+        if on_progress:
+            await on_progress(0.05, "准备转换...")
+
+        output_path = input_path.with_suffix(f".{output_format.value}")
+        args = extra_args or []
+
+        start = time.monotonic()
+
+        if on_progress:
+            await on_progress(0.1, "正在转换...")
+
+        try:
+            loop = asyncio.get_running_loop()
+
+            def _convert() -> str:
+                return pypandoc.convert_file(
+                    source_file=str(input_path),
+                    to=pandoc_target,
+                    format="markdown",
+                    outputfile=str(output_path),
+                    extra_args=args,
+                )
+
+            if self.settings.pandoc_timeout > 0:
+                # 带超时的异步执行
+                await asyncio.wait_for(
+                    loop.run_in_executor(None, _convert),
+                    timeout=self.settings.pandoc_timeout,
+                )
+            else:
+                await loop.run_in_executor(None, _convert)
+
+            if on_progress:
+                await on_progress(1.0, "转换完成")
+
+            duration = int((time.monotonic() - start) * 1000)
+            file_size = output_path.stat().st_size
+
+            logger.info(
+                "转换完成: %s → %s, 耗时 %dms, 大小 %d bytes",
+                input_path.name,
+                output_format.value,
+                duration,
+                file_size,
+            )
+
+            return ConversionResult(
+                task_id=UUID("00000000-0000-0000-0000-000000000000"),
+                output_path=output_path,
+                output_format=output_format,
+                duration_ms=duration,
+                file_size=file_size,
+            )
+
+        except TimeoutError:
+            raise ConversionError(
+                f"转换超时（{self.settings.pandoc_timeout}s）",
+                detail={"input": str(input_path), "format": output_format.value},
+            ) from None
+        except Exception as e:
+            raise ConversionError(
+                "Pandoc 转换失败",
+                detail={
+                    "input": str(input_path),
+                    "format": output_format.value,
+                    "error": str(e),
+                },
+            ) from e
+
+    async def validate_format(self, output_format: OutputFormat) -> bool:
+        """校验格式是否支持"""
+        return output_format in self.FORMAT_MAP
