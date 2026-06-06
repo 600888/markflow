@@ -1,15 +1,165 @@
 """结构化日志配置"""
 
-from __future__ import annotations
-
-import logging
+import inspect
+import json
+import os
 import sys
 
+from loguru import logger
 
-def setup_logging(level: str = "INFO") -> None:
-    """初始化日志格式"""
-    logging.basicConfig(
-        level=getattr(logging, level.upper(), logging.INFO),
-        format="%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d | %(message)s",
-        stream=sys.stdout,
-    )
+LOG_COLORS = {
+    "DEBUG": "\033[1;36m",  # CYAN
+    "INFO": "\033[1;32m",  # GREEN
+    "WARNING": "\033[1;33m",  # YELLOW
+    "ERROR": "\033[1;31m",  # RED
+    "CRITICAL": "\033[1;31m",  # RED
+    "EXCEPTION": "\033[1;31m",  # RED
+}
+COLOR_RESET = "\033[1;0m"
+
+
+class Log:
+    # 静态标记：确保只移除一次默认 handler
+    _default_handler_removed = False
+
+    def __init__(
+        self,
+        filename: str | None = None,
+        cmdlevel: str = "DEBUG",
+        filelevel: str = "INFO",
+        backup_count: int = 7,  # 默认保留7天/7个文件
+        limit: int | str = "20 MB",  # 支持字符串格式
+        when: str | None = None,
+        colorful: bool = True,
+        compression: str | None = None,  # 新增压缩功能
+        is_backtrace: bool = True,
+        enqueue: bool = True,
+    ):
+        # 只移除 loguru 默认的 stderr handler (ID 0)，避免删除其他模块已添加的 handlers
+        if not Log._default_handler_removed:
+            try:
+                logger.remove(0)  # 只移除默认 handler
+            except ValueError:
+                pass  # 默认 handler 可能已被移除
+            Log._default_handler_removed = True
+
+        self.is_backtrace = is_backtrace
+
+        # 设置日志文件路径
+        if filename is None:
+            filename = getattr(sys.modules["__main__"], "__file__", "log.py")
+            filename = os.path.basename(filename.replace(".py", ".log"))
+
+        # 规范化文件路径，确保 bind 和 filter 使用相同的路径格式
+        filename = os.path.normpath(os.path.abspath(filename))
+
+        # 绑定 task 到 logger（必须使用规范化后的路径）
+        self.logger = logger.bind(task=filename)
+
+        # 确保日志目录存在
+        log_dir = os.path.dirname(filename)
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+        # 控制台输出配置
+        self.logger.add(
+            sys.stderr,
+            level=cmdlevel,
+            format=self._formatter,
+            colorize=colorful,
+            backtrace=True,
+            enqueue=enqueue,
+            filter=self._create_filter(filename),
+        )
+
+        # 文件输出配置
+        rotation_config = self._get_rotation_config(when, limit)
+        self.logger.add(
+            filename,
+            level=filelevel,
+            format=self._formatter,
+            backtrace=True,
+            rotation=rotation_config,
+            retention=f"{backup_count} days",
+            compression=compression,
+            enqueue=enqueue,
+            filter=self._create_filter(filename),
+        )
+
+    def _create_filter(self, filename):
+        # 直接使用 filename 进行比较
+        target_filename = filename
+
+        def filter_func(record):
+            task = record["extra"].get("task")
+            if not task:
+                return False
+            return task == target_filename
+
+        return filter_func
+
+    def _formatter(self, record):
+        # 处理消息内容
+        message = str(record["message"]).replace("{", "{{").replace("}", "}}")
+        if isinstance(message, (dict, list)):
+            try:
+                message = json.dumps(message, ensure_ascii=False)
+            except TypeError:
+                message = str(message)
+
+        # 处理调用栈和颜色
+        if self.is_backtrace:
+            frame = inspect.currentframe()
+            while frame:
+                if "loguru" not in frame.f_code.co_filename and "logger.py" not in frame.f_code.co_filename:
+                    break
+                frame = frame.f_back
+            file_info = (
+                f"[{os.path.basename(frame.f_code.co_filename)}:{frame.f_code.co_name}:{frame.f_lineno}]"
+                if frame
+                else f"[{record['file']}:{record['function']}:{record['line']}]"
+            )
+        else:
+            file_info = f"[{record['file']}:{record['line']}]"
+
+        # Escape Loguru tags in file_info and message
+        file_info = file_info.replace("<", "\\<").replace(">", "\\>")
+        message = message.replace("<", "\\<").replace(">", "\\>")
+
+        level_color = LOG_COLORS.get(record["level"].name, "")
+        return (
+            f"{level_color}[{record['time'].strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] "
+            + file_info
+            + f"[{record['level']}] {message}{COLOR_RESET}\n"
+        )
+
+    def _get_rotation_config(self, when: str | None, limit: int | str):
+        if when:  # 时间轮转
+            return when  # "D"（天）、"H"（小时）、"midnight"等
+        else:  # 大小轮转
+            if isinstance(limit, int):
+                return f"{limit / 1024 / 1024} MB"
+            return limit  # 直接支持"10 MB"、"1 GB"等字符串格式
+
+    @staticmethod
+    def set_logger(**kwargs) -> bool:
+        """For backward compatibility."""
+        return True
+
+    def debug(self, *args, **kwargs):
+        self.logger.debug(*args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        self.logger.info(*args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        self.logger.warning(*args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        self.logger.error(*args, **kwargs)
+
+    def critical(self, *args, **kwargs):
+        self.logger.critical(*args, **kwargs)
+
+    def exception(self, *args, **kwargs):
+        self.logger.exception(*args, **kwargs)

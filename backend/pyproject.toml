@@ -2,7 +2,6 @@
 name = "markflow-backend"
 version = "1.0.0"
 description = "Markdown to Word/PDF/HTML conversion service"
-readme = "README.md"
 requires-python = ">=3.11"
 
 dependencies = [
@@ -15,6 +14,7 @@ dependencies = [
     "sse-starlette>=2.1.0",
     "python-dotenv>=1.0.1",
     "aiofiles>=24.1.0",
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +27,9 @@ dev = [
     "pyrefly>=0.1.0",
     "coverage>=7.6.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["app*", "config*"]
 
 [tool.ruff]
 target-version = "py311"
@@ -54,6 +57,9 @@ per-file-ignores."tests/**" = [
 ]
 per-file-ignores."**/conftest.py" = [
     "F401",
+]
+per-file-ignores."**/logger.py" = [
+    "D", "ANN", "FBT", "ARG", "SIM", "PTH", "PLR", "PLC", "PLE", "PLW", "RET", "E501", "W292",
 ]
 
 [tool.ruff.format]

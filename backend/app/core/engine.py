@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import time
 from pathlib import Path
 from uuid import UUID
@@ -11,11 +10,10 @@ from uuid import UUID
 import pypandoc
 
 from app.core.interfaces import ConversionEngine, ProgressCallback
+from app.core.log import log
 from app.models import ConversionResult, OutputFormat
 from app.utils.config import AppSettings
 from app.utils.exceptions import ConversionError, PandocNotFoundError, UnsupportedFormatError
-
-logger = logging.getLogger(__name__)
 
 
 class PandocEngine(ConversionEngine):
@@ -41,7 +39,7 @@ class PandocEngine(ConversionEngine):
         """启动时验证 Pandoc 是否可用"""
         try:
             path = pypandoc.get_pandoc_path()
-            logger.info("Pandoc 路径: %s", path)
+            log.info("Pandoc 路径: %s", path)
         except OSError as e:
             raise PandocNotFoundError(
                 "Pandoc 未安装或不在 PATH 中，请先安装 Pandoc",
@@ -98,7 +96,7 @@ class PandocEngine(ConversionEngine):
             duration = int((time.monotonic() - start) * 1000)
             file_size = output_path.stat().st_size
 
-            logger.info(
+            log.info(
                 "转换完成: %s → %s, 耗时 %dms, 大小 %d bytes",
                 input_path.name,
                 output_format.value,

@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 import re
 from pathlib import Path
 
 import aiofiles
 
 from app.core.interfaces import FileManager
+from app.core.log import log
 from app.models import OutputFormat
 from app.utils.config import AppSettings
-
-logger = logging.getLogger(__name__)
 
 
 class TempFileManager(FileManager):
@@ -35,7 +33,7 @@ class TempFileManager(FileManager):
         async with aiofiles.open(file_path, "wb") as f:
             await f.write(content)
 
-        logger.debug("文件已保存: %s (%d bytes)", file_path, len(content))
+        log.debug("文件已保存: %s (%d bytes)", file_path, len(content))
         return file_path
 
     async def cleanup(self, path: Path) -> None:
@@ -43,9 +41,9 @@ class TempFileManager(FileManager):
         try:
             if path.exists():
                 path.unlink()
-                logger.debug("文件已清理: %s", path)
+                log.debug("文件已清理: %s", path)
         except OSError as e:
-            logger.warning("清理文件失败: %s - %s", path, e)
+            log.warning("清理文件失败: %s - %s", path, e)
 
     def get_output_path(self, base_name: str, fmt: OutputFormat) -> Path:
         """生成输出路径"""

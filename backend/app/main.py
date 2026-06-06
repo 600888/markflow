@@ -7,16 +7,25 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 
 from app.utils.config import AppSettings
-from app.utils.logger import setup_logging
+from app.utils.logger import Log
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     """应用生命周期"""
-    setup_logging(settings.log_level)
+    Log(
+        cmdlevel=settings.log_level,
+        filelevel=settings.log_level,
+        filename="logs/markflow.log",
+        backup_count=7,
+        limit="20 MB",
+    )
+    logger.info("MarkFlow 后端服务启动，端口: {}", settings.port)
     yield
+    logger.info("MarkFlow 后端服务关闭")
 
 
 settings = AppSettings()
