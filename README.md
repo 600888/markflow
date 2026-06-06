@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # MarkFlow
 
 Markdown 转 Word / PDF / HTML 的桌面工具。基于 **React + FastAPI(Pandoc) + Tauri** 架构。
@@ -71,7 +70,3 @@ markflow/
 # 构建 Tauri 桌面安装包
 cargo tauri build
 ```
-=======
-# markflow
-一个用于将markdown转换为word和pdf的工具
->>>>>>> ad3aaba17fc45ff24883626ee87cf406d82057b7
