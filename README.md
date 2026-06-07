@@ -22,7 +22,10 @@ pip install -e ".[dev]"
 cd ../frontend
 npm install
 
-# 3. 开发模式启动（前后端分离）
+# 3. 安装 git hooks（提交前自动检查 lint 和类型）
+pre-commit install
+
+# 4. 开发模式启动（前后端分离）
 # 终端 1：后端
 cd backend
 uvicorn app.main:app --reload --port 62581
@@ -31,7 +34,7 @@ uvicorn app.main:app --reload --port 62581
 cd frontend
 npm run dev
 
-# 4. 或启动 Tauri 桌面端（自动管理前后端）
+# 5. 或启动 Tauri 桌面端（自动管理前后端）
 cargo tauri dev
 ```
 

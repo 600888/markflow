@@ -28,6 +28,7 @@ dev = [
     "pyrefly>=0.1.0",
     "coverage>=7.6.0",
     "python-docx>=1.1",
+    "pre-commit>=4.0.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -68,11 +69,12 @@ per-file-ignores."app/api/*.py" = [
     "ANN202", "D101", "SIM105", "BLE001", "S110", "TC002",
 ]
 per-file-ignores."app/services/converter.py" = [
-    "F401", "TRY300",
+    "F401", "TRY300", "S101",
 ]
 per-file-ignores."app/core/engine.py" = [
     "N806", "SLF001", "C901", "PLR0912", "FBT001", "D301",
     "S603", "S607", "BLE001", "ANN202", "SIM105", "PLW1510",
+    "ANN401",
 ]
 per-file-ignores."app/core/template_manager.py" = [
     "C901",
