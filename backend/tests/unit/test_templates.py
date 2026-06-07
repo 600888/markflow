@@ -42,7 +42,7 @@ class TestTemplateInfo:
 class TestConversionOptions:
     def test_defaults(self) -> None:
         opts = ConversionOptions()
-        assert opts.template_slug == "minimal"
+        assert opts.template_slug == "academic"
         assert opts.toc is False
         assert opts.toc_depth == 3
         assert opts.metadata == {}
