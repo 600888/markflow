@@ -10,6 +10,10 @@ interface AppState {
   setFile: (file: File | null) => void;
   clearFile: () => void;
 
+  // Markdown 内容（可编辑区域）
+  markdownContent: string;
+  setMarkdownContent: (s: string) => void;
+
   // 转换配置
   format: OutputFormat;
   setFormat: (f: OutputFormat) => void;
@@ -29,6 +33,12 @@ interface AppState {
   setMetaAuthor: (v: string) => void;
   showAdvanced: boolean;
   toggleAdvanced: () => void;
+
+  // 编辑器选项
+  formulaPosition: "inline" | "display" | "smart";
+  setFormulaPosition: (v: "inline" | "display" | "smart") => void;
+  keepSeparator: boolean;
+  setKeepSeparator: (v: boolean) => void;
 
   // 转换状态
   status: ConversionStatus | "";
@@ -50,11 +60,14 @@ export const useStore = create<AppState>((set) => ({
   fileName: "",
   setFile: (file) => set({ file, fileName: file?.name ?? "" }),
   clearFile: () =>
-    set({ file: null, fileName: "", status: "", progress: 0 }),
+    set({ file: null, fileName: "", status: "", progress: 0, markdownContent: "" }),
+
+  markdownContent: "",
+  setMarkdownContent: (markdownContent) => set({ markdownContent }),
 
   format: "docx",
   setFormat: (format) => set({ format }),
-  template: "minimal",
+  template: "academic",
   setTemplate: (template) => set({ template }),
   templates: [],
   setTemplates: (templates) => set({ templates }),
@@ -69,6 +82,11 @@ export const useStore = create<AppState>((set) => ({
   setMetaAuthor: (metaAuthor) => set({ metaAuthor }),
   showAdvanced: false,
   toggleAdvanced: () => set((s) => ({ showAdvanced: !s.showAdvanced })),
+
+  formulaPosition: "inline",
+  setFormulaPosition: (formulaPosition) => set({ formulaPosition }),
+  keepSeparator: true,
+  setKeepSeparator: (keepSeparator) => set({ keepSeparator }),
 
   status: "",
   progress: 0,

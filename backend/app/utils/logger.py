@@ -111,7 +111,10 @@ class Log:
         if self.is_backtrace:
             frame = inspect.currentframe()
             while frame:
-                if "loguru" not in frame.f_code.co_filename and "logger.py" not in frame.f_code.co_filename:
+                if (
+                    "loguru" not in frame.f_code.co_filename
+                    and "logger.py" not in frame.f_code.co_filename
+                ):
                     break
                 frame = frame.f_back
             file_info = (

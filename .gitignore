@@ -223,4 +223,5 @@ __marimo__/
 frontend/node_modules
 data/
 backend/temp
+temp/
 *.vscode

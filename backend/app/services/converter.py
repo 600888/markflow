@@ -34,6 +34,7 @@ class ConversionService:
         filename: str,
         output_format: OutputFormat,
         extra_args: list[str] | None = None,
+        template_slug: str | None = None,
     ) -> ConversionTask:
         """提交转换任务，返回任务对象"""
         if len(content) > self._max_file_size:
@@ -46,6 +47,7 @@ class ConversionService:
             task_id=uuid4(),
             input_path=input_path,
             output_format=output_format,
+            template_slug=template_slug,
             extra_args=extra_args or [],
         )
         self._tasks[task.task_id] = task
@@ -70,6 +72,7 @@ class ConversionService:
                     input_path=task.input_path,
                     output_format=task.output_format,
                     extra_args=task.extra_args,
+                    template_slug=task.template_slug,
                     on_progress=_on_progress,
                 )
 
@@ -81,9 +84,11 @@ class ConversionService:
 
             return result
 
-        except Exception:
+        except Exception as e:
             task.status = ConversionStatus.FAILED
+            task.error = str(e)
             task.completed_at = datetime.now(UTC)
+            log.error(f"任务 {task_id} 失败: {e}")
             raise
         finally:
             await self._file_manager.cleanup(task.input_path)

@@ -5,10 +5,13 @@ import { fetchTemplates } from "../services/api";
 import type { TemplateInfo } from "../types";
 
 const FALLBACK: TemplateInfo[] = [
-  { slug: "academic", name: "📝 学术论文", version: "1.0", description: "黑体标题·宋体正文\n1.5倍行距·首行缩进", author: "", target_formats: ["docx"], has_reference_doc: true, has_lua_filters: false },
   { slug: "minimal", name: "✨ 简洁模版", version: "1.0", description: "Pandoc默认\n轻量·快速", author: "", target_formats: ["docx"], has_reference_doc: true, has_lua_filters: false },
+  { slug: "academic", name: "📝 学术论文", version: "1.0", description: "黑体标题·宋体正文\n1.5倍行距·首行缩进", author: "", target_formats: ["docx"], has_reference_doc: true, has_lua_filters: false },
   { slug: "report", name: "📊 报告模版", version: "1.0", description: "微软雅黑·蓝色主题\n1.25倍行距", author: "", target_formats: ["docx"], has_reference_doc: true, has_lua_filters: false },
 ];
+
+/** 按照此顺序排列模版 */
+const TEMPLATE_ORDER = ["minimal", "academic", "report"];
 
 export function TemplateSelector() {
   const template = useStore((s) => s.template);
@@ -17,7 +20,15 @@ export function TemplateSelector() {
   const setTemplates = useStore((s) => s.setTemplates);
 
   useEffect(() => {
-    fetchTemplates().then((d) => setTemplates(d.templates)).catch(() => setTemplates(FALLBACK));
+    fetchTemplates()
+      .then((d) => {
+        // 按指定顺序排列，不在顺序中的排在末尾
+        const sorted = [...d.templates].sort(
+          (a, b) => TEMPLATE_ORDER.indexOf(a.slug) - TEMPLATE_ORDER.indexOf(b.slug),
+        );
+        setTemplates(sorted);
+      })
+      .catch(() => setTemplates(FALLBACK));
   }, [setTemplates]);
 
   const list = templates.length > 0 ? templates : FALLBACK;
@@ -49,7 +60,7 @@ export function TemplateSelector() {
                       <Box sx={{ display: "inline-block", px: 0.75, py: 0.25, borderRadius: 5, bgcolor: "primary.light", fontSize: 9, fontWeight: 600, color: "primary.main", fontFamily: "Geist, Inter, sans-serif" }}>推荐</Box>
                     }
                     {tpl.slug === "minimal" &&
-                      <Box sx={{ display: "inline-block", px: 0.75, py: 0.25, borderRadius: 5, bgcolor: "#DCFCE7", fontSize: 9, fontWeight: 600, color: "success.main", fontFamily: "Geist, Inter, sans-serif" }}>默认</Box>
+                      <Box sx={{ display: "inline-block", px: 0.75, py: 0.25, borderRadius: 5, bgcolor: "#DCFCE7", fontSize: 9, fontWeight: 600, color: "success.main", fontFamily: "Geist, Inter, sans-serif" }}>轻量</Box>
                     }
                   </Box>
                 </CardContent>

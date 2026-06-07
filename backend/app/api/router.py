@@ -58,9 +58,7 @@ async def health() -> HealthResponse:
 # ========== 模版列表 ==========
 @router.get("/templates", response_model=TemplateListResponse)
 async def list_templates(mgr: Annotated[TemplateManager, Depends(get_mgr)]) -> TemplateListResponse:
-    items = [
-        TemplateItem(**t.model_dump()) for t in mgr.list_templates()
-    ]
+    items = [TemplateItem(**t.model_dump()) for t in mgr.list_templates()]
     return TemplateListResponse(templates=items)
 
 
@@ -72,6 +70,8 @@ async def convert(
     template_slug: Annotated[str, Form()] = "minimal",
     toc: Annotated[str, Form()] = "false",
     toc_depth: Annotated[int, Form()] = 3,
+    formula_position: Annotated[str, Form()] = "inline",
+    keep_separator: Annotated[str, Form()] = "true",
     metadata: Annotated[str | None, Form()] = None,
     svc: Annotated[ConversionService, Depends(get_svc)] = None,
     mgr: Annotated[TemplateManager, Depends(get_mgr)] = None,
@@ -94,14 +94,16 @@ async def convert(
         template_slug=template_slug,
         toc=(toc.lower() == "true"),
         toc_depth=toc_depth,
+        formula_position=formula_position,
+        keep_separator=(keep_separator.lower() == "true"),
         metadata=_parse_metadata(metadata),
     )
     extra_args = mgr.build_extra_args(options)
-    log.info(f"模版={template_slug}, toc={toc}, metadata={options.metadata}, args={extra_args}")
+    log.info(f"模版={template_slug}, toc={toc}, formula={formula_position}, keep_sep={keep_separator}, metadata={options.metadata}, args={extra_args}")
 
     # 提交任务
     filename = file.filename or "input.md"
-    task = await svc.submit(content, filename, fmt, extra_args)
+    task = await svc.submit(content, filename, fmt, extra_args, template_slug)
 
     # 后台执行
     asyncio.create_task(_run_convert(svc, task.task_id))
@@ -144,23 +146,30 @@ async def stream_progress(
 
             yield {
                 "event": "progress",
-                "data": json.dumps({
-                    "progress": task.progress,
-                    "status": task.status.value,
-                }),
+                "data": json.dumps(
+                    {
+                        "progress": task.progress,
+                        "status": task.status.value,
+                    }
+                ),
             }
 
-            if task.status in (ConversionStatus.COMPLETED, ConversionStatus.FAILED):
-                if task.status == ConversionStatus.COMPLETED:
-                    yield {
-                        "event": "completed",
-                        "data": json.dumps({"task_id": str(task_id)}),
-                    }
+            if task.status == ConversionStatus.FAILED:
+                yield {
+                    "event": "error",
+                    "data": json.dumps({"detail": task.error or "转换失败"}),
+                }
+                return
+            if task.status == ConversionStatus.COMPLETED:
+                yield {
+                    "event": "completed",
+                    "data": json.dumps({"task_id": str(task_id)}),
+                }
                 return
 
             await asyncio.sleep(0.5)
 
-    return EventSourceResponse(event_gen())
+    return EventSourceResponse(event_gen(), ping=5)
 
 
 # ========== 下载结果 ==========

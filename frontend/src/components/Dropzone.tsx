@@ -7,6 +7,7 @@ export function Dropzone() {
   const file = useStore((s) => s.file);
   const fileName = useStore((s) => s.fileName);
   const setFile = useStore((s) => s.setFile);
+  const setMarkdownContent = useStore((s) => s.setMarkdownContent);
   const clearFile = useStore((s) => s.clearFile);
   const inputRef = useRef<HTMLInputElement>(null);
   const [hover, setHover] = useState(false);
@@ -15,7 +16,11 @@ export function Dropzone() {
     if (!f) return;
     if (!f.name.endsWith(".md")) { alert("仅支持 .md 文件"); return; }
     setFile(f);
-  }, [setFile]);
+    // 读取文件内容到 store
+    const r = new FileReader();
+    r.onload = () => setMarkdownContent(r.result as string);
+    r.readAsText(f);
+  }, [setFile, setMarkdownContent]);
 
   return (
     <Box>
@@ -27,7 +32,7 @@ export function Dropzone() {
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setHover(true); }}
         onDragLeave={() => setHover(false)}
-        onDrop={(e) => { e.preventDefault(); setHover(false); handleFile(e.dataTransfer.files[0]); }}
+        onDrop={(e) => { e.preventDefault(); setHover(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
         sx={{
           height: 112, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0.75,
           borderRadius: 1, cursor: "pointer", border: 2, borderStyle: "dashed",
@@ -39,7 +44,7 @@ export function Dropzone() {
         <Box component="span" sx={{ fontSize: 28, opacity: 0.7 }}>📂</Box>
         <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.primary", fontFamily: "Inter" }}>点击或拖拽 Markdown 文件</Typography>
         <Typography sx={{ fontSize: 11, color: "text.secondary", fontFamily: "Inter" }}>支持 .md 格式，最大 50MB</Typography>
-        <input ref={inputRef} type="file" accept=".md,.markdown" hidden onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
+        <input ref={inputRef} type="file" accept=".md,.markdown" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
       </Box>
 
       {file && (

@@ -9,3 +9,8 @@ body {
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-thumb { background: #a0a0a0; border-radius: 2px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+textarea::-webkit-scrollbar { width: 4px; }
+textarea::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 2px; }
+textarea::-webkit-scrollbar-track { background: transparent; }
+textarea { scrollbar-width: thin; }

@@ -11,35 +11,94 @@ styles:
     size: "三号"
     bold: true
     alignment: "center"
-    space_before: "3 倍行距"
-    space_after: "1.5 倍行距"
+    space_before: "2.5 行"
+    space_after: "0.5 行"
   heading2:
     font: "黑体"
     size: "四号"
     bold: true
-    space_before: "2 倍行距"
-    space_after: "1 倍行距"
+    space_before: "0.5 行"
+    space_after: "0.5 行"
   heading3:
     font: "黑体"
     size: "小四"
     bold: true
-    space_before: "1.5 倍行距"
-    space_after: "0.5 倍行距"
+    space_before: "0 行"
+    space_after: "0 行"
+  heading4:
+    font: "宋体"
+    size: "小四"
+    bold: true
+    space_before: "0.25 行"
+    space_after: "0.25 行"
   body:
     font: "宋体"
     size: "小四"
     line_spacing: 1.5
     first_line_indent: "2 字符"
+    space_before: "0 行"
+    space_after: "0 行"
   code:
     font: "Consolas"
     size: "五号"
     background: "#F5F5F5"
   table:
+    # 基础样式
+    font: "宋体"
+    size: "五号"
+    line_spacing: 1.0
+    alignment: "center"
+
+    # 段落控制
+    first_line_indent: "0 字符" # ✅ 单元格无缩进
+    space_before: "0.5 行" # 表格与上文间距
+    space_after: "0.5 行" # 表格与下文间距
+
+    # 表头样式
     header_font: "黑体"
-    header_size: "五号"
+    header_size: "小五"
     header_bold: true
-    header_background: "#E8E8E8"
+    header_alignment: "center"
+    header_background: "#F2F2F2" # 可选，建议用浅灰
+
+    # 表体样式
     body_font: "宋体"
-    body_size: "五号"
-    border: "三线表"
-    stripe_rows: true
+    body_size: "小五"
+    body_alignment: "center"
+
+    # 单元格内边距（单位：pt）
+    cell_padding:
+      top: 2
+      bottom: 2
+      left: 4
+      right: 4
+
+    # 三线表边框（标准学术风格）
+    border_style: "three_line_table"
+    border_top:
+      weight: 1.5
+      color: "black"
+    border_header_bottom:
+      weight: 0.75
+      color: "black"
+    border_bottom:
+      weight: 1.5
+      color: "black"
+    border_vertical: false # 无竖线
+    border_horizontal_internal: false # 内横行无边框
+
+    # 可选：斑马纹（建议默认关闭）
+    stripe_rows: false # 默认关闭
+    stripe_color: "#F9F9F9"
+
+    # 跨页设置（长表格）
+    page_break:
+      allow: true
+      repeat_header: true
+
+    # 标题配置
+    caption_position: "above"
+    caption_font: "黑体"
+    caption_size: "小五"
+    caption_bold: false
+    caption_separator: " " # "表1 示例" 而非 "表1：示例"

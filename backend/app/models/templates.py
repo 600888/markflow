@@ -12,6 +12,8 @@ class ConversionOptions(BaseModel):
     toc: bool = False
     toc_depth: int = Field(default=3, ge=1, le=6)
     metadata: dict[str, str] = Field(default_factory=dict)
+    formula_position: str = "inline"  # inline | display | smart
+    keep_separator: bool = True
 
 
 class TemplateInfo(BaseModel):

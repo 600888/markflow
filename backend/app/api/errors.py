@@ -23,7 +23,8 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(UnsupportedFormatError)
     async def handle_unsupported_format(
-        request: Request, exc: UnsupportedFormatError,
+        request: Request,
+        exc: UnsupportedFormatError,
     ) -> JSONResponse:
         return JSONResponse(
             status_code=400,

@@ -10,12 +10,16 @@ from app.core.log import log
 from app.models.templates import ConversionOptions, TemplateInfo
 from config.paths import TEMPLATES_DIR
 
+# 内置过滤器路径
+_FILTERS_DIR = Path(__file__).resolve().parent.parent.parent / "filters"
+
 
 class TemplateManager:
     """模版管理器 — 扫描、加载、组装 Pandoc 参数"""
 
     def __init__(self, templates_dir: Path | None = None) -> None:
         self._dir = templates_dir or TEMPLATES_DIR
+        self._yaml_cache: dict[str, dict] = {}
 
     def list_templates(self) -> list[TemplateInfo]:
         """列出所有可用模版"""
@@ -75,7 +79,42 @@ class TemplateManager:
         for key, value in options.metadata.items():
             args.extend(["--metadata", f"{key}={value}"])
 
+        # 公式位置过滤器
+        if options.formula_position != "smart":
+            formula_filter = _FILTERS_DIR / "formula_position.lua"
+            if formula_filter.exists():
+                args.extend(["--lua-filter", str(formula_filter.resolve())])
+                args.extend(["--metadata", f"formula-position={options.formula_position}"])
+
+        # 分割线过滤器
+        if not options.keep_separator:
+            hrule_filter = _FILTERS_DIR / "remove_hrule.lua"
+            if hrule_filter.exists():
+                args.extend(["--lua-filter", str(hrule_filter.resolve())])
+                args.extend(["--metadata", "keep-separator=false"])
+
         return args
+
+    def get_table_config(self, slug: str) -> dict | None:
+        """获取模板的表格样式配置（styles.table）"""
+        data = self._yaml_cache.get(slug)
+        if data is None:
+            data = self._load_yaml(slug)
+            if data:
+                self._yaml_cache[slug] = data
+        if data is None:
+            return None
+        return data.get("styles", {}).get("table")
+
+    def _load_yaml(self, slug: str) -> dict | None:
+        """按 slug 加载 template.yaml"""
+        yaml_path = self._dir / slug / "template.yaml"
+        if not yaml_path.exists():
+            return None
+        try:
+            return yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, OSError):
+            return None
 
     def _load_template(self, template_dir: Path) -> TemplateInfo | None:
         """从目录加载单个模版"""
@@ -93,6 +132,9 @@ class TemplateManager:
         ref_doc = (template_dir / "reference.docx").exists()
         filters_dir = template_dir / "filters"
         has_filters = filters_dir.is_dir() and any(filters_dir.glob("*.lua"))
+
+        # 缓存完整 YAML 供后续查询表格样式等
+        self._yaml_cache[data.get("slug", template_dir.name)] = data
 
         return TemplateInfo(
             slug=data.get("slug", template_dir.name),

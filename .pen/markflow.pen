@@ -520,13 +520,76 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "templateAcademic",
-                          "name": "TemplateAcademic",
+                          "id": "templateMinimal",
+                          "name": "TemplateMinimal",
                           "height": 100,
                           "fill": "$surfaceCard",
                           "cornerRadius": 8,
                           "stroke": "$border",
                           "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 4,
+                          "padding": [
+                            12,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tmplMinimalName",
+                              "name": "TmplMinimalName",
+                              "fill": "$foreground",
+                              "content": "✨ 简洁模版",
+                              "fontFamily": "Funnel Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tmplMinimalDesc",
+                              "name": "TmplMinimalDesc",
+                              "fill": "$foregroundMuted",
+                              "content": "Pandoc默认\n轻量·快速",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tmplMinimalBadge",
+                              "name": "TmplMinimalBadge",
+                              "fill": "#DCFCE7",
+                              "cornerRadius": 10,
+                              "padding": [
+                                2,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tmplMinimalBadgeText",
+                                  "name": "TmplMinimalBadgeText",
+                                  "fill": "#22C55E",
+                                  "content": "轻量",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 9,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "templateAcademic",
+                          "name": "TemplateAcademic",
+                          "height": 100,
+                          "fill": "#F3E8FF",
+                          "cornerRadius": 8,
+                          "stroke": "$accent",
+                          "strokeWidth": 2,
                           "layout": "vertical",
                           "gap": 4,
                           "padding": [
@@ -573,69 +636,6 @@
                                   "name": "TmplAcademicBadgeText",
                                   "fill": "$accent",
                                   "content": "推荐",
-                                  "fontFamily": "Geist",
-                                  "fontSize": 9,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "templateMinimal",
-                          "name": "TemplateMinimal",
-                          "height": 100,
-                          "fill": "#F3E8FF",
-                          "cornerRadius": 8,
-                          "stroke": "$accent",
-                          "strokeWidth": 2,
-                          "layout": "vertical",
-                          "gap": 4,
-                          "padding": [
-                            12,
-                            10
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "tmplMinimalName",
-                              "name": "TmplMinimalName",
-                              "fill": "$foreground",
-                              "content": "✨ 简洁模版",
-                              "fontFamily": "Funnel Sans",
-                              "fontSize": 12,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "tmplMinimalDesc",
-                              "name": "TmplMinimalDesc",
-                              "fill": "$foregroundMuted",
-                              "content": "Pandoc默认\n轻量·快速",
-                              "fontFamily": "Inter",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "tmplMinimalBadge",
-                              "name": "TmplMinimalBadge",
-                              "fill": "#DCFCE7",
-                              "cornerRadius": 10,
-                              "padding": [
-                                2,
-                                6
-                              ],
-                              "justifyContent": "center",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "tmplMinimalBadgeText",
-                                  "name": "TmplMinimalBadgeText",
-                                  "fill": "#22C55E",
-                                  "content": "默认",
                                   "fontFamily": "Geist",
                                   "fontSize": 9,
                                   "fontWeight": "600"
@@ -1065,10 +1065,9 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
-                  "gap": 16,
                   "padding": [
                     0,
-                    20
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
@@ -1110,6 +1109,134 @@
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "500"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "tabSpacer",
+                      "name": "TabSpacer",
+                      "opacity": 0,
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "editorOptions",
+                      "name": "EditorOptions",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "optionFormulaPosition",
+                          "name": "OptionFormulaPosition",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "labelFormulaPos",
+                              "name": "LabelFormulaPos",
+                              "fill": "$foregroundMuted",
+                              "content": "公式位置",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "selectFormulaPos",
+                              "name": "SelectFormulaPos",
+                              "width": 80,
+                              "height": 26,
+                              "fill": "$surfaceCard",
+                              "cornerRadius": 4,
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "padding": [
+                                2,
+                                8
+                              ],
+                              "gap": 4,
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "selectFormulaPosValue",
+                                  "name": "SelectFormulaPosValue",
+                                  "fill": "$foreground",
+                                  "content": "行内",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "selectFormulaPosArrow",
+                                  "name": "SelectFormulaPosArrow",
+                                  "fill": "$foregroundMuted",
+                                  "content": "▾",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "optionDivider",
+                          "name": "OptionDivider",
+                          "fill": "$border",
+                          "width": 1,
+                          "height": 18
+                        },
+                        {
+                          "type": "frame",
+                          "id": "optionKeepSeparator",
+                          "name": "OptionKeepSeparator",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "labelKeepSeparator",
+                              "name": "LabelKeepSeparator",
+                              "fill": "$foregroundMuted",
+                              "content": "保留分割线",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "toggleSeparator",
+                              "name": "ToggleSeparator",
+                              "width": 32,
+                              "height": 18,
+                              "fill": "$accent",
+                              "cornerRadius": 9,
+                              "padding": [
+                                2,
+                                2
+                              ],
+                              "justifyContent": "flex_end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "toggleSeparatorKnob",
+                                  "name": "ToggleSeparatorKnob",
+                                  "fill": "#FFFFFF",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },

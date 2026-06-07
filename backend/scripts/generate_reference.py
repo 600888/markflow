@@ -50,9 +50,13 @@ STYLE_MAP = {
     "heading1": "Heading 1",
     "heading2": "Heading 2",
     "heading3": "Heading 3",
+    "heading4": "Heading 4",
     "body": "Normal",
     "code": "Code",
 }
+
+# 正文缩进样式（Lua filter 将正文映射到此样式）
+BODY_TEXT_STYLE = "Body Text"
 
 
 def parse_size(raw: str | float | int) -> float | None:
@@ -84,24 +88,54 @@ def apply_font(style, config: dict) -> None:
     name = config.get("font", "").strip()
     if name:
         font.name = name
-        # 设置中文字体（需要操作 xml）
+        # 在样式 xml 中设置 w:ascii / w:eastAsia / w:hAnsi
         rPr = style.element.get_or_add_rPr()
         rFonts = rPr.find(qn("w:rFonts"))
         if rFonts is None:
             rFonts = style.element.makeelement(qn("w:rFonts"), {})
-            rPr.append(rFonts)
+            rPr.insert(0, rFonts)
+        # 三个属性全部设为同一字体，确保中英文都生效
+        rFonts.set(qn("w:ascii"), name)
         rFonts.set(qn("w:eastAsia"), name)
+        rFonts.set(qn("w:hAnsi"), name)
+        # 清除主题字体引用（否则会覆盖我们的设置）
+        theme_attrs = [
+            qn("w:asciiTheme"),
+            qn("w:eastAsiaTheme"),
+            qn("w:hAnsiTheme"),
+            qn("w:cstheme"),
+        ]
+        for attr in theme_attrs:
+            if attr in rFonts.attrib:
+                del rFonts.attrib[attr]
 
     size_pt = parse_size(config.get("size"))
     if size_pt:
         font.size = Pt(size_pt)
+        # 同时清除 szCs（复杂脚本字号，可能覆盖 sz）
+        szCs = rPr.find(qn("w:szCs"))
+        if szCs is not None:
+            rPr.remove(szCs)
 
     if config.get("bold"):
         font.bold = True
+    else:
+        rPr = style.element.find(qn("w:rPr"))
+        if rPr is not None:
+            b = rPr.find(qn("w:b"))
+            if b is not None:
+                rPr.remove(b)
 
     color = parse_color(config.get("color"))
     if color:
         font.color.rgb = color
+    else:
+        # 清除主题颜色（Heading 样式默认有蓝色）
+        rPr = style.element.find(qn("w:rPr"))
+        if rPr is not None:
+            c = rPr.find(qn("w:color"))
+            if c is not None:
+                rPr.remove(c)
 
 
 def apply_para(style, config: dict) -> None:
@@ -168,6 +202,12 @@ def build_reference(template_dir: Path) -> None:
     except KeyError:
         doc.styles.add_style("Code", style_type=1)  # WD_STYLE_TYPE.PARAGRAPH
 
+    # 确保 Caption 样式存在（表格标题用）
+    try:
+        doc.styles["Caption"]
+    except KeyError:
+        doc.styles.add_style("Caption", style_type=1)
+
     for yaml_key, word_style_name in STYLE_MAP.items():
         sc = styles_cfg.get(yaml_key)
         if not sc:
@@ -178,7 +218,51 @@ def build_reference(template_dir: Path) -> None:
             print(f"    [WARN] style '{word_style_name}' missing, skip")
             continue
         apply_font(style, sc)
-        apply_para(style, sc)
+        # Normal 不设置首行缩进（由 Body Text 样式处理）
+        sc_para = dict(sc)
+        if yaml_key == "body":
+            sc_para.pop("first_line_indent", None)
+        apply_para(style, sc_para)
+
+    # Body Text：字体同 Normal + 首行缩进（通过 Lua filter 映射正文段落）
+    body_cfg = styles_cfg.get("body", {})
+    indent_str = str(body_cfg.get("first_line_indent", "2 字符"))
+    num_str = "".join(c for c in indent_str if c.isdigit() or c == ".")
+    if num_str:
+        twips = int(float(num_str) * 0.5 * 567)
+        bt = doc.styles["Body Text"]
+        bt_el = bt.element
+        # 设置字体
+        rPr = bt_el.get_or_add_rPr()
+        rFonts = bt_el.makeelement(
+            qn("w:rFonts"),
+            {
+                qn("w:ascii"): body_cfg.get("font", "宋体"),
+                qn("w:eastAsia"): body_cfg.get("font", "宋体"),
+                qn("w:hAnsi"): body_cfg.get("font", "宋体"),
+            },
+        )
+        rPr.insert(0, rFonts)
+        # 设置首行缩进
+        pPr = bt_el.get_or_add_pPr()
+        ind_el = bt_el.makeelement(qn("w:ind"), {qn("w:firstLine"): str(twips)})
+        pPr.append(ind_el)
+
+    # Caption 样式（表格标题）
+    table_cfg = styles_cfg.get("table", {})
+    cap_font = table_cfg.get("caption_font", "")
+    cap_size = table_cfg.get("caption_size", "")
+    cap_bold = table_cfg.get("caption_bold", False)
+    if cap_font or cap_size:
+        try:
+            cap_style = doc.styles["Caption"]
+            apply_font(cap_style, {"font": cap_font, "size": cap_size, "bold": cap_bold})
+            # 标题居中
+            cap_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            # 清除 Normal 继承的缩进
+            cap_style.paragraph_format.first_line_indent = Pt(0)
+        except KeyError:
+            pass
 
     ref_path = template_dir / "reference.docx"
     doc.save(str(ref_path))

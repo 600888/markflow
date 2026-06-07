@@ -69,13 +69,15 @@ class TestTemplateManager:
             tpl_dir = base / "test-tpl"
             tpl_dir.mkdir()
             tpl_dir.joinpath("template.yaml").write_text(
-                yaml.dump({
-                    "name": "测试模版",
-                    "slug": "test-tpl",
-                    "version": "1.0",
-                    "description": "单元测试模版",
-                    "target_formats": ["docx"],
-                }),
+                yaml.dump(
+                    {
+                        "name": "测试模版",
+                        "slug": "test-tpl",
+                        "version": "1.0",
+                        "description": "单元测试模版",
+                        "target_formats": ["docx"],
+                    }
+                ),
                 encoding="utf-8",
             )
             tpl_dir.joinpath("reference.docx").write_text("mock docx")

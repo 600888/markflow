@@ -20,6 +20,8 @@ export async function submitConvert(
   toc: boolean,
   tocDepth: number,
   metadata: Record<string, string>,
+  formulaPosition: string = "inline",
+  keepSeparator: boolean = true,
 ): Promise<{ task_id: string; status: string; message: string }> {
   const form = new FormData();
   form.append("file", file);
@@ -29,10 +31,29 @@ export async function submitConvert(
     form.append("toc", "true");
     form.append("toc_depth", String(tocDepth));
   }
+  form.append("formula_position", formulaPosition);
+  form.append("keep_separator", keepSeparator ? "true" : "false");
   if (Object.keys(metadata).length > 0) {
     form.append("metadata", JSON.stringify(metadata));
   }
   return api.post("convert", { body: form }).json();
+}
+
+/** 直接用 Markdown 文本内容提交转换（无需上传文件） */
+export async function submitConvertFromContent(
+  content: string,
+  fileName: string,
+  outputFormat: string,
+  templateSlug: string,
+  toc: boolean,
+  tocDepth: number,
+  metadata: Record<string, string>,
+  formulaPosition: string = "inline",
+  keepSeparator: boolean = true,
+): Promise<{ task_id: string; status: string; message: string }> {
+  const blob = new Blob([content], { type: "text/markdown" });
+  const file = new File([blob], fileName || "document.md", { type: "text/markdown" });
+  return submitConvert(file, outputFormat, templateSlug, toc, tocDepth, metadata, formulaPosition, keepSeparator);
 }
 
 export async function fetchTaskStatus(taskId: string): Promise<TaskStatus> {
@@ -45,8 +66,10 @@ export function streamProgress(
   onComplete: () => void,
   onError: (err: string) => void,
 ): EventSource {
+  let hadProgress = false;
   const es = new EventSource(`${BASE}/tasks/${taskId}/progress`);
   es.addEventListener("progress", (e) => {
+    hadProgress = true;
     const data = JSON.parse(e.data) as { progress: number; status: string };
     onProgress(data.progress, data.status);
   });
@@ -55,8 +78,11 @@ export function streamProgress(
     es.close();
   });
   es.addEventListener("error", () => {
-    onError("SSE 连接错误");
     es.close();
+    // 只有在没收到过 progress 时才报错
+    if (!hadProgress) {
+      onError("SSE 连接错误");
+    }
   });
   return es;
 }

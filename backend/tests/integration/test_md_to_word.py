@@ -61,8 +61,8 @@ class TestMdToWordConversion:
             results.append((md_file.name, output_file.name, result.duration_ms, result.file_size))
 
         # 打印汇总
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"共转换 {len(results)} 个文件到 {OUTPUT_DIR}")
         for name, out, ms, size in results:
             print(f"  ✅ {name} → {out}  ({ms}ms, {size} bytes)")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
