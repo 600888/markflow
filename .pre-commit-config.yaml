@@ -29,3 +29,11 @@ repos:
         files: ^backend/.*\.py$
         pass_filenames: false
         types: [python]
+
+      - id: pytest
+        name: pytest (backend)
+        entry: cmd /c "cd backend && pytest --cov=app --cov-report=term-missing -x"
+        language: system
+        files: ^backend/
+        pass_filenames: false
+        stages: [push]
