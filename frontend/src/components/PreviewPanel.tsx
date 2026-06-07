@@ -1,77 +1,64 @@
 import { useState, useEffect } from "react";
+import { Box, Typography } from "@mui/material";
 import { useStore } from "../stores/useStore";
 
 export function PreviewPanel() {
   const file = useStore((s) => s.file);
-  const [activeTab, setActiveTab] = useState<"preview" | "output">("preview");
-  const [previewHtml, setPreviewHtml] = useState("");
+  const [tab, setTab] = useState<0 | 1>(0);
+  const [text, setText] = useState("");
 
   useEffect(() => {
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPreviewHtml(
-          `<div style="font-family:-apple-system,BlinkMacSystemFont,'Microsoft YaHei',sans-serif;font-size:13px;line-height:1.8;color:var(--color-foreground)"><pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escapeHtml(reader.result as string)}</pre></div>`,
-        );
-      };
-      reader.readAsText(file);
-    } else {
-      setPreviewHtml("");
-    }
+    if (file) { const r = new FileReader(); r.onload = () => setText(r.result as string); r.readAsText(file); }
+    else setText("");
   }, [file]);
 
   return (
-    <div className="flex flex-col bg-[var(--color-surface-secondary)] h-full">
-      {/* Tab Bar */}
-      <div className="flex items-center gap-4 h-11 px-5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-        <button
-          onClick={() => setActiveTab("preview")}
-          className={`text-xs border-b-2 pb-px ${
-            activeTab === "preview"
-              ? "font-semibold text-[var(--color-accent)] border-[var(--color-accent)]"
-              : "font-medium text-[var(--color-foreground-muted)] border-transparent"
-          }`}
-        >
-          📖 Markdown 预览
-        </button>
-        <button
-          onClick={() => setActiveTab("output")}
-          className={`text-xs pb-px ${
-            activeTab === "output"
-              ? "font-semibold text-[var(--color-accent)]"
-              : "font-medium text-[var(--color-foreground-muted)]"
-          }`}
-        >
-          📤 转换结果
-        </button>
-      </div>
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
+      {/* Tab bar: height 44, bottom border, padding [0,20] */}
+      <Box sx={{ height: 44, display: "flex", alignItems: "center", gap: 2, px: 2.5, borderBottom: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+        <Box onClick={() => setTab(0)}
+          sx={{ position: "relative", cursor: "pointer", py: 0.5 }}>
+          <Typography sx={{
+            fontSize: 12, fontWeight: 600,
+            color: tab === 0 ? "primary.main" : "text.secondary",
+            fontFamily: "Inter",
+          }}>
+            📖 Markdown 预览
+          </Typography>
+          {tab === 0 && <Box sx={{ position: "absolute", bottom: -13, left: 0, right: 0, height: 2, bgcolor: "primary.main", borderRadius: 0.5 }} />}
+        </Box>
+        <Box onClick={() => setTab(1)}
+          sx={{ position: "relative", cursor: "pointer", py: 0.5 }}>
+          <Typography sx={{
+            fontSize: 12, fontWeight: tab === 1 ? 600 : 500,
+            color: tab === 1 ? "primary.main" : "text.secondary",
+            fontFamily: "Inter",
+          }}>
+            📤 转换结果
+          </Typography>
+          {tab === 1 && <Box sx={{ position: "absolute", bottom: -13, left: 0, right: 0, height: 2, bgcolor: "primary.main", borderRadius: 0.5 }} />}
+        </Box>
+      </Box>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <Box sx={{ flex: 1, overflow: "auto", p: 3 }}>
         {!file ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--color-foreground-muted)]">
-            <span className="text-5xl">📋</span>
-            <span className="text-sm text-center leading-relaxed">
-              上传 Markdown 文件后
-              <br />
-              在此处预览渲染效果
-            </span>
-          </div>
-        ) : activeTab === "preview" ? (
-          <div
-            className="text-sm leading-loose text-[var(--color-foreground)] whitespace-pre-wrap font-mono text-xs"
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
-          />
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 1.5 }}>
+            <Typography sx={{ fontSize: 48, color: "text.secondary", fontFamily: "Inter" }}>📋</Typography>
+            <Typography sx={{ fontSize: 13, color: "text.secondary", textAlign: "center", lineHeight: 1.6, fontFamily: "Inter" }}>
+              上传 Markdown 文件后<br />在此处预览渲染效果
+            </Typography>
+          </Box>
+        ) : tab === 0 ? (
+          <Box component="pre" sx={{ fontFamily: "monospace", fontSize: 12, whiteSpace: "pre-wrap", m: 0, color: "text.primary", lineHeight: 1.6 }}>
+            {escapeHtml(text)}
+          </Box>
         ) : (
-          <div className="text-sm text-[var(--color-foreground-muted)]">
-            转换完成后将在此显示输出文件信息。
-          </div>
+          <Typography sx={{ fontSize: 13, color: "text.secondary", fontFamily: "Inter" }}>转换完成后将在此显示输出文件信息。</Typography>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+function escapeHtml(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }

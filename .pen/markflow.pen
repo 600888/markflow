@@ -8,8 +8,8 @@
       "y": 100,
       "name": "MarkFlow - Main",
       "clip": true,
-      "width": 960,
-      "height": 680,
+      "width": 1400,
+      "height": 900,
       "fill": "$surface",
       "cornerRadius": 8,
       "layout": "vertical",
@@ -92,6 +92,88 @@
                   "fontWeight": "normal"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "windowControls",
+              "name": "WindowControls",
+              "layout": "horizontal",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "btnMinimize",
+                  "name": "BtnMinimize",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "horizontal",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "minIcon",
+                      "name": "MinIcon",
+                      "content": "─",
+                      "fontSize": 12,
+                      "fill": "$foregroundMuted",
+                      "fontFamily": "Inter"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "btnMaximize",
+                  "name": "BtnMaximize",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "horizontal",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "maxIcon",
+                      "name": "MaxIcon",
+                      "content": "□",
+                      "fontSize": 12,
+                      "fill": "$foregroundMuted",
+                      "fontFamily": "Inter"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "btnClose",
+                  "name": "BtnClose",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "horizontal",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "closeIcon",
+                      "name": "CloseIcon",
+                      "content": "✕",
+                      "fontSize": 12,
+                      "fill": "$foregroundMuted",
+                      "fontFamily": "Inter"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -106,7 +188,7 @@
               "type": "frame",
               "id": "leftPanel",
               "name": "LeftPanel",
-              "width": 380,
+              "width": 440,
               "height": "fill_container",
               "fill": "$surface",
               "stroke": "$border",
@@ -1115,25 +1197,7 @@
               "id": "statusAddress",
               "name": "StatusAddress",
               "fill": "$foregroundMuted",
-              "content": "后端 127.0.0.1:62581",
-              "fontFamily": "Geist",
-              "fontSize": 11,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "rectangle",
-              "id": "statusbarSpacer",
-              "name": "StatusbarSpacer",
-              "opacity": 0,
-              "width": "fill_container",
-              "height": 1
-            },
-            {
-              "type": "text",
-              "id": "statusVersion",
-              "name": "StatusVersion",
-              "fill": "$foregroundMuted",
-              "content": "Pandoc 3.9 | MarkFlow v0.1",
+              "content": "服务已连接",
               "fontFamily": "Geist",
               "fontSize": 11,
               "fontWeight": "normal"

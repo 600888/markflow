@@ -3,22 +3,22 @@ slug: "minimal"
 version: "1.0.0"
 description: "Pandoc 默认样式，适合日常笔记和轻量文档"
 author: "MarkFlow"
-target_formats: ["docx"]
+target_formats: ["docx", "pdf", "html", "epub"]
 
 styles:
   heading1:
     font: "Times New Roman"
-    size: "16pt"
+    size: "三号"
     bold: true
   heading2:
     font: "Times New Roman"
-    size: "13pt"
+    size: "四号"
     bold: true
   heading3:
     font: "Times New Roman"
-    size: "12pt"
+    size: "小四"
     bold: true
   body:
     font: "等线"
-    size: "11pt"
+    size: "五号"
     line_spacing: 1.15

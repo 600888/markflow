@@ -176,8 +176,8 @@ async def download_result(
         raise HTTPException(status_code=400, detail="任务未完成")
     return FileResponse(
         task.output_path,
-        filename=f"output.{task.output_format.value}",
         media_type="application/octet-stream",
+        headers={"Content-Disposition": "inline"},
     )
 
 

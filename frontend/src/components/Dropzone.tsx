@@ -1,4 +1,6 @@
 import { useRef, useState, useCallback } from "react";
+import { Box, Typography, IconButton } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import { useStore } from "../stores/useStore";
 
 export function Dropzone() {
@@ -7,74 +9,46 @@ export function Dropzone() {
   const setFile = useStore((s) => s.setFile);
   const clearFile = useStore((s) => s.clearFile);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
+  const [hover, setHover] = useState(false);
 
-  const handleFile = useCallback(
-    (f: File | null) => {
-      if (!f) return;
-      if (!f.name.endsWith(".md")) {
-        alert("仅支持 .md 文件");
-        return;
-      }
-      setFile(f);
-    },
-    [setFile],
-  );
-
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(true);
-  }, []);
-  const onDragLeave = useCallback(() => setDragging(false), []);
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      handleFile(e.dataTransfer.files[0]);
-    },
-    [handleFile],
-  );
+  const handleFile = useCallback((f: File | null) => {
+    if (!f) return;
+    if (!f.name.endsWith(".md")) { alert("仅支持 .md 文件"); return; }
+    setFile(f);
+  }, [setFile]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="text-[11px] font-semibold text-[var(--color-foreground-muted)] tracking-wide uppercase">
+    <Box>
+      <Typography sx={{ fontSize: 11, fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5, mb: 1.25, fontFamily: "Inter" }}>
         📄 文件上传
-      </div>
+      </Typography>
 
-      <div
+      <Box
         onClick={() => inputRef.current?.click()}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        className={`flex flex-col items-center justify-center gap-1.5 p-7 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-          dragging ? "dropzone-active" : "border-[var(--color-border)] bg-[var(--color-surface)]"
-        }`}
+        onDragOver={(e) => { e.preventDefault(); setHover(true); }}
+        onDragLeave={() => setHover(false)}
+        onDrop={(e) => { e.preventDefault(); setHover(false); handleFile(e.dataTransfer.files[0]); }}
+        sx={{
+          height: 112, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0.75,
+          borderRadius: 1, cursor: "pointer", border: 2, borderStyle: "dashed",
+          borderColor: hover ? "primary.main" : "divider",
+          bgcolor: hover ? "action.hover" : "background.paper",
+          transition: "all 0.15s",
+        }}
       >
-        <span className="text-2xl">📂</span>
-        <span className="text-[13px] font-medium text-[var(--color-foreground)]">
-          点击或拖拽 Markdown 文件
-        </span>
-        <span className="text-[11px] text-[var(--color-foreground-muted)]">
-          支持 .md 格式，最大 50MB
-        </span>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".md,.markdown"
-          className="hidden"
-          onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-        />
-      </div>
+        <Box component="span" sx={{ fontSize: 28, opacity: 0.7 }}>📂</Box>
+        <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.primary", fontFamily: "Inter" }}>点击或拖拽 Markdown 文件</Typography>
+        <Typography sx={{ fontSize: 11, color: "text.secondary", fontFamily: "Inter" }}>支持 .md 格式，最大 50MB</Typography>
+        <input ref={inputRef} type="file" accept=".md,.markdown" hidden onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
+      </Box>
 
       {file && (
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border rounded-full text-xs font-medium bg-purple-50 border-purple-400 text-purple-600">
+        <Box sx={{ mt: 1.25, display: "inline-flex", alignItems: "center", gap: 0.75, px: 1.75, py: 0.75, border: 1, borderRadius: 5, borderColor: "primary.main", bgcolor: "primary.light", color: "primary.main", fontSize: 12, fontFamily: "Inter" }}>
           <span>📝</span>
           <span>{fileName}</span>
-          <button onClick={clearFile} className="ml-1 text-purple-400 hover:text-purple-600 text-sm">
-            ✕
-          </button>
-        </div>
+          <IconButton size="small" onClick={clearFile} sx={{ p: 0, ml: 0.25, color: "inherit", opacity: 0.6, "&:hover": { opacity: 1 } }}><Close sx={{ fontSize: 14 }} /></IconButton>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }

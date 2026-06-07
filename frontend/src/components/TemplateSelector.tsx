@@ -1,39 +1,13 @@
 import { useEffect } from "react";
+import { Box, Typography, Card, CardActionArea, CardContent, Chip } from "@mui/material";
 import { useStore } from "../stores/useStore";
 import { fetchTemplates } from "../services/api";
 import type { TemplateInfo } from "../types";
 
-const STATIC_TEMPLATES: TemplateInfo[] = [
-  {
-    slug: "academic",
-    name: "📝 学术论文",
-    version: "1.0",
-    description: "黑体标题·宋体正文\n1.5倍行距·首行缩进",
-    author: "MarkFlow",
-    target_formats: ["docx", "pdf"],
-    has_reference_doc: true,
-    has_lua_filters: false,
-  },
-  {
-    slug: "minimal",
-    name: "✨ 简洁模版",
-    version: "1.0",
-    description: "Pandoc默认\n轻量·快速",
-    author: "MarkFlow",
-    target_formats: ["docx"],
-    has_reference_doc: true,
-    has_lua_filters: false,
-  },
-  {
-    slug: "report",
-    name: "📊 报告模版",
-    version: "1.0",
-    description: "微软雅黑·蓝色主题\n1.25倍行距",
-    author: "MarkFlow",
-    target_formats: ["docx"],
-    has_reference_doc: true,
-    has_lua_filters: false,
-  },
+const FALLBACK: TemplateInfo[] = [
+  { slug: "academic", name: "📝 学术论文", version: "1.0", description: "黑体标题·宋体正文\n1.5倍行距·首行缩进", author: "", target_formats: ["docx"], has_reference_doc: true, has_lua_filters: false },
+  { slug: "minimal", name: "✨ 简洁模版", version: "1.0", description: "Pandoc默认\n轻量·快速", author: "", target_formats: ["docx"], has_reference_doc: true, has_lua_filters: false },
+  { slug: "report", name: "📊 报告模版", version: "1.0", description: "微软雅黑·蓝色主题\n1.25倍行距", author: "", target_formats: ["docx"], has_reference_doc: true, has_lua_filters: false },
 ];
 
 export function TemplateSelector() {
@@ -43,54 +17,47 @@ export function TemplateSelector() {
   const setTemplates = useStore((s) => s.setTemplates);
 
   useEffect(() => {
-    fetchTemplates()
-      .then((data) => setTemplates(data.templates))
-      .catch(() => setTemplates(STATIC_TEMPLATES));
+    fetchTemplates().then((d) => setTemplates(d.templates)).catch(() => setTemplates(FALLBACK));
   }, [setTemplates]);
 
-  const display = templates.length > 0 ? templates : STATIC_TEMPLATES;
+  const list = templates.length > 0 ? templates : FALLBACK;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="text-[11px] font-semibold text-[var(--color-foreground-muted)] tracking-wide uppercase">
+    <Box>
+      <Typography sx={{ fontSize: 11, fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5, mb: 1.25, fontFamily: "Inter" }}>
         🎨 文档模版
-      </div>
-      <div className="flex gap-2">
-        {display.map((tpl) => {
-          const isSelected = tpl.slug === template;
-          const isMinimal = tpl.slug === "minimal";
-          const isAcademic = tpl.slug === "academic";
-
+      </Typography>
+      <Box sx={{ display: "flex", gap: 1 }}>
+        {list.map((tpl) => {
+          const sel = tpl.slug === template;
           return (
-            <button
-              key={tpl.slug}
-              onClick={() => setTemplate(tpl.slug)}
-              className={`flex-1 flex flex-col gap-1 p-3 rounded-lg border-2 text-left transition-all ${
-                isSelected
-                  ? "border-[var(--color-accent)] bg-purple-50"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-accent)]"
-              }`}
+            <Card key={tpl.slug} variant="outlined"
+              sx={{
+                flex: 1, minHeight: 100, borderRadius: 1,
+                border: sel ? 2 : 1,
+                borderColor: sel ? "primary.main" : "divider",
+                bgcolor: sel ? "primary.light" : "background.paper",
+                transition: "all 0.15s",
+              }}
             >
-              <span className="text-xs font-semibold text-[var(--color-foreground)]">
-                {tpl.name}
-              </span>
-              <span className="text-[10px] text-[var(--color-foreground-muted)] leading-relaxed whitespace-pre-line">
-                {tpl.description}
-              </span>
-              {isAcademic && (
-                <span className="inline-block mt-auto w-fit px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-purple-100 text-[var(--color-accent)]">
-                  推荐
-                </span>
-              )}
-              {isMinimal && (
-                <span className="inline-block mt-auto w-fit px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-green-100 text-green-500">
-                  默认
-                </span>
-              )}
-            </button>
+              <CardActionArea onClick={() => setTemplate(tpl.slug)} sx={{ height: "100%", p: 1.5 }}>
+                <CardContent sx={{ p: "0 !important", display: "flex", flexDirection: "column", gap: 0.5, height: "100%" }}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 600, fontFamily: "Funnel Sans, Inter, sans-serif" }}>{tpl.name}</Typography>
+                  <Typography sx={{ fontSize: 10, color: "text.secondary", fontFamily: "Inter", whiteSpace: "pre-line", lineHeight: 1.5 }}>{tpl.description}</Typography>
+                  <Box sx={{ mt: "auto" }}>
+                    {tpl.slug === "academic" &&
+                      <Box sx={{ display: "inline-block", px: 0.75, py: 0.25, borderRadius: 5, bgcolor: "primary.light", fontSize: 9, fontWeight: 600, color: "primary.main", fontFamily: "Geist, Inter, sans-serif" }}>推荐</Box>
+                    }
+                    {tpl.slug === "minimal" &&
+                      <Box sx={{ display: "inline-block", px: 0.75, py: 0.25, borderRadius: 5, bgcolor: "#DCFCE7", fontSize: 9, fontWeight: 600, color: "success.main", fontFamily: "Geist, Inter, sans-serif" }}>默认</Box>
+                    }
+                  </Box>
+                </CardContent>
+              </CardActionArea>
+            </Card>
           );
         })}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

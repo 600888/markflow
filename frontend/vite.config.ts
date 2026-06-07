@@ -1,13 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    port: 1420,
-    strictPort: true,
-  },
+  plugins: [react()],
+  server: { port: 1420, strictPort: true },
   envPrefix: ["VITE_", "TAURI_"],
   build: {
     target: process.env.TAURI_PLATFORM === "windows" ? "chrome105" : "safari14",

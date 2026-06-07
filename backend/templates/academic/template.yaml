@@ -8,38 +8,38 @@ target_formats: ["docx", "pdf"]
 styles:
   heading1:
     font: "黑体"
-    size: "16pt"
+    size: "三号"
     bold: true
     alignment: "center"
-    space_before: "12pt"
-    space_after: "6pt"
+    space_before: "3 倍行距"
+    space_after: "1.5 倍行距"
   heading2:
     font: "黑体"
-    size: "14pt"
+    size: "四号"
     bold: true
-    space_before: "10pt"
-    space_after: "4pt"
+    space_before: "2 倍行距"
+    space_after: "1 倍行距"
   heading3:
     font: "黑体"
-    size: "13pt"
+    size: "小四"
     bold: true
-    space_before: "8pt"
-    space_after: "2pt"
+    space_before: "1.5 倍行距"
+    space_after: "0.5 倍行距"
   body:
     font: "宋体"
-    size: "12pt"
+    size: "小四"
     line_spacing: 1.5
-    first_line_indent: "2em"
+    first_line_indent: "2 字符"
   code:
     font: "Consolas"
-    size: "10pt"
+    size: "五号"
     background: "#F5F5F5"
   table:
     header_font: "黑体"
-    header_size: "11pt"
+    header_size: "五号"
     header_bold: true
     header_background: "#E8E8E8"
     body_font: "宋体"
-    body_size: "11pt"
-    border: "all"
+    body_size: "五号"
+    border: "三线表"
     stripe_rows: true

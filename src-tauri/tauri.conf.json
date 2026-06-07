@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "MarkFlow",
-        "width": 960,
-        "height": 680,
+        "width": 1400,
+        "height": 900,
         "resizable": true
       }
     ],
