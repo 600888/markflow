@@ -31,7 +31,7 @@ impl ProcessHandle {
     }
 }
 
-/// 跨平台杀死整个进程树
+/// 跨平台杀死整个进程树（同步等待完成）
 fn kill_process_tree(pid: u32) {
     if pid == 0 { return; }
     if cfg!(target_os = "windows") {
@@ -39,14 +39,14 @@ fn kill_process_tree(pid: u32) {
             .args(["/F", "/T", "/PID", &pid.to_string()])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .spawn();
+            .status(); // 用 status() 替代 spawn()，等待 taskkill 执行完毕
     } else {
         // Unix: 使用进程组 ID 杀死整个进程树
         let _ = Command::new("kill")
             .args(["-TERM", &format!("-{}", pid)])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .spawn();
+            .status(); // 用 status() 替代 spawn()，等待 kill 执行完毕
     }
 }
 
@@ -156,6 +156,7 @@ async fn wait_for_backend(url: &str, max_duration: Duration) -> bool {
 
 /// 关闭后端进程（同步版本，用于窗口关闭事件中安全执行）
 pub fn stop_backend() {
+    // 1. 从静态变量中取出已管理的进程句柄并杀死
     let handle = {
         let mut guard = BACKEND_PROCESS.lock().unwrap();
         guard.take()
@@ -165,7 +166,60 @@ pub fn stop_backend() {
         let _ = h.kill();
     }
 
+    // 2. 额外通过端口清扫：防止 uvicorn --reload 模式的后台残留进程，
+    //    也处理可能独立启动（如 dev terminal）的重复后端进程
+    let port = *BACKEND_PORT.lock().unwrap();
+    if port > 0 {
+        kill_processes_on_port(port);
+        // 也清扫相邻端口的残留（如果 get_available_port 跳到了更高端口）
+        for p in port + 1..port + 10 {
+            if std::net::TcpListener::bind(format!("127.0.0.1:{}", p)).is_ok() {
+                break; // 遇到空闲端口即停止
+            }
+            kill_processes_on_port(p);
+        }
+    }
+
     *BACKEND_READY.lock().unwrap() = false;
+}
+
+/// 强制杀死占用指定端口的全部进程（Windows 使用 netstat + taskkill）
+fn kill_processes_on_port(port: u16) {
+    if cfg!(target_os = "windows") {
+        // 通过 netstat 找到占用端口的 PID
+        let output = Command::new("netstat")
+            .args(["-ano"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output()
+            .ok();
+        if let Some(out) = output {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            let port_str = format!(":{}", port);
+            for line in stdout.lines() {
+                if line.contains(&port_str) && line.contains("LISTENING") {
+                    // 提取最后一列 PID
+                    if let Some(pid_str) = line.split_whitespace().last() {
+                        if let Ok(pid) = pid_str.parse::<u32>() {
+                            eprintln!("[MarkFlow] killing process {} on port {}", pid, port);
+                            let _ = Command::new("taskkill")
+                                .args(["/F", "/PID", &pid.to_string()])
+                                .stdout(Stdio::null())
+                                .stderr(Stdio::null())
+                                .status();
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Unix: 使用 lsof 或 fuser 查找端口占用进程
+        let _ = Command::new("fuser")
+            .args(["-k", &format!("{}/tcp", port)])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
 }
 
 /// 向前端返回后端 URL

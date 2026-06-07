@@ -17,7 +17,7 @@ class AppSettings(BaseSettings):
 
     # Pandoc
     pandoc_path: str | None = None
-    pandoc_timeout: int = 120
+    pandoc_timeout: int = 300
 
     # 文件
     max_file_size: int = 50 * 1024 * 1024

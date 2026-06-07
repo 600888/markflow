@@ -52,7 +52,6 @@ ignore = [
     "D104",                        # __init__.py 包 docstring
     "TRY003",                      # 异常消息过长
     "EM101", "EM102",              # 异常字符串必须赋值给变量（过度）
-    "ASYNC240",                    # 异步函数中用 pathlib（内部有 try）
 ]
 per-file-ignores."tests/**" = [
     "D", "S101", "PLR2004", "PLC0415", "RUF012", "TC003", "ANN", "ARG",
