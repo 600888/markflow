@@ -20,7 +20,7 @@ export function FormatSelector() {
         📦 输出格式
       </Typography>
       <Box sx={{ display: "flex", gap: 0.75 }}>
-        {FORMATS.map((f, i) => {
+        {FORMATS.map((f) => {
           const sel = f.id === format;
           return (
             <Box

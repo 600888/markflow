@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
+import subprocess
 import time
 from pathlib import Path
 from uuid import UUID
@@ -288,6 +290,8 @@ class PandocEngine(ConversionEngine):
 
         # 预处理 Markdown：标准化数学公式定界符
         self._normalize_math_in_file(input_path)
+        # 预处理 Markdown：渲染 Mermaid 图表
+        self._preprocess_mermaid(input_path)
 
         output_path = input_path.with_suffix(f".{output_format.value}")
         args = extra_args or []
@@ -421,6 +425,108 @@ class PandocEngine(ConversionEngine):
             except OSError:
                 pass
 
+    # ── Mermaid 图表预处理 ────────────────────────────────
+
+    @staticmethod
+    def _mmdc_config_path() -> Path:
+        """mmdc 无头浏览器配置文件路径"""
+        cfg = Path(__file__).resolve().parent.parent.parent / "config" / "mmdc_puppeteer.json"
+        if not cfg.exists():
+            cfg.parent.mkdir(parents=True, exist_ok=True)
+            cfg.write_text(
+                json.dumps({
+                    "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+                }),
+                encoding="utf-8",
+            )
+        return cfg
+
+    @staticmethod
+    def _preprocess_mermaid(input_path: Path) -> None:
+        """将 Markdown 中的 ```mermaid 代码块渲染为图片
+
+        流程：
+        1. 扫描文件中的 ```mermaid ... ``` 代码块
+        2. 每个代码块生成一个临时 .mmd 文件
+        3. 用 mmdc（mermaid-cli）渲染为 PNG
+        4. 将原代码块替换为 ![Mermaid diagram](<图片路径>)
+        5. 写回文件
+
+        如果 mmdc 不可用或渲染失败，仅记录警告，不阻断转换。
+        """
+        try:
+            text = input_path.read_text(encoding="utf-8")
+        except OSError:
+            return
+
+        # 匹配 ```mermaid ... ``` 代码块（支持 mermaid / mermaid-example 等变体）
+        pattern = re.compile(
+            r'```mermaid\w*[ \t]*\n(.*?)```',
+            re.DOTALL,
+        )
+
+        matches = list(pattern.finditer(text))
+        if not matches:
+            return
+
+        # 创建临时目录存放中间文件
+        tmp_dir = input_path.parent / f".mermaid_{input_path.stem}"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+
+        mmdc_cmd = _find_mmdc()
+        if mmdc_cmd is None:
+            log.warning("mmdc (mermaid-cli) 未安装，跳过 Mermaid 渲染")
+            # 清理空目录
+            try:
+                tmp_dir.rmdir()
+            except OSError:
+                pass
+            return
+
+        config_path = PandocEngine._mmdc_config_path()
+
+        new_text = text
+        # 倒序替换，避免位置偏移
+        for idx, m in enumerate(reversed(matches)):
+            code_content = m.group(1).strip()
+            if not code_content:
+                # 空代码块，替换为空行
+                start, end = m.start(), m.end()
+                new_text = new_text[:start] + "\n" + new_text[end:]
+                continue
+
+            mmd_file = tmp_dir / f"diagram_{idx}.mmd"
+            png_file = tmp_dir / f"diagram_{idx}.png"
+
+            try:
+                mmd_file.write_text(code_content, encoding="utf-8")
+
+                subprocess.run(
+                    [*mmdc_cmd, "-i", str(mmd_file), "-o", str(png_file),
+                     "-b", "transparent", "-s", "2",
+                     "-p", str(config_path)],
+                    capture_output=True, timeout=30, check=False,
+                )
+
+                if png_file.exists():
+                    # 相对路径（相对于输入文件所在目录）
+                    rel_path = png_file.relative_to(input_path.parent)
+                    img_md = f"![Mermaid diagram]({rel_path.as_posix()})\n"
+                    start, end = m.start(), m.end()
+                    new_text = new_text[:start] + img_md + new_text[end:]
+                    log.info(f"Mermaid 图表 #{idx} 渲染成功: {png_file.name}")
+                else:
+                    log.warning(f"Mermaid 图表 #{idx} 渲染失败，保留原文")
+            except (subprocess.TimeoutExpired, OSError) as e:
+                log.warning(f"Mermaid 图表 #{idx} 渲染异常: {e}，保留原文")
+
+        if new_text != text:
+            try:
+                input_path.write_text(new_text, encoding="utf-8")
+                log.info(f"Mermaid 预处理完成，共处理 {len(matches)} 个图表")
+            except OSError:
+                pass
+
     # ── 表格样式后处理 ─────────────────────────────────────
 
     def _apply_table_styles(self, docx_path: Path, slug: str) -> None:
@@ -517,3 +623,30 @@ class PandocEngine(ConversionEngine):
             doc.save(str(docx_path))
         except Exception as e:
             log.warning(f"保存 docx 表格样式失败: {e}")
+
+
+def _find_mmdc() -> list[str] | None:
+    """查找可用的 mmdc 命令（npx / 全局安装），返回命令前缀列表"""
+    # 优先使用 npx（自动下载）
+    try:
+        result = subprocess.run(
+            ["npx", "--yes", "@mermaid-js/mermaid-cli", "--version"],
+            capture_output=True, timeout=15,
+        )
+        if result.returncode == 0:
+            return ["npx", "-y", "@mermaid-js/mermaid-cli"]
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # 尝试全局安装的 mmdc
+    try:
+        result = subprocess.run(
+            ["mmdc", "--version"],
+            capture_output=True, timeout=10,
+        )
+        if result.returncode == 0:
+            return ["mmdc"]
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    return None

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class ConversionOptions(BaseModel):
     """转换高级选项"""
 
-    template_slug: str = "minimal"
+    template_slug: str = "academic"
     toc: bool = False
     toc_depth: int = Field(default=3, ge=1, le=6)
     metadata: dict[str, str] = Field(default_factory=dict)

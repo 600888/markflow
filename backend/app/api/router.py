@@ -67,7 +67,7 @@ async def list_templates(mgr: Annotated[TemplateManager, Depends(get_mgr)]) -> T
 async def convert(
     file: Annotated[UploadFile, File()],
     output_format: Annotated[str, Form()] = "docx",
-    template_slug: Annotated[str, Form()] = "minimal",
+    template_slug: Annotated[str, Form()] = "academic",
     toc: Annotated[str, Form()] = "false",
     toc_depth: Annotated[int, Form()] = 3,
     formula_position: Annotated[str, Form()] = "inline",

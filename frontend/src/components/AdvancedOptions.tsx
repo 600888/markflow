@@ -1,4 +1,4 @@
-import { Box, Typography, Collapse, Checkbox, FormControlLabel } from "@mui/material";
+import { Box, Typography, Collapse } from "@mui/material";
 import { KeyboardArrowRight } from "@mui/icons-material";
 import { useStore } from "../stores/useStore";
 
@@ -40,9 +40,9 @@ export function AdvancedOptions() {
             <Box key={row.label} sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
               <Typography sx={{ fontSize: 12, color: "text.secondary", width: 60, flexShrink: 0, fontFamily: "Inter" }}>{row.label}</Typography>
               {row.type === "select" ? (
-                <Box sx={{ flex: 1, position: "relative" }}>
-                  <Box component="select" value={(row as any).value}
-                    onChange={(e: any) => (row as any).onChange(Number(e.target.value))}
+                <Box key={row.label} sx={{ flex: 1, position: "relative" }}>
+                  <Box component="select" value={row.value as number}
+                    onChange={(e) => (row.onChange as (v: number) => void)(Number(e.target.value))}
                     sx={{
                       width: "100%", height: 28, borderRadius: 1.5, border: 1, borderColor: "divider",
                       bgcolor: "background.paper", color: "text.primary", fontSize: 12, pl: 1.25, pr: 3,
@@ -50,14 +50,14 @@ export function AdvancedOptions() {
                       "&:focus": { outline: "none", borderColor: "primary.main" },
                     }}
                   >
-                    {(row as any).values.map((v: number) => <option key={v} value={v}>{v}{row.suffix}</option>)}
+                    {(row.values as number[]).map((v: number) => <option key={v} value={v}>{v}{row.suffix}</option>)}
                   </Box>
                   <Box sx={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "text.secondary", fontSize: 12 }}>▾</Box>
                 </Box>
               ) : (
-                <Box component="input" type="text" value={row.value}
-                  onChange={(e: any) => row.onChange(e.target.value)}
-                  placeholder={row.placeholder}
+                <Box key={row.label} component="input" type="text" value={row.value as string}
+                  onChange={(e) => (row.onChange as (v: string) => void)(e.target.value)}
+                  placeholder={(row as { label: string; type: string; value: string; onChange: (v: string) => void; placeholder?: string }).placeholder}
                   sx={{
                     flex: 1, height: 28, borderRadius: 1.5, border: 1, borderColor: "divider",
                     bgcolor: "background.paper", color: "text.primary", fontSize: 12, px: 1.25,

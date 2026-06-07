@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import type { OutputFormat, ConversionStatus, TemplateInfo } from "../types";
+import { setBaseUrl } from "../services/api";
+import { initializeBackend, checkBackendReady } from "../services/tauri";
 
-const BACKEND_PORT = "62581";
+const DEV_BACKEND_URL = "http://127.0.0.1:62581";
 
 interface AppState {
   // 文件
@@ -53,6 +55,8 @@ interface AppState {
   backendUrl: string;
   backendOnline: boolean;
   setBackendOnline: (v: boolean) => void;
+  /** 初始化后端连接（Tauri 环境调用 invoke，浏览器环境用硬编码地址） */
+  initBackend: () => Promise<void>;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -95,7 +99,23 @@ export const useStore = create<AppState>((set) => ({
   theme: "light",
   toggleTheme: () => set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
 
-  backendUrl: `http://127.0.0.1:${BACKEND_PORT}`,
+  backendUrl: DEV_BACKEND_URL,
   backendOnline: false,
   setBackendOnline: (backendOnline) => set({ backendOnline }),
+
+  initBackend: async () => {
+    try {
+      // 从 Tauri 或默认值获取后端 URL
+      const url = await initializeBackend();
+      setBaseUrl(url);
+
+      // 检查 Tauri 环境下的后端就绪状态
+      const ready = await checkBackendReady();
+      set({ backendUrl: url, backendOnline: ready });
+    } catch {
+      // 浏览器开发模式：使用默认地址
+      setBaseUrl(DEV_BACKEND_URL);
+      set({ backendUrl: DEV_BACKEND_URL });
+    }
+  },
 }));

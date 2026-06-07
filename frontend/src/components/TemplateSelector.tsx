@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Box, Typography, Card, CardActionArea, CardContent, Chip } from "@mui/material";
+import { Box, Typography, Card, CardActionArea, CardContent } from "@mui/material";
 import { useStore } from "../stores/useStore";
 import { fetchTemplates } from "../services/api";
 import type { TemplateInfo } from "../types";

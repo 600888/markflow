@@ -221,7 +221,12 @@ __marimo__/
 .streamlit/secrets.toml
 
 frontend/node_modules
+frontend/dist
 data/
 backend/temp
 temp/
 *.vscode
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/binaries/

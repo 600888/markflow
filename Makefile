@@ -1,4 +1,4 @@
-.PHONY: all backend frontend tauri lint test clean
+.PHONY: all backend frontend tauri lint test clean pack
 
 # ========= 后端 =========
 
@@ -13,6 +13,24 @@ backend-lint:
 
 backend-test:
 	cd backend && pytest --cov=app --cov-report=term-missing
+
+# 使用 PyInstaller 打包后端为独立可执行文件
+backend-pack:
+	cd backend && pyinstaller --onedir \
+		--name pandoc-service \
+		--distpath ../src-tauri/binaries \
+		--workpath build/pyinstaller \
+		--add-data "app;app" \
+		--add-data "config;config" \
+		--hidden-import uvicorn \
+		--hidden-import uvicorn.logging \
+		--hidden-import uvicorn.loops.auto \
+		--hidden-import uvicorn.protocols.http.auto \
+		--hidden-import uvicorn.protocols.websockets.auto \
+		--hidden-import sse_starlette \
+		--collect-all app \
+		app/main.py
+	@echo "后端打包完成: src-tauri/binaries/pandoc-service/"
 
 # ========= 前端 =========
 
@@ -49,6 +67,8 @@ clean:
 	@if exist backend\output rmdir /s /q backend\output
 	@if exist backend\.coverage del /f backend\.coverage
 	@if exist backend\htmlcov rmdir /s /q backend\htmlcov
+	@if exist backend\build rmdir /s /q backend\build
 	@if exist frontend\dist rmdir /s /q frontend\dist
 	@if exist src-tauri\target rmdir /s /q src-tauri\target
+	@if exist src-tauri\binaries rmdir /s /q src-tauri\binaries
 	@for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d" 2>nul

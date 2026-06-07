@@ -2,20 +2,23 @@
   "$schema": "https://raw.githubusercontent.com/nicarq/tauri-apps/main/tooling/cli/schema.json",
   "productName": "MarkFlow",
   "version": "0.1.0",
-  "identifier": "com.markflow.app",
+  "identifier": "com.markflow.desktop",
   "build": {
     "frontendDist": "../frontend/dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "cd ../frontend && npm run dev",
-    "beforeBuildCommand": "cd ../frontend && npm run build"
+    "beforeDevCommand": "npm --prefix frontend run dev",
+    "beforeBuildCommand": "npm --prefix frontend run build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "MarkFlow",
         "width": 1400,
         "height": 900,
-        "resizable": true
+        "resizable": true,
+        "center": true,
+        "decorations": false
       }
     ],
     "security": {

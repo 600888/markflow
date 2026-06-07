@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import argparse
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -17,6 +19,14 @@ from app.core.template_manager import TemplateManager
 from app.services.converter import ConversionService
 from app.utils.config import AppSettings
 from app.utils.logger import Log
+
+
+def _parse_cli_args() -> argparse.Namespace:
+    """解析命令行参数（Tauri sidecar 传入 --port）"""
+    parser = argparse.ArgumentParser(description="MarkFlow Backend")
+    parser.add_argument("--port", type=int, default=None, help="服务端口号")
+    args, _ = parser.parse_known_args()
+    return args
 
 
 @asynccontextmanager
@@ -80,6 +90,12 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
+
+    cli_args = _parse_cli_args()
+
+    # Tauri sidecar 传入的 --port 覆盖配置
+    if cli_args.port is not None:
+        settings.port = cli_args.port
 
     uvicorn.run(
         "app.main:app",

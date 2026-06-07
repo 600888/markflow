@@ -1,16 +1,34 @@
 import ky from "ky";
 import type { HealthCheck, TemplateInfo, TaskStatus } from "../types";
 
-const BASE = "http://127.0.0.1:62581/api/v1";
+let _api: typeof ky | null = null;
+let _baseUrl = "http://127.0.0.1:62581";
 
-const api = ky.create({ prefixUrl: BASE, timeout: 30_000 });
+/** 设置后端基础 URL */
+export function setBaseUrl(url: string): void {
+  _baseUrl = url;
+  _api = ky.create({ prefixUrl: `${url}/api/v1`, timeout: 30_000 });
+}
+
+/** 获取当前 base URL */
+export function getBaseUrl(): string {
+  return _baseUrl;
+}
+
+/** 确保 API 客户端已初始化 */
+function api(): typeof ky {
+  if (!_api) {
+    _api = ky.create({ prefixUrl: `${_baseUrl}/api/v1`, timeout: 30_000 });
+  }
+  return _api;
+}
 
 export async function checkHealth(): Promise<HealthCheck> {
-  return api.get("health").json();
+  return api().get("health").json();
 }
 
 export async function fetchTemplates(): Promise<{ templates: TemplateInfo[] }> {
-  return api.get("templates").json();
+  return api().get("templates").json();
 }
 
 export async function submitConvert(
@@ -36,7 +54,7 @@ export async function submitConvert(
   if (Object.keys(metadata).length > 0) {
     form.append("metadata", JSON.stringify(metadata));
   }
-  return api.post("convert", { body: form }).json();
+  return api().post("convert", { body: form }).json();
 }
 
 /** 直接用 Markdown 文本内容提交转换（无需上传文件） */
@@ -57,7 +75,7 @@ export async function submitConvertFromContent(
 }
 
 export async function fetchTaskStatus(taskId: string): Promise<TaskStatus> {
-  return api.get(`tasks/${taskId}`).json();
+  return api().get(`tasks/${taskId}`).json();
 }
 
 export function streamProgress(
@@ -67,7 +85,7 @@ export function streamProgress(
   onError: (err: string) => void,
 ): EventSource {
   let hadProgress = false;
-  const es = new EventSource(`${BASE}/tasks/${taskId}/progress`);
+  const es = new EventSource(`${_baseUrl}/api/v1/tasks/${taskId}/progress`);
   es.addEventListener("progress", (e) => {
     hadProgress = true;
     const data = JSON.parse(e.data) as { progress: number; status: string };
@@ -79,7 +97,6 @@ export function streamProgress(
   });
   es.addEventListener("error", () => {
     es.close();
-    // 只有在没收到过 progress 时才报错
     if (!hadProgress) {
       onError("SSE 连接错误");
     }
@@ -88,5 +105,5 @@ export function streamProgress(
 }
 
 export function getDownloadUrl(taskId: string): string {
-  return `${BASE}/tasks/${taskId}/download`;
+  return `${_baseUrl}/api/v1/tasks/${taskId}/download`;
 }
