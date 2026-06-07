@@ -11,7 +11,7 @@ repos:
     hooks:
       - id: prettier
         files: ^frontend/src/
-        types_or: [javascript, jsx, typescript, tsx, css, json]
+        types_or: [javascript, jsx, ts, tsx, css, json]
 
   - repo: local
     hooks:
