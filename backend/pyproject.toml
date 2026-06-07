@@ -70,6 +70,17 @@ per-file-ignores."app/api/*.py" = [
 per-file-ignores."app/services/converter.py" = [
     "F401", "TRY300",
 ]
+per-file-ignores."app/core/engine.py" = [
+    "N806", "SLF001", "C901", "PLR0912", "FBT001", "D301",
+    "S603", "S607", "BLE001", "ANN202", "SIM105", "PLW1510",
+]
+per-file-ignores."app/core/template_manager.py" = [
+    "C901",
+]
+per-file-ignores."scripts/generate_reference.py" = [
+    "INP001", "D103", "D205", "D213", "PLR2004", "C901",
+    "PLR0912", "PLR0915", "N806", "T201",
+]
 
 [tool.ruff.format]
 quote-style = "double"

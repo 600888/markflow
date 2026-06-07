@@ -1,4 +1,5 @@
-"""从 template.yaml 自动生成 reference.docx
+"""
+从 template.yaml 自动生成 reference.docx
 用法: python scripts/generate_reference.py [slug...]
 示例: python scripts/generate_reference.py academic report
       不带参数则生成全部模版
@@ -59,7 +60,7 @@ STYLE_MAP = {
 BODY_TEXT_STYLE = "Body Text"
 
 
-def parse_size(raw: str | float | int) -> float | None:
+def parse_size(raw: str | float) -> float | None:
     """解析字号：中文号数 / pt数字 / 字符串数值"""
     if isinstance(raw, (int, float)):
         return float(raw)

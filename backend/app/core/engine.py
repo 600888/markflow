@@ -40,7 +40,7 @@ ALIGN_MAP: dict[str, WD_ALIGN_PARAGRAPH] = {
 }
 
 
-def _parse_size(raw: str | float | int) -> float | None:
+def _parse_size(raw: str | float) -> float | None:
     if isinstance(raw, (int, float)):
         return float(raw)
     s = str(raw).strip()
@@ -177,9 +177,8 @@ def _apply_cell_text_format(cell_or_tc: object, font_name: str | None = None,
                 if bold:
                     if existing_b is None:
                         rPr.append(OxmlElement("w:b"))
-                else:
-                    if existing_b is not None:
-                        rPr.remove(existing_b)
+                elif existing_b is not None:
+                    rPr.remove(existing_b)
 
 
 def _apply_three_line_border(table: object, tc: dict) -> None:
@@ -381,7 +380,8 @@ class PandocEngine(ConversionEngine):
 
     @staticmethod
     def _normalize_math_in_file(path: Path) -> None:
-        """将 Markdown 中 `[ ... ]` 显示公式转为 Pandoc 标准语法 `$$ ... $$`
+        """
+        将 Markdown 中 `[ ... ]` 显示公式转为 Pandoc 标准语法 `$$ ... $$`
 
         Pandoc 只识别 $$...$$ 和 \\[...\\] 作为显示公式，
         许多作者习惯用 [ ... ]，需要提前转换。
@@ -403,8 +403,8 @@ class PandocEngine(ConversionEngine):
         # ── 多行显示公式 ──
         # 匹配：独占一行的 [ ，到独占一行的 ] ，中间为公式内容
         new_text = re.sub(
-            r'^[ \t]*\[[ \t]*$\n(.*?)^[ \t]*\][ \t]*$',
-            lambda m: '$$\n' + m.group(1) + '$$',
+            r"^[ \t]*\[[ \t]*$\n(.*?)^[ \t]*\][ \t]*$",
+            lambda m: "$$\n" + m.group(1) + "$$",
             new_text,
             flags=re.MULTILINE | re.DOTALL,
         )
@@ -412,8 +412,8 @@ class PandocEngine(ConversionEngine):
         # ── 单行显示公式 ──
         # 匹配：[ math content ] 整个在一行
         new_text = re.sub(
-            r'^[ \t]*\[[ \t]*(.+?(?:[_\\{}]|[a-z]+\^|sum|int|lim|prod|frac|sqrt|sin|cos|log).+?)[ \t]*\][ \t]*$',
-            r'$$ \1 $$',
+            r"^[ \t]*\[[ \t]*(.+?(?:[_\\{}]|[a-z]+\^|sum|int|lim|prod|frac|sqrt|sin|cos|log).+?)[ \t]*\][ \t]*$",  # noqa: E501
+            r"$$ \1 $$",
             new_text,
             flags=re.MULTILINE,
         )
@@ -429,7 +429,7 @@ class PandocEngine(ConversionEngine):
 
     @staticmethod
     def _mmdc_config_path() -> Path:
-        """mmdc 无头浏览器配置文件路径"""
+        """Mmdc 无头浏览器配置文件路径"""
         cfg = Path(__file__).resolve().parent.parent.parent / "config" / "mmdc_puppeteer.json"
         if not cfg.exists():
             cfg.parent.mkdir(parents=True, exist_ok=True)
@@ -443,7 +443,8 @@ class PandocEngine(ConversionEngine):
 
     @staticmethod
     def _preprocess_mermaid(input_path: Path) -> None:
-        """将 Markdown 中的 ```mermaid 代码块渲染为图片
+        """
+        将 Markdown 中的 ```mermaid 代码块渲染为图片
 
         流程：
         1. 扫描文件中的 ```mermaid ... ``` 代码块
@@ -461,7 +462,7 @@ class PandocEngine(ConversionEngine):
 
         # 匹配 ```mermaid ... ``` 代码块（支持 mermaid / mermaid-example 等变体）
         pattern = re.compile(
-            r'```mermaid\w*[ \t]*\n(.*?)```',
+            r"```mermaid\w*[ \t]*\n(.*?)```",
             re.DOTALL,
         )
 
@@ -557,7 +558,8 @@ class PandocEngine(ConversionEngine):
 
         # 表头样式
         hdr_font = str(tc.get("header_font", "")).strip() or font_name
-        hdr_size_pt = _parse_size(tc.get("header_size", "")) if tc.get("header_size") else font_size_pt
+        header_size = tc.get("header_size")
+        hdr_size_pt = _parse_size(header_size) if header_size else font_size_pt
         hdr_bold = tc.get("header_bold", False)
         hdr_align = ALIGN_MAP.get(str(tc.get("header_alignment", "")).strip(), align)
         hdr_bg = str(tc.get("header_background", "")).strip() or None

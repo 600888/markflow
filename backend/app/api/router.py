@@ -99,7 +99,10 @@ async def convert(
         metadata=_parse_metadata(metadata),
     )
     extra_args = mgr.build_extra_args(options)
-    log.info(f"模版={template_slug}, toc={toc}, formula={formula_position}, keep_sep={keep_separator}, metadata={options.metadata}, args={extra_args}")
+    log.info(
+        f"模版={template_slug}, toc={toc}, formula={formula_position}, "
+        f"keep_sep={keep_separator}, metadata={options.metadata}, args={extra_args}"
+    )
 
     # 提交任务
     filename = file.filename or "input.md"

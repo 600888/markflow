@@ -56,8 +56,8 @@ export function ConvertSection() {
         () => { setProgress("completed", 1); esRef.current = null; },
         (err) => { setError(err); setProgress("failed", 0); esRef.current = null; toast("转换失败", "error"); },
       );
-    } catch (e: any) {
-      setError(e.message ?? "转换请求失败");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "转换请求失败");
       setProgress("failed", 0);
     }
   };
@@ -93,7 +93,7 @@ export function ConvertSection() {
       const m: Record<string, string> = { docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", pdf: "application/pdf", html: "text/html", epub: "application/epub+zip" };
       setDownloadProgress(100);
 
-      const h = await (window as any).showSaveFilePicker({
+      const h = await (window as Window & typeof globalThis).showSaveFilePicker({
         suggestedName: `output.${ext}`,
         types: [{ description: format.toUpperCase(), accept: { [m[format] ?? "application/octet-stream"]: [`.${ext}`] } }],
       });
@@ -101,8 +101,8 @@ export function ConvertSection() {
       await w.write(blob);
       await w.close();
       toast("文件保存成功", "success");
-    } catch (e: any) {
-      if (e.name === "AbortError") return;
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setError("下载文件失败");
     } finally {
       setTimeout(() => setDownloadProgress(null), 800);
