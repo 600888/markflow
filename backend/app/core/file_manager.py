@@ -33,7 +33,7 @@ class TempFileManager(FileManager):
         async with aiofiles.open(file_path, "wb") as f:
             await f.write(content)
 
-        log.debug("文件已保存: %s (%d bytes)", file_path, len(content))
+        log.debug(f"文件已保存: {file_path} ({len(content)} bytes)")
         return file_path
 
     async def cleanup(self, path: Path) -> None:
@@ -41,9 +41,9 @@ class TempFileManager(FileManager):
         try:
             if path.exists():
                 path.unlink()
-                log.debug("文件已清理: %s", path)
+                log.debug(f"文件已清理: {path}")
         except OSError as e:
-            log.warning("清理文件失败: %s - %s", path, e)
+            log.warning(f"清理文件失败: {path} - {e}")
 
     def get_output_path(self, base_name: str, fmt: OutputFormat) -> Path:
         """生成输出路径"""

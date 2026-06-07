@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarkFlow - UI 设计稿</title>
+<style>
+/* ============================================================
+   MarkFlow UI 设计稿 — 高保真原型
+   基于开发计划 Phase 6+7 + 模版系统设计
+   ============================================================ */
+
+:root {
+  --bg: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-hover: #e9ecef;
+  --bg-drop: #eaf4ff;
+  --border: #dee2e6;
+  --text: #212529;
+  --text-secondary: #6c757d;
+  --text-muted: #adb5bd;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --success: #16a34a;
+  --success-bg: #f0fdf4;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.12);
+}
+
+[data-theme="dark"] {
+  --bg: #1a1b1e;
+  --bg-secondary: #25262b;
+  --bg-hover: #2c2e33;
+  --bg-drop: #1e3a5f;
+  --border: #373a40;
+  --text: #c1c2c5;
+  --text-secondary: #909296;
+  --text-muted: #5c5f66;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-light: #1e3a5f;
+  --success: #22c55e;
+  --success-bg: #0d3320;
+  --danger: #f87171;
+  --danger-bg: #3b1515;
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #e5e7eb;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  padding: 24px;
+}
+
+/* ---- 桌面窗口模拟 ---- */
+.app-window {
+  width: 960px;
+  height: 680px;
+  max-width: 100%;
+  margin: auto;
+  background: var(--bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---- 标题栏 ---- */
+.titlebar {
+  height: 40px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+  user-select: none;
+}
+.titlebar .logo {
+  width: 18px; height: 18px;
+  background: var(--primary);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 10px; font-weight: bold;
+}
+.titlebar .title { font-size: 12px; color: var(--text-secondary); }
+.titlebar .spacer { flex:1; }
+.titlebar .theme-btn {
+  width: 28px; height: 28px;
+  border: none; border-radius: 6px;
+  background: transparent; color: var(--text-secondary);
+  cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.titlebar .theme-btn:hover { background: var(--bg-hover); }
+
+/* ---- 主体内容 ---- */
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ---- 左侧面板 ---- */
+.left-panel {
+  width: 380px;
+  overflow-y: auto;
+  padding: 24px 24px 16px;
+  border-right: 1px solid var(--border);
+}
+.left-panel::-webkit-scrollbar { width: 4px; }
+.left-panel::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
+
+/* ---- 右面板 (预览) ---- */
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+}
+
+/* ---- 区域标题 ---- */
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-title::before {
+  content: '';
+  width: 3px; height: 14px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+.section:not(:last-child) { margin-bottom: 22px; }
+
+/* ---- 文件拖拽区 ---- */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--bg);
+}
+.dropzone:hover, .dropzone.active {
+  border-color: var(--primary);
+  background: var(--bg-drop);
+}
+.dropzone .icon { font-size: 28px; margin-bottom: 8px; }
+.dropzone .label { font-size: 13px; color: var(--text); font-weight: 500; }
+.dropzone .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* ---- 已选文件 ---- */
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--primary);
+  margin-top: 10px;
+}
+.file-chip .remove {
+  cursor: pointer;
+  font-size: 14px;
+  opacity: .6;
+  transition: opacity .15s;
+}
+.file-chip .remove:hover { opacity: 1; }
+
+/* ---- 格式选择器 (radio 卡片) ---- */
+.format-grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.format-card {
+  flex: 1; min-width: 56px;
+  padding: 10px 6px;
+  text-align: center;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--bg);
+}
+.format-card:hover { border-color: var(--primary); color: var(--primary); }
+.format-card.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ---- 模版选择器 ---- */
+.template-grid {
+  display: flex;
+  gap: 8px;
+}
+.template-card {
+  flex: 1;
+  padding: 12px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--bg);
+}
+.template-card:hover { border-color: var(--primary); }
+.template-card.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+.template-card .tmpl-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.template-card .tmpl-desc { font-size: 10px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+.template-card .tmpl-badge {
+  display: inline-block;
+  padding: 2px 6px; border-radius: 10px;
+  font-size: 9px; font-weight: 600;
+  margin-top: 6px;
+}
+
+/* ---- 高级选项 ---- */
+.advanced-section { margin-bottom: 0; }
+.advanced-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-secondary);
+  cursor: pointer; user-select: none;
+  padding: 6px 0;
+}
+.advanced-toggle .arrow {
+  font-size: 10px; transition: transform .2s;
+}
+.advanced-toggle.open .arrow { transform: rotate(90deg); }
+.advanced-content {
+  display: none;
+  padding: 12px 0 0;
+}
+.advanced-content.show { display: block; }
+
+.option-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.option-row label { width: 60px; color: var(--text-secondary); flex-shrink: 0; }
+.option-row input[type="text"],
+.option-row select {
+  flex: 1; padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+}
+.option-row input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--primary);
+}
+.checkbox-row { cursor: pointer; }
+.checkbox-row label { cursor: pointer; width: auto; }
+
+/* ---- 转换按钮 ---- */
+.convert-btn {
+  width: 100%; padding: 10px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  margin-top: 8px;
+}
+.convert-btn:hover { background: var(--primary-hover); }
+.convert-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ---- 进度条区域 ---- */
+.progress-area {
+  padding: 8px 0;
+  margin-top: 4px;
+}
+.progress-bar-bg {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  width: 65%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width .3s;
+}
+.progress-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+.progress-text .status { color: var(--primary); font-weight: 500; }
+
+/* ---- 下载按钮 ---- */
+.download-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: var(--success);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  margin-top: 8px;
+}
+.download-btn:hover { background: #15803d; }
+
+/* ---- 错误提示 ---- */
+.error-msg {
+  padding: 10px 14px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: 8px;
+}
+
+/* ---- 右侧预览面板 ---- */
+.preview-header {
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  gap: 16px;
+}
+.preview-header .tab {
+  cursor: pointer;
+  padding: 2px 0;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.preview-header .tab.active {
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+.preview-body {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text);
+}
+.preview-body::-webkit-scrollbar { width: 4px; }
+.preview-body::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
+
+/* ---- 模拟 Markdown 渲染 ---- */
+.preview-body h1 {
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: 20px; font-weight: 700;
+  margin-bottom: 16px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.preview-body h2 { font-size: 16px; font-weight: 600; margin: 20px 0 10px; color: var(--text); }
+.preview-body p { margin-bottom: 10px; }
+.preview-body .placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 80px 20px;
+}
+.preview-body .placeholder .big-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* ---- 底部状态栏 ---- */
+.statusbar {
+  height: 28px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  gap: 16px;
+  background: var(--bg-secondary);
+}
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+}
+</style>
+</head>
+<body data-theme="light">
+
+<!-- ============== 桌面窗口 ============== -->
+<div class="app-window">
+
+  <!-- 标题栏 -->
+  <div class="titlebar">
+    <div class="logo">M</div>
+    <span class="title">MarkFlow v0.1</span>
+    <div class="spacer"></div>
+    <button class="theme-btn" onclick="toggleTheme()" title="切换主题">☀️</button>
+  </div>
+
+  <!-- 主体 -->
+  <div class="main-content">
+
+    <!-- ===== 左侧：操作面板 ===== -->
+    <div class="left-panel">
+
+      <!-- 1. 文件上传 -->
+      <div class="section">
+        <div class="section-title">📄 文件上传</div>
+        <div class="dropzone" id="dropzone">
+          <div class="icon">📂</div>
+          <div class="label">点击或拖拽 Markdown 文件</div>
+          <div class="hint">支持 .md 格式，最大 50MB</div>
+        </div>
+        <div class="file-chip" id="fileChip" style="display:none">
+          📝 <span id="fileName"></span>
+          <span class="remove" onclick="clearFile()">✕</span>
+        </div>
+      </div>
+
+      <!-- 2. 输出格式 -->
+      <div class="section">
+        <div class="section-title">📦 输出格式</div>
+        <div class="format-grid" id="formatGrid">
+          <div class="format-card selected" data-format="docx">DOCX</div>
+          <div class="format-card" data-format="pdf">PDF</div>
+          <div class="format-card" data-format="html">HTML</div>
+          <div class="format-card" data-format="epub">EPUB</div>
+          <div class="format-card" data-format="latex">LaTeX</div>
+        </div>
+      </div>
+
+      <!-- 3. 文档模版 -->
+      <div class="section">
+        <div class="section-title">🎨 文档模版</div>
+        <div class="template-grid" id="templateGrid">
+          <div class="template-card" data-template="academic">
+            <div class="tmpl-name">📝 学术论文</div>
+            <div class="tmpl-desc">黑体标题 · 宋体正文<br>1.5 倍行距 · 首行缩进</div>
+            <div class="tmpl-badge" style="background:#eff6ff;color:#2563eb">推荐</div>
+          </div>
+          <div class="template-card selected" data-template="minimal">
+            <div class="tmpl-name">✨ 简洁模版</div>
+            <div class="tmpl-desc">Pandoc 默认<br>轻量 · 快速</div>
+            <div class="tmpl-badge" style="background:#f0fdf4;color:#16a34a">默认</div>
+          </div>
+          <div class="template-card" data-template="report">
+            <div class="tmpl-name">📊 报告模版</div>
+            <div class="tmpl-desc">微软雅黑 · 蓝色主题<br>1.25 倍行距</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 高级选项 -->
+      <div class="section advanced-section">
+        <div class="advanced-toggle" id="advToggle" onclick="toggleAdvanced()">
+          <span class="arrow">▶</span>
+          <span>⚙ 高级选项</span>
+        </div>
+        <div class="advanced-content" id="advContent">
+          <div class="option-row checkbox-row">
+            <input type="checkbox" id="toc" onchange="syncOptions()">
+            <label for="toc">生成目录 (TOC)</label>
+          </div>
+          <div class="option-row">
+            <label>目录深度</label>
+            <select id="tocDepth">
+              <option value="1">1 级</option>
+              <option value="2">2 级</option>
+              <option value="3" selected>3 级</option>
+              <option value="4">4 级</option>
+              <option value="5">5 级</option>
+              <option value="6">6 级</option>
+            </select>
+          </div>
+          <div class="option-row">
+            <label>文档标题</label>
+            <input type="text" id="metaTitle" placeholder="自动从 Markdown 获取">
+          </div>
+          <div class="option-row">
+            <label>作者</label>
+            <input type="text" id="metaAuthor" placeholder="你的名字">
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. 转换按钮 -->
+      <button class="convert-btn" onclick="simulateConvert()">
+        🔄 开始转换
+      </button>
+
+      <!-- 6. 进度 + 下载 (动态显示) -->
+      <div id="progressArea" style="display:none"></div>
+    </div>
+
+    <!-- ===== 右侧：预览面板 ===== -->
+    <div class="right-panel">
+      <div class="preview-header">
+        <span class="tab active" id="tabPreview" onclick="switchTab('preview')">📖 Markdown 预览</span>
+        <span class="tab" id="tabOutput" onclick="switchTab('output')">📤 转换结果</span>
+      </div>
+
+      <div class="preview-body" id="previewBody">
+        <div class="placeholder" id="placeholder">
+          <div class="big-icon">📋</div>
+          <p>上传 Markdown 文件后<br>在此处预览渲染效果</p>
+        </div>
+
+        <div id="previewContent" style="display:none">
+          <h1>示例：技术选型文档</h1>
+          <h2>一、整体架构</h2>
+          <p>本项目采用 <strong>React + FastAPI + Tauri</strong> 三层架构，Tauri 负责桌面外壳和进程管理，Python FastAPI 承载 Pandoc 转换逻辑，React 负责 UI 渲染。</p>
+          <h2>二、技术栈</h2>
+          <p>后端使用 <code>FastAPI</code> + <code>Pandoc</code>，转换引擎通过 <code>pypandoc</code> 库调用 Pandoc 命令行工具，支持 DOCX / PDF / HTML / EPUB 等多种格式输出。</p>
+          <h2>三、模版系统</h2>
+          <p>内置学术论文、报告、简洁三种模版，通过 <code>--reference-doc</code> 机制控制字体、行距、缩进等样式。支持用户自定义模版上传。</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 底部状态栏 -->
+  <div class="statusbar">
+    <span class="status-dot"></span>
+    <span>后端 127.0.0.1:62581</span>
+    <div class="spacer"></div>
+    <span>Pandoc 3.9</span>
+    <span>|</span>
+    <span>MarkFlow v0.1</span>
+  </div>
+</div>
+
+<!-- ============== 交互 JS ============== -->
+<script>
+// ---- 主题切换 ----
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.querySelector('.theme-btn');
+  const next = body.dataset.theme === 'dark' ? 'light' : 'dark';
+  body.dataset.theme = next;
+  btn.textContent = next === 'dark' ? '🌙' : '☀️';
+}
+
+// ---- 格式选择 ----
+document.querySelectorAll('.format-card').forEach(card => {
+  card.addEventListener('click', function() {
+    document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+  });
+});
+
+// ---- 模版选择 ----
+document.querySelectorAll('.template-card').forEach(card => {
+  card.addEventListener('click', function() {
+    document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+  });
+});
+
+// ---- 文件选择 ----
+const dropzone = document.getElementById('dropzone');
+const fileChip = document.getElementById('fileChip');
+const fileName = document.getElementById('fileName');
+
+dropzone.addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.md,.markdown';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (file) showFile(file.name);
+  };
+  input.click();
+});
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('active'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('active'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('active');
+  const file = e.dataTransfer.files[0];
+  if (file) showFile(file.name);
+});
+
+function showFile(name) {
+  fileName.textContent = name;
+  fileChip.style.display = 'inline-flex';
+  // 模拟预览
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('previewContent').style.display = 'block';
+}
+
+function clearFile() {
+  fileChip.style.display = 'none';
+  fileName.textContent = '';
+  document.getElementById('placeholder').style.display = 'block';
+  document.getElementById('previewContent').style.display = 'none';
+  document.getElementById('progressArea').style.display = 'none';
+  document.getElementById('progressArea').innerHTML = '';
+}
+
+// ---- 高级选项 ----
+function toggleAdvanced() {
+  const toggle = document.getElementById('advToggle');
+  const content = document.getElementById('advContent');
+  toggle.classList.toggle('open');
+  content.classList.toggle('show');
+}
+
+function syncOptions() {}
+
+// ---- Tab 切换 ----
+function switchTab(which) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab' + which.charAt(0).toUpperCase() + which.slice(1)).classList.add('active');
+}
+
+// ---- 模拟转换流程 ----
+async function simulateConvert() {
+  const area = document.getElementById('progressArea');
+  area.style.display = 'block';
+  const steps = [
+    { pct: 0, text: '准备转换...', status: 'pending' },
+    { pct: 15, text: '应用模版样式...', status: 'running' },
+    { pct: 40, text: '正在调用 Pandoc 引擎...', status: 'running' },
+    { pct: 75, text: '生成文档...', status: 'running' },
+    { pct: 100, text: '转换完成 ✓', status: 'completed' },
+    { pct: 100, text: '下载文档', status: 'completed' },
+  ];
+
+  for (const step of steps) {
+    area.innerHTML = renderProgress(step);
+    await new Promise(r => setTimeout(r, 600));
+  }
+}
+
+function renderProgress(s) {
+  let html = '<div class="progress-area">';
+  html += `<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${s.pct}%"></div></div>`;
+  html += `<div class="progress-text"><span class="status">${s.text}</span><span>${s.pct}%</span></div>`;
+  if (s.status === 'completed') {
+    html += `<button class="download-btn" onclick="alert('下载文档')">⬇ 下载 DOCX</button>`;
+  }
+  html += '</div>';
+  return html;
+}
+</script>
+
+</body>
+</html>

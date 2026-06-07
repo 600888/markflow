@@ -1,0 +1,1301 @@
+{
+  "version": "2.13",
+  "children": [
+    {
+      "type": "frame",
+      "id": "mainWindow",
+      "x": 100,
+      "y": 100,
+      "name": "MarkFlow - Main",
+      "clip": true,
+      "width": 960,
+      "height": 680,
+      "fill": "$surface",
+      "cornerRadius": 8,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "titlebar",
+          "name": "Titlebar",
+          "width": "fill_container",
+          "height": 40,
+          "fill": "$surfaceSecondary",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": 4,
+              "id": "logo",
+              "name": "Logo",
+              "fill": "$accent",
+              "width": 20,
+              "height": 20
+            },
+            {
+              "type": "text",
+              "id": "logoText",
+              "name": "LogoText",
+              "fill": "#FFFFFF",
+              "content": "M",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "appTitle",
+              "name": "AppTitle",
+              "fill": "$foregroundMuted",
+              "content": "MarkFlow v0.1",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "rectangle",
+              "id": "titlebarSpacer",
+              "name": "TitlebarSpacer",
+              "opacity": 0,
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "themeBtn",
+              "name": "ThemeBtn",
+              "width": 28,
+              "height": 28,
+              "cornerRadius": 4,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "themeIcon",
+                  "name": "ThemeIcon",
+                  "fill": "$foregroundMuted",
+                  "content": "☀",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mainContent",
+          "name": "MainContent",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "leftPanel",
+              "name": "LeftPanel",
+              "width": 380,
+              "height": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "vertical",
+              "gap": 24,
+              "padding": [
+                24,
+                20
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "sectionUpload",
+                  "name": "SectionUpload",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sectionUploadTitle",
+                      "name": "SectionUploadTitle",
+                      "fill": "$foregroundMuted",
+                      "content": "📄 文件上传",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.5
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dropzone",
+                      "name": "Dropzone",
+                      "width": "fill_container",
+                      "height": 112,
+                      "fill": "$surfaceCard",
+                      "cornerRadius": 8,
+                      "stroke": "$border",
+                      "strokeWidth": 2,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "dropzoneIcon",
+                          "name": "DropzoneIcon",
+                          "fill": "$foregroundMuted",
+                          "content": "📂",
+                          "fontFamily": "Inter",
+                          "fontSize": 28,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "dropzoneLabel",
+                          "name": "DropzoneLabel",
+                          "fill": "$foreground",
+                          "content": "点击或拖拽 Markdown 文件",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "dropzoneHint",
+                          "name": "DropzoneHint",
+                          "fill": "$foregroundMuted",
+                          "content": "支持 .md 格式，最大 50MB",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fileChip",
+                      "name": "FileChip",
+                      "fill": "#F3E8FF",
+                      "cornerRadius": 20,
+                      "stroke": "$accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        6,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "chipIcon",
+                          "name": "ChipIcon",
+                          "fill": "$accent",
+                          "content": "📝",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "chipFilename",
+                          "name": "ChipFilename",
+                          "fill": "$accent",
+                          "content": "development_plan.md",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "chipRemove",
+                          "name": "ChipRemove",
+                          "fill": "$accent",
+                          "content": "✕",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sectionFormat",
+                  "name": "SectionFormat",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sectionFormatTitle",
+                      "name": "SectionFormatTitle",
+                      "fill": "$foregroundMuted",
+                      "content": "📦 输出格式",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.5
+                    },
+                    {
+                      "type": "frame",
+                      "id": "formatCards",
+                      "name": "FormatCards",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "formatDOCX",
+                          "name": "FormatDOCX",
+                          "height": 36,
+                          "fill": "#F3E8FF",
+                          "cornerRadius": 6,
+                          "stroke": "$accent",
+                          "strokeWidth": 2,
+                          "padding": [
+                            10,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "formatDOCXLabel",
+                              "name": "FormatDOCXLabel",
+                              "fill": "$accent",
+                              "content": "DOCX",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "formatPDF",
+                          "name": "FormatPDF",
+                          "height": 36,
+                          "fill": "$surfaceCard",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            10,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "formatPDFLabel",
+                              "name": "FormatPDFLabel",
+                              "fill": "$foregroundMuted",
+                              "content": "PDF",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "formatHTML",
+                          "name": "FormatHTML",
+                          "height": 36,
+                          "fill": "$surfaceCard",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            10,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "formatHTMLLabel",
+                              "name": "FormatHTMLLabel",
+                              "fill": "$foregroundMuted",
+                              "content": "HTML",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "formatEPUB",
+                          "name": "FormatEPUB",
+                          "height": 36,
+                          "fill": "$surfaceCard",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            10,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "formatEPUBLabel",
+                              "name": "FormatEPUBLabel",
+                              "fill": "$foregroundMuted",
+                              "content": "EPUB",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "formatLaTeX",
+                          "name": "FormatLaTeX",
+                          "height": 36,
+                          "fill": "$surfaceCard",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            10,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "formatLaTeXLabel",
+                              "name": "FormatLaTeXLabel",
+                              "fill": "$foregroundMuted",
+                              "content": "LaTeX",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sectionTemplate",
+                  "name": "SectionTemplate",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sectionTemplateTitle",
+                      "name": "SectionTemplateTitle",
+                      "fill": "$foregroundMuted",
+                      "content": "🎨 文档模版",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.5
+                    },
+                    {
+                      "type": "frame",
+                      "id": "templateCards",
+                      "name": "TemplateCards",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "templateAcademic",
+                          "name": "TemplateAcademic",
+                          "height": 100,
+                          "fill": "$surfaceCard",
+                          "cornerRadius": 8,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 4,
+                          "padding": [
+                            12,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tmplAcademicName",
+                              "name": "TmplAcademicName",
+                              "fill": "$foreground",
+                              "content": "📝 学术论文",
+                              "fontFamily": "Funnel Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tmplAcademicDesc",
+                              "name": "TmplAcademicDesc",
+                              "fill": "$foregroundMuted",
+                              "content": "黑体标题·宋体正文\n1.5倍行距·首行缩进",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tmplAcademicBadge",
+                              "name": "TmplAcademicBadge",
+                              "fill": "#F3E8FF",
+                              "cornerRadius": 10,
+                              "padding": [
+                                2,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tmplAcademicBadgeText",
+                                  "name": "TmplAcademicBadgeText",
+                                  "fill": "$accent",
+                                  "content": "推荐",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 9,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "templateMinimal",
+                          "name": "TemplateMinimal",
+                          "height": 100,
+                          "fill": "#F3E8FF",
+                          "cornerRadius": 8,
+                          "stroke": "$accent",
+                          "strokeWidth": 2,
+                          "layout": "vertical",
+                          "gap": 4,
+                          "padding": [
+                            12,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tmplMinimalName",
+                              "name": "TmplMinimalName",
+                              "fill": "$foreground",
+                              "content": "✨ 简洁模版",
+                              "fontFamily": "Funnel Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tmplMinimalDesc",
+                              "name": "TmplMinimalDesc",
+                              "fill": "$foregroundMuted",
+                              "content": "Pandoc默认\n轻量·快速",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tmplMinimalBadge",
+                              "name": "TmplMinimalBadge",
+                              "fill": "#DCFCE7",
+                              "cornerRadius": 10,
+                              "padding": [
+                                2,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tmplMinimalBadgeText",
+                                  "name": "TmplMinimalBadgeText",
+                                  "fill": "#22C55E",
+                                  "content": "默认",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 9,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "templateReport",
+                          "name": "TemplateReport",
+                          "height": 100,
+                          "fill": "$surfaceCard",
+                          "cornerRadius": 8,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 4,
+                          "padding": [
+                            12,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tmplReportName",
+                              "name": "TmplReportName",
+                              "fill": "$foreground",
+                              "content": "📊 报告模版",
+                              "fontFamily": "Funnel Sans",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tmplReportDesc",
+                              "name": "TmplReportDesc",
+                              "fill": "$foregroundMuted",
+                              "content": "微软雅黑·蓝色主题\n1.25倍行距",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sectionAdvanced",
+                  "name": "SectionAdvanced",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "advancedToggle",
+                      "name": "AdvancedToggle",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "advancedArrow",
+                          "name": "AdvancedArrow",
+                          "fill": "$foregroundMuted",
+                          "content": "▶",
+                          "fontFamily": "Inter",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "advancedLabel",
+                          "name": "AdvancedLabel",
+                          "fill": "$foregroundMuted",
+                          "content": "⚙ 高级选项",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "advancedContent",
+                      "name": "AdvancedContent",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "optionTOC",
+                          "name": "OptionTOC",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 3,
+                              "id": "checkboxTOC",
+                              "name": "CheckboxTOC",
+                              "fill": "$surfaceCard",
+                              "width": 16,
+                              "height": 16,
+                              "stroke": "$border",
+                              "strokeWidth": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "labelTOC",
+                              "name": "LabelTOC",
+                              "fill": "$foreground",
+                              "content": "生成目录 (TOC)",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "optionTOCDepth",
+                          "name": "OptionTOCDepth",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "labelTOCDepth",
+                              "name": "LabelTOCDepth",
+                              "fill": "$foregroundMuted",
+                              "content": "目录深度",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "selectDepth",
+                              "name": "SelectDepth",
+                              "width": "fill_container",
+                              "height": 28,
+                              "fill": "$surfaceCard",
+                              "cornerRadius": 6,
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "selectDepthValue",
+                                  "name": "SelectDepthValue",
+                                  "fill": "$foreground",
+                                  "content": "3 级",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "selectDepthArrow",
+                                  "name": "SelectDepthArrow",
+                                  "fill": "$foregroundMuted",
+                                  "content": "▾",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "optionTitle",
+                          "name": "OptionTitle",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "labelTitle",
+                              "name": "LabelTitle",
+                              "fill": "$foregroundMuted",
+                              "content": "文档标题",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "inputTitle",
+                              "name": "InputTitle",
+                              "width": "fill_container",
+                              "height": 28,
+                              "fill": "$surfaceCard",
+                              "cornerRadius": 6,
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "inputTitlePlaceholder",
+                                  "name": "InputTitlePlaceholder",
+                                  "fill": "$foregroundMuted",
+                                  "content": "自动从 Markdown 获取",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "optionAuthor",
+                          "name": "OptionAuthor",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "labelAuthor",
+                              "name": "LabelAuthor",
+                              "fill": "$foregroundMuted",
+                              "content": "作者",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "inputAuthor",
+                              "name": "InputAuthor",
+                              "width": "fill_container",
+                              "height": 28,
+                              "fill": "$surfaceCard",
+                              "cornerRadius": 6,
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "inputAuthorPlaceholder",
+                                  "name": "InputAuthorPlaceholder",
+                                  "fill": "$foregroundMuted",
+                                  "content": "你的名字",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sectionActions",
+                  "name": "SectionActions",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "convertBtn",
+                      "name": "ConvertBtn",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$accent",
+                      "cornerRadius": 8,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "convertBtnText",
+                          "name": "ConvertBtnText",
+                          "fill": "#FFFFFF",
+                          "content": "🔄 开始转换",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "progressArea",
+                      "name": "ProgressArea",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 3,
+                          "id": "progressBarBg",
+                          "name": "ProgressBarBg",
+                          "fill": "$border",
+                          "width": "fill_container",
+                          "height": 6
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 3,
+                          "id": "progressBarFill",
+                          "name": "ProgressBarFill",
+                          "fill": "$accent",
+                          "width": 0,
+                          "height": 6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "progressText",
+                          "name": "ProgressText",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "progressStatus",
+                              "name": "ProgressStatus",
+                              "fill": "$accent",
+                              "content": "准备转换...",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "progressPercent",
+                              "name": "ProgressPercent",
+                              "fill": "$foregroundMuted",
+                              "content": "0%",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "downloadBtn",
+                      "name": "DownloadBtn",
+                      "height": 36,
+                      "fill": "$success",
+                      "cornerRadius": 8,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "downloadBtnText",
+                          "name": "DownloadBtnText",
+                          "fill": "#FFFFFF",
+                          "content": "⬇ 下载 DOCX",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rightPanel",
+              "name": "RightPanel",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$surfaceSecondary",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "tabBar",
+                  "name": "TabBar",
+                  "width": "fill_container",
+                  "height": 44,
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "gap": 16,
+                  "padding": [
+                    0,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tabPreview",
+                      "name": "TabPreview",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tabPreviewText",
+                          "name": "TabPreviewText",
+                          "fill": "$accent",
+                          "content": "📖 Markdown 预览",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 1,
+                          "id": "tabPreviewIndicator",
+                          "name": "TabPreviewIndicator",
+                          "fill": "$accent",
+                          "width": "fill_container",
+                          "height": 2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "tabOutput",
+                      "name": "TabOutput",
+                      "fill": "$foregroundMuted",
+                      "content": "📤 转换结果",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "previewBody",
+                  "name": "PreviewBody",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    24,
+                    28
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "placeholderState",
+                      "name": "PlaceholderState",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "placeholderIcon",
+                          "name": "PlaceholderIcon",
+                          "fill": "$foregroundMuted",
+                          "content": "📋",
+                          "fontFamily": "Inter",
+                          "fontSize": 48,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "placeholderText",
+                          "name": "PlaceholderText",
+                          "fill": "$foregroundMuted",
+                          "content": "上传 Markdown 文件后\n在此处预览渲染效果",
+                          "lineHeight": 1.6,
+                          "textAlign": "center",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "statusbar",
+          "name": "Statusbar",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$surfaceSecondary",
+          "stroke": "$border",
+          "strokeWidth": {
+            "top": 1
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "statusDot",
+              "name": "StatusDot",
+              "fill": "$success",
+              "width": 7,
+              "height": 7
+            },
+            {
+              "type": "text",
+              "id": "statusAddress",
+              "name": "StatusAddress",
+              "fill": "$foregroundMuted",
+              "content": "后端 127.0.0.1:62581",
+              "fontFamily": "Geist",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "rectangle",
+              "id": "statusbarSpacer",
+              "name": "StatusbarSpacer",
+              "opacity": 0,
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "statusVersion",
+              "name": "StatusVersion",
+              "fill": "$foregroundMuted",
+              "content": "Pandoc 3.9 | MarkFlow v0.1",
+              "fontFamily": "Geist",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "themes": {
+    "Mode": [
+      "Light",
+      "Dark"
+    ]
+  },
+  "variables": {
+    "surface": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "Mode": "Light"
+          }
+        },
+        {
+          "value": "#0A0A0AFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "surfaceSecondary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F7F8FAFF",
+          "theme": {
+            "Mode": "Light"
+          }
+        },
+        {
+          "value": "#141414FF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "surfaceCard": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "Mode": "Light"
+          }
+        },
+        {
+          "value": "#1A1A1AFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#0A0A0AFF",
+          "theme": {
+            "Mode": "Light"
+          }
+        },
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "foregroundMuted": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#71717AFF",
+          "theme": {
+            "Mode": "Light"
+          }
+        },
+        {
+          "value": "#A1A1AAFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "accent": {
+      "type": "color",
+      "value": "#A855F7FF"
+    },
+    "accentSecondary": {
+      "type": "color",
+      "value": "#EC4899FF"
+    },
+    "accentTertiary": {
+      "type": "color",
+      "value": "#06B6D4FF"
+    },
+    "border": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#E5E7EBFF",
+          "theme": {
+            "Mode": "Light"
+          }
+        },
+        {
+          "value": "#27272AFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "borderSubtle": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#1A1A1AFF",
+          "theme": {
+            "Mode": "Light"
+          }
+        },
+        {
+          "value": "#3F3F46FF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "radiusSm": {
+      "type": "number",
+      "value": 4
+    },
+    "radiusLg": {
+      "type": "number",
+      "value": 8
+    },
+    "success": {
+      "type": "color",
+      "value": "#22C55EFF"
+    },
+    "danger": {
+      "type": "color",
+      "value": "#EF4444FF"
+    }
+  }
+}

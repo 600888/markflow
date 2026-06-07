@@ -42,7 +42,7 @@ class PandocEngine(ConversionEngine):
         """启动时验证 Pandoc 是否可用"""
         try:
             path = pypandoc.get_pandoc_path()
-            log.info("Pandoc 路径: %s", path)
+            log.info(f"Pandoc 路径: {path}")
         except OSError as e:
             raise PandocNotFoundError(
                 "Pandoc 未安装或不在 PATH 中，请先安装 Pandoc",
@@ -74,7 +74,7 @@ class PandocEngine(ConversionEngine):
                 ConversionOptions(template_slug=template_slug),
             )
             args = template_args + args
-            log.info("使用模版: %s, 参数: %s", template_slug, template_args)
+            log.info(f"使用模版: {template_slug}, 参数: {template_args}")
 
         start = time.monotonic()
 
@@ -109,11 +109,8 @@ class PandocEngine(ConversionEngine):
             file_size = output_path.stat().st_size
 
             log.info(
-                "转换完成: %s → %s, 耗时 %dms, 大小 %d bytes",
-                input_path.name,
-                output_format.value,
-                duration,
-                file_size,
+                f"转换完成: {input_path.name} → {output_format.value}, "
+                f"耗时 {duration}ms, 大小 {file_size} bytes"
             )
 
             return ConversionResult(

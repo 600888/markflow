@@ -22,7 +22,7 @@ class TemplateManager:
         templates: list[TemplateInfo] = []
 
         if not self._dir.exists():
-            log.warning("模版目录不存在: %s", self._dir)
+            log.warning(f"模版目录不存在: {self._dir}")
             return templates
 
         for entry in sorted(self._dir.iterdir()):
@@ -81,13 +81,13 @@ class TemplateManager:
         """从目录加载单个模版"""
         yaml_path = template_dir / "template.yaml"
         if not yaml_path.exists():
-            log.debug("跳过无 template.yaml 的目录: %s", template_dir.name)
+            log.debug(f"跳过无 template.yaml 的目录: {template_dir.name}")
             return None
 
         try:
             data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
         except (yaml.YAMLError, OSError) as e:
-            log.warning("解析 template.yaml 失败: %s — %s", yaml_path, e)
+            log.warning(f"解析 template.yaml 失败: {yaml_path} — {e}")
             return None
 
         ref_doc = (template_dir / "reference.docx").exists()

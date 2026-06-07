@@ -62,6 +62,13 @@ per-file-ignores."**/conftest.py" = [
 per-file-ignores."**/logger.py" = [
     "D", "ANN", "FBT", "ARG", "SIM", "PTH", "PLR", "PLC", "PLE", "PLW", "RET", "E501", "W292",
 ]
+per-file-ignores."app/api/*.py" = [
+    "D103", "ARG001", "PLW0603", "PLR0913", "B904", "PLC0415", "RUF006",
+    "ANN202", "D101", "SIM105", "BLE001", "S110", "TC002",
+]
+per-file-ignores."app/services/converter.py" = [
+    "F401", "TRY300",
+]
 
 [tool.ruff.format]
 quote-style = "double"

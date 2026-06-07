@@ -9,13 +9,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
+from app.api.errors import register_error_handlers
+from app.api.router import init, router
+from app.core.engine import PandocEngine
+from app.core.file_manager import TempFileManager
+from app.core.template_manager import TemplateManager
+from app.services.converter import ConversionService
 from app.utils.config import AppSettings
 from app.utils.logger import Log
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
-    """应用生命周期"""
+    """应用生命周期 — 组装依赖并注入"""
     Log(
         cmdlevel=settings.log_level,
         filelevel=settings.log_level,
@@ -23,9 +29,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
         backup_count=7,
         limit="20 MB",
     )
-    logger.info("MarkFlow 后端服务启动，端口: {}", settings.port)
+    logger.info("MarkFlow 后端启动，端口: {}", settings.port)
+
+    # 依赖组装
+    engine = PandocEngine(settings)
+    file_mgr = TempFileManager(settings)
+    template_mgr = TemplateManager()
+    conv_svc = ConversionService(
+        engine=engine,
+        file_manager=file_mgr,
+        max_file_size=settings.max_file_size,
+        max_concurrent=settings.max_concurrent_tasks,
+    )
+
+    # 注入到路由层
+    init(conv_svc, template_mgr)
+
     yield
-    logger.info("MarkFlow 后端服务关闭")
+
+    logger.info("MarkFlow 后端关闭")
 
 
 settings = AppSettings()
@@ -46,6 +68,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(router, prefix="/api/v1")
+    register_error_handlers(app)
 
     return app
 
