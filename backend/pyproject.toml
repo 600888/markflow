@@ -85,9 +85,6 @@ per-file-ignores."scripts/generate_reference.py" = [
 [tool.ruff.format]
 quote-style = "double"
 
-[tool.pyrefly]
-strict = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

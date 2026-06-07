@@ -93,7 +93,7 @@ export function ConvertSection() {
       const m: Record<string, string> = { docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", pdf: "application/pdf", html: "text/html", epub: "application/epub+zip" };
       setDownloadProgress(100);
 
-      const h = await (window as Window & typeof globalThis).showSaveFilePicker({
+      const h = await window.showSaveFilePicker({
         suggestedName: `output.${ext}`,
         types: [{ description: format.toUpperCase(), accept: { [m[format] ?? "application/octet-stream"]: [`.${ext}`] } }],
       });

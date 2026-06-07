@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from typing import Generator
 
 import pytest
 import yaml
@@ -60,7 +61,7 @@ class TestConversionOptions:
 
 class TestTemplateManager:
     @pytest.fixture
-    def tmp_templates(self) -> Path:
+    def tmp_templates(self) -> Generator[Path, None, None]:
         """创建临时模版目录用于测试"""
         with tempfile.TemporaryDirectory() as td:
             base = Path(td)

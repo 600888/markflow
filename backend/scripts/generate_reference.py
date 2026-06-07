@@ -110,13 +110,16 @@ def apply_font(style, config: dict) -> None:
             if attr in rFonts.attrib:
                 del rFonts.attrib[attr]
 
-    size_pt = parse_size(config.get("size"))
+    size_raw = config.get("size")
+    size_pt = parse_size(size_raw) if isinstance(size_raw, (str, float, int)) else None
     if size_pt:
         font.size = Pt(size_pt)
         # 同时清除 szCs（复杂脚本字号，可能覆盖 sz）
-        szCs = rPr.find(qn("w:szCs"))
-        if szCs is not None:
-            rPr.remove(szCs)
+        rPr = style.element.find(qn("w:rPr"))
+        if rPr is not None:
+            szCs = rPr.find(qn("w:szCs"))
+            if szCs is not None:
+                rPr.remove(szCs)
 
     if config.get("bold"):
         font.bold = True

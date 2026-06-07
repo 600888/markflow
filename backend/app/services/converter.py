@@ -58,6 +58,7 @@ class ConversionService:
         task = self._tasks.get(task_id)
         if task is None:
             raise ValueError(f"任务不存在: {task_id}")
+        assert task is not None  # type narrowing for pyrefly
 
         task.status = ConversionStatus.RUNNING
         task.progress = 0.0

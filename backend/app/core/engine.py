@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import Any
 import re
 import subprocess
 import time
@@ -54,7 +55,7 @@ def _parse_size(raw: str | float) -> float | None:
 
 
 # ── 表格 XML 操作辅助 ─────────────────────────────────────
-def _resolve_tc(cell_or_tc: object):
+def _resolve_tc(cell_or_tc: object) -> Any:
     """统一入口：从 python-docx Cell 或 CT_Tc 元素获取 CT_Tc"""
     if hasattr(cell_or_tc, "_tc"):
         return cell_or_tc._tc  # type: ignore[attr-defined]

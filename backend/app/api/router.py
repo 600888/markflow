@@ -73,8 +73,8 @@ async def convert(
     formula_position: Annotated[str, Form()] = "inline",
     keep_separator: Annotated[str, Form()] = "true",
     metadata: Annotated[str | None, Form()] = None,
-    svc: Annotated[ConversionService, Depends(get_svc)] = None,
-    mgr: Annotated[TemplateManager, Depends(get_mgr)] = None,
+    svc: Annotated[ConversionService | None, Depends(get_svc)] = None,
+    mgr: Annotated[TemplateManager | None, Depends(get_mgr)] = None,
 ) -> ConvertResponse:
     # 解析输出格式
     try:
