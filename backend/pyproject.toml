@@ -15,6 +15,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "aiofiles>=24.1.0",
     "loguru>=0.7.3",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -53,7 +54,7 @@ ignore = [
 ]
 per-file-ignores."tests/**" = [
     "D", "S101", "PLR2004", "PLC0415", "RUF012", "TC003", "ANN", "ARG",
-    "FBT", "PT011", "PGH004",
+    "FBT", "PT011", "PGH004", "T201",
 ]
 per-file-ignores."**/conftest.py" = [
     "F401",
@@ -71,6 +72,9 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: 需要 Pandoc 的集成测试，不在常规 CI 中运行",
+]
 
 [build-system]
 requires = ["setuptools>=75.0"]

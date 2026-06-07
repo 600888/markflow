@@ -21,9 +21,20 @@ class ConversionEngine(ABC):
         input_path: Path,
         output_format: OutputFormat,
         extra_args: list[str] | None = None,
+        template_slug: str | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> ConversionResult:
-        """执行格式转换"""
+        """
+        执行格式转换。
+
+        Args:
+            input_path: 输入文件路径
+            output_format: 目标输出格式
+            extra_args: 额外的 Pandoc 参数
+            template_slug: 模版标识，用于 --reference-doc
+            on_progress: 进度回调
+
+        """
         ...
 
     @abstractmethod

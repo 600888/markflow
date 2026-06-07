@@ -1,0 +1,45 @@
+name: "学术论文"
+slug: "academic"
+version: "1.0.0"
+description: "符合中文学术论文排版规范（GB/T 7714），黑体标题、宋体正文、1.5 倍行距、首行缩进"
+author: "MarkFlow"
+target_formats: ["docx", "pdf"]
+
+styles:
+  heading1:
+    font: "黑体"
+    size: "16pt"
+    bold: true
+    alignment: "center"
+    space_before: "12pt"
+    space_after: "6pt"
+  heading2:
+    font: "黑体"
+    size: "14pt"
+    bold: true
+    space_before: "10pt"
+    space_after: "4pt"
+  heading3:
+    font: "黑体"
+    size: "13pt"
+    bold: true
+    space_before: "8pt"
+    space_after: "2pt"
+  body:
+    font: "宋体"
+    size: "12pt"
+    line_spacing: 1.5
+    first_line_indent: "2em"
+  code:
+    font: "Consolas"
+    size: "10pt"
+    background: "#F5F5F5"
+  table:
+    header_font: "黑体"
+    header_size: "11pt"
+    header_bold: true
+    header_background: "#E8E8E8"
+    body_font: "宋体"
+    body_size: "11pt"
+    border: "all"
+    stripe_rows: true

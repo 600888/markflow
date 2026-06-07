@@ -11,7 +11,9 @@ import pypandoc
 
 from app.core.interfaces import ConversionEngine, ProgressCallback
 from app.core.log import log
+from app.core.template_manager import TemplateManager
 from app.models import ConversionResult, OutputFormat
+from app.models.templates import ConversionOptions
 from app.utils.config import AppSettings
 from app.utils.exceptions import ConversionError, PandocNotFoundError, UnsupportedFormatError
 
@@ -33,6 +35,7 @@ class PandocEngine(ConversionEngine):
 
     def __init__(self, settings: AppSettings | None = None) -> None:
         self.settings = settings or AppSettings()
+        self._template_mgr = TemplateManager()
         self._validate_pandoc()
 
     def _validate_pandoc(self) -> None:
@@ -51,6 +54,7 @@ class PandocEngine(ConversionEngine):
         input_path: Path,
         output_format: OutputFormat,
         extra_args: list[str] | None = None,
+        template_slug: str | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> ConversionResult:
         """执行 Pandoc 转换"""
@@ -63,6 +67,14 @@ class PandocEngine(ConversionEngine):
 
         output_path = input_path.with_suffix(f".{output_format.value}")
         args = extra_args or []
+
+        # 组装模版参数
+        if template_slug:
+            template_args = self._template_mgr.build_extra_args(
+                ConversionOptions(template_slug=template_slug),
+            )
+            args = template_args + args
+            log.info("使用模版: %s, 参数: %s", template_slug, template_args)
 
         start = time.monotonic()
 

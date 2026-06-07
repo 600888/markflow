@@ -1,0 +1,37 @@
+name: "报告模版"
+slug: "report"
+version: "1.0.0"
+description: "适合工作报告和技术文档，微软雅黑字体，1.25 倍行距，蓝色主题"
+author: "MarkFlow"
+target_formats: ["docx"]
+
+styles:
+  heading1:
+    font: "微软雅黑"
+    size: "22pt"
+    bold: true
+    color: "#2E75B6"
+    space_before: "24pt"
+    space_after: "12pt"
+  heading2:
+    font: "微软雅黑"
+    size: "16pt"
+    bold: true
+    color: "#2E75B6"
+    space_before: "18pt"
+    space_after: "8pt"
+  heading3:
+    font: "微软雅黑"
+    size: "13pt"
+    bold: true
+    color: "#404040"
+    space_before: "12pt"
+    space_after: "6pt"
+  body:
+    font: "微软雅黑"
+    size: "11pt"
+    line_spacing: 1.25
+  code:
+    font: "Cascadia Code"
+    size: "9pt"
+    background: "#F0F6FC"

@@ -1,0 +1,24 @@
+name: "简洁模版"
+slug: "minimal"
+version: "1.0.0"
+description: "Pandoc 默认样式，适合日常笔记和轻量文档"
+author: "MarkFlow"
+target_formats: ["docx"]
+
+styles:
+  heading1:
+    font: "Times New Roman"
+    size: "16pt"
+    bold: true
+  heading2:
+    font: "Times New Roman"
+    size: "13pt"
+    bold: true
+  heading3:
+    font: "Times New Roman"
+    size: "12pt"
+    bold: true
+  body:
+    font: "等线"
+    size: "11pt"
+    line_spacing: 1.15

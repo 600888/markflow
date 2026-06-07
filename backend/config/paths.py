@@ -9,3 +9,9 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 # 日志目录（markflow/logs/）
 LOG_DIR = ROOT_DIR / "logs"
+
+# 测试数据目录（markflow/data/）
+DATA_DIR = ROOT_DIR / "data"
+
+# 模版目录（backend/templates/）
+TEMPLATES_DIR = ROOT_DIR / "backend" / "templates"
