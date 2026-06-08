@@ -9,18 +9,21 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
-            // 后台启动 Python 后端
+            // 同步启动后端进程（立即注册 handle，防止关闭窗口时遗漏清理）
+            let backend_url = backend::spawn_backend(&handle);
+
+            // 异步等待后端就绪
             tauri::async_runtime::spawn(async move {
-                backend::start_backend(&handle).await;
+                backend::wait_backend_ready(&backend_url).await;
             });
 
-            // 窗口关闭时立即杀死后端（在 RunEvent 之前处理）
+            // 窗口关闭时：轻量清理，不阻塞 GUI 线程
+            // 完整的端口清扫延迟到 ExitRequested 中执行
             if let Some(win) = app.get_webview_window("main") {
                 win.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { .. } = event {
-                        eprintln!("[MarkFlow] window close requested, killing backend");
-                        backend::stop_backend();
-                        // 不调用 close()，让默认关闭行为继续
+                        eprintln!("[MarkFlow] window close requested, fast cleanup");
+                        backend::cleanup_managed_process();
                     }
                 });
             }
