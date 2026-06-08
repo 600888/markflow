@@ -1,6 +1,6 @@
-import { Box, Typography } from "@mui/material";
 import { useStore } from "../stores/useStore";
 import type { OutputFormat } from "../types";
+import { cn } from "../lib/utils";
 
 const FORMATS: { id: OutputFormat; label: string }[] = [
   { id: "docx", label: "DOCX" },
@@ -15,34 +15,29 @@ export function FormatSelector() {
   const setFormat = useStore((s) => s.setFormat);
 
   return (
-    <Box>
-      <Typography sx={{ fontSize: 11, fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5, mb: 1.25, fontFamily: "Inter" }}>
+    <div>
+      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
         📦 输出格式
-      </Typography>
-      <Box sx={{ display: "flex", gap: 0.75 }}>
+      </p>
+      <div className="flex gap-1.5">
         {FORMATS.map((f) => {
           const sel = f.id === format;
           return (
-            <Box
+            <div
               key={f.id}
               onClick={() => setFormat(f.id)}
-              sx={{
-                flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: 1.5, cursor: "pointer", fontSize: 12, fontFamily: "Inter",
-                fontWeight: sel ? 600 : 500,
-                color: sel ? "primary.main" : "text.secondary",
-                bgcolor: sel ? "primary.light" : "background.paper",
-                border: sel ? "2px solid" : "1px solid",
-                borderColor: sel ? "primary.main" : "divider",
-                transition: "all 0.15s",
-                "&:hover": { borderColor: "primary.main", color: "primary.main" },
-              }}
+              className={cn(
+                "flex-1 h-9 flex items-center justify-center rounded-md cursor-pointer text-xs font-sans transition-all hover:border-primary hover:text-primary",
+                sel
+                  ? "bg-accent text-primary border-2 border-primary font-semibold"
+                  : "bg-card text-muted-foreground border border-border font-medium",
+              )}
             >
               {f.label}
-            </Box>
+            </div>
           );
         })}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

@@ -1,18 +1,30 @@
-import { StrictMode, useMemo } from "react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { ThemeProvider, CssBaseline } from "@mui/material";
 import { useStore } from "./stores/useStore";
-import { light, dark } from "./theme";
 import App from "./App";
+import "./index.css";
+
+function ThemeManager() {
+  const theme = useStore((s) => s.theme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [theme]);
+
+  return null;
+}
 
 function Root() {
-  const themeMode = useStore((s) => s.theme);
-  const theme = useMemo(() => (themeMode === "dark" ? dark : light), [themeMode]);
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <>
+      <ThemeManager />
       <App />
-    </ThemeProvider>
+    </>
   );
 }
 

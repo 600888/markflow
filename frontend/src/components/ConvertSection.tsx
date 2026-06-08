@@ -1,8 +1,14 @@
 import { useRef, useState } from "react";
-import { Box, Typography, Alert, LinearProgress } from "@mui/material";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useStore } from "../stores/useStore";
-import { submitConvertFromContent, streamProgress, getDownloadUrl } from "../services/api";
-import { toast } from "./Toast";
+import {
+  submitConvertFromContent,
+  streamProgress,
+  getDownloadUrl,
+} from "../services/api";
+import { toast } from "./ui/toast";
+import { Progress } from "./ui/progress";
+import { cn } from "../lib/utils";
 
 export function ConvertSection() {
   const file = useStore((s) => s.file);
@@ -25,12 +31,16 @@ export function ConvertSection() {
   const [error, setError] = useState("");
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const esRef = useRef<EventSource | null>(null);
-  const canConvert = (file || markdownContent) && status !== "running" && status !== "pending";
+  const canConvert =
+    (file || markdownContent) && status !== "running" && status !== "pending";
 
   const handleConvert = async () => {
     if (!canConvert) return;
     const content = markdownContent || "";
-    if (!content.trim()) { toast("Markdown 内容为空，请先输入内容", "info"); return; }
+    if (!content.trim()) {
+      toast("Markdown 内容为空，请先输入内容", "info");
+      return;
+    }
 
     setError("");
     setProgress("pending", 0);
@@ -51,10 +61,19 @@ export function ConvertSection() {
       );
       setTaskId(task_id);
       setProgress("running", 0.05);
-      esRef.current = streamProgress(task_id,
+      esRef.current = streamProgress(
+        task_id,
         (pct) => setProgress("running", pct),
-        () => { setProgress("completed", 1); esRef.current = null; },
-        (err) => { setError(err); setProgress("failed", 0); esRef.current = null; toast("转换失败", "error"); },
+        () => {
+          setProgress("completed", 1);
+          esRef.current = null;
+        },
+        (err) => {
+          setError(err);
+          setProgress("failed", 0);
+          esRef.current = null;
+          toast("转换失败", "error");
+        },
       );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "转换请求失败");
@@ -82,7 +101,9 @@ export function ConvertSection() {
         chunks.push(value);
         receivedLength += value.length;
         if (contentLength > 0) {
-          setDownloadProgress(Math.round((receivedLength / contentLength) * 100));
+          setDownloadProgress(
+            Math.round((receivedLength / contentLength) * 100),
+          );
         } else {
           setDownloadProgress(Math.min(Math.round(receivedLength / 1024), 99));
         }
@@ -90,12 +111,22 @@ export function ConvertSection() {
 
       const blob = new Blob(chunks);
       const ext = format === "latex" ? "tex" : format;
-      const m: Record<string, string> = { docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", pdf: "application/pdf", html: "text/html", epub: "application/epub+zip" };
+      const m: Record<string, string> = {
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        pdf: "application/pdf",
+        html: "text/html",
+        epub: "application/epub+zip",
+      };
       setDownloadProgress(100);
 
       const h = await window.showSaveFilePicker({
         suggestedName: `output.${ext}`,
-        types: [{ description: format.toUpperCase(), accept: { [m[format] ?? "application/octet-stream"]: [`.${ext}`] } }],
+        types: [
+          {
+            description: format.toUpperCase(),
+            accept: { [m[format] ?? "application/octet-stream"]: [`.${ext}`] },
+          },
+        ],
       });
       const w = await h.createWritable();
       await w.write(blob);
@@ -110,74 +141,94 @@ export function ConvertSection() {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-      <Box
+    <div className="flex flex-col gap-3">
+      <div
         onClick={handleConvert}
-        sx={{
-          width: "100%", height: 40, borderRadius: 1,
-          bgcolor: "#A855F7",
-          color: "#fff", fontSize: 14, fontWeight: 600,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 1,
-          cursor: canConvert ? "pointer" : "not-allowed",
-          opacity: canConvert ? 1 : 0.5,
-          transition: "opacity 0.15s", fontFamily: "Inter",
-          "&:hover": { opacity: canConvert ? 0.85 : 0.5 },
-        }}
+        className={cn(
+          "w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-1 transition-opacity font-sans",
+          canConvert
+            ? "cursor-pointer hover:opacity-90"
+            : "cursor-not-allowed opacity-50",
+        )}
       >
-        🔄 开始转换
-      </Box>
+        {status === "running" || status === "pending" ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            转换中...
+          </>
+        ) : (
+          "🔄 开始转换"
+        )}
+      </div>
 
-      {error && <Alert severity="error" sx={{ fontSize: 12, py: 0, borderRadius: 1 }}>{error}</Alert>}
-
-      {(status === "running" || status === "completed") && (
-        <Box>
-          <Box sx={{ height: 6, bgcolor: "divider", borderRadius: 0.5, overflow: "hidden" }}>
-            <Box sx={{ height: "100%", width: `${Math.round(progress * 100)}%`, bgcolor: "primary.main", borderRadius: 0.5, transition: "width 0.3s" }} />
-          </Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.75 }}>
-            <Typography sx={{ fontSize: 11, fontWeight: 500, color: "primary.main", fontFamily: "Inter" }}>
-              {status === "running" ? "正在转换..." : "转换完成 ✓"}
-            </Typography>
-            <Typography sx={{ fontSize: 11, color: "text.secondary", fontFamily: "Inter" }}>
-              {Math.round(progress * 100)}%
-            </Typography>
-          </Box>
-        </Box>
+      {/* 错误提示 */}
+      {error && (
+        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs">
+          <AlertCircle size={14} />
+          <span>{error}</span>
+        </div>
       )}
 
+      {/* 转换进度 */}
+      {(status === "running" || status === "completed") && (
+        <div>
+          <Progress value={progress * 100} className="h-1.5" />
+          <div className="flex justify-between mt-0.75">
+            <span className="text-[11px] font-medium text-primary">
+              {status === "running" ? "正在转换..." : "转换完成 ✓"}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {Math.round(progress * 100)}%
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 下载区域 */}
       {status === "completed" && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Box onClick={handleDownload} sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, px: 2, py: 1, borderRadius: 1, bgcolor: "success.main", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter", opacity: downloadProgress !== null && downloadProgress < 100 ? 0.6 : 1, pointerEvents: downloadProgress !== null && downloadProgress < 100 ? "none" : "auto" }}>
-              {downloadProgress !== null && downloadProgress < 100 ? "⏳ 下载中..." : `⬇ 下载 ${format.toUpperCase()}`}
-            </Box>
-            <Box onClick={clearFile} sx={{ display: "inline-flex", alignItems: "center", px: 2, py: 1, borderRadius: 1, border: 1, borderColor: "divider", color: "text.secondary", fontSize: 13, cursor: "pointer", fontFamily: "Inter" }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex gap-1.5">
+            <div
+              onClick={handleDownload}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-4 py-0 h-9 rounded-lg bg-success text-white text-sm font-semibold cursor-pointer font-sans",
+                downloadProgress !== null && downloadProgress < 100
+                  ? "opacity-60 pointer-events-none"
+                  : "hover:opacity-90",
+              )}
+            >
+              {downloadProgress !== null && downloadProgress < 100
+                ? "⏳ 下载中..."
+                : `⬇ 下载 ${format.toUpperCase()}`}
+            </div>
+            <div
+              onClick={clearFile}
+              className="inline-flex items-center gap-1.5 px-4 py-0 h-9 rounded-lg border border-border text-muted-foreground text-sm cursor-pointer font-sans hover:bg-accent"
+            >
               重新转换
-            </Box>
-          </Box>
+            </div>
+          </div>
 
           {downloadProgress !== null && (
-            <Box>
-              <LinearProgress
-                variant="determinate"
-                value={downloadProgress}
-                sx={{
-                  height: 6, borderRadius: 3, bgcolor: "divider",
-                  "& .MuiLinearProgress-bar": { borderRadius: 3, bgcolor: "success.main" },
-                }}
-              />
-              <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}>
-                <Typography sx={{ fontSize: 11, fontWeight: 500, color: "success.main", fontFamily: "Inter" }}>
+            <div>
+              <div className="h-1.5 w-full overflow-hidden rounded-sm bg-border">
+                <div
+                  className="h-full bg-success transition-all rounded-sm"
+                  style={{ width: `${downloadProgress}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-0.5">
+                <span className="text-[11px] font-medium text-success">
                   {downloadProgress < 100 ? "正在下载..." : "下载完成 ✓"}
-                </Typography>
-                <Typography sx={{ fontSize: 11, color: "text.secondary", fontFamily: "Inter" }}>
+                </span>
+                <span className="text-[11px] text-muted-foreground">
                   {downloadProgress}%
-                </Typography>
-              </Box>
-            </Box>
+                </span>
+              </div>
+            </div>
           )}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

@@ -1,6 +1,14 @@
-import { Box, Typography, Collapse } from "@mui/material";
-import { KeyboardArrowRight } from "@mui/icons-material";
+import { ChevronRight } from "lucide-react";
 import { useStore } from "../stores/useStore";
+import { Checkbox } from "./ui/checkbox";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "./ui/select";
+import { cn } from "../lib/utils";
 
 export function AdvancedOptions() {
   const show = useStore((s) => s.showAdvanced);
@@ -15,62 +23,97 @@ export function AdvancedOptions() {
   const setMetaAuthor = useStore((s) => s.setMetaAuthor);
 
   return (
-    <Box>
-      <Box onClick={toggle} sx={{ display: "flex", alignItems: "center", gap: 0.75, cursor: "pointer", color: "text.secondary", "&:hover": { color: "text.primary" } }}>
-        <KeyboardArrowRight sx={{ fontSize: 10, transition: "0.2s", transform: show ? "rotate(90deg)" : "none" }} />
-        <Typography sx={{ fontSize: 12, fontFamily: "Inter" }}>⚙ 高级选项</Typography>
-      </Box>
+    <div>
+      <div
+        onClick={toggle}
+        className="flex items-center gap-0.75 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ChevronRight
+          size={12}
+          className={cn(
+            "transition-transform duration-200",
+            show && "rotate-90",
+          )}
+        />
+        <span className="text-xs">⚙ 高级选项</span>
+      </div>
 
-      <Collapse in={show}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25, mt: 1.25 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, height: 28 }}>
-            <Box sx={{ width: 16, height: 16, borderRadius: 0.5, border: 1, borderColor: "divider", bgcolor: "background.paper", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", "&:hover": { borderColor: "primary.main" } }}>
-              {toc && <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: "primary.main" }} />}
-            </Box>
-            <Typography onClick={() => setToc(!toc)} sx={{ fontSize: 12, cursor: "pointer", fontFamily: "Inter" }}>
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          show ? "max-h-[300px] opacity-100 mt-1.25" : "max-h-0 opacity-0",
+        )}
+      >
+        <div className="flex flex-col gap-2.5">
+          {/* TOC 开关 */}
+          <div className="flex items-center gap-2.5 h-7">
+            <Checkbox
+              id="toc"
+              checked={toc}
+              onCheckedChange={(v) => setToc(v === true)}
+            />
+            <label
+              htmlFor="toc"
+              className="text-xs cursor-pointer select-none"
+              onClick={() => setToc(!toc)}
+            >
               生成目录 (TOC)
-            </Typography>
-          </Box>
+            </label>
+          </div>
 
-          {[
-            { label: "目录深度", type: "select", value: tocDepth, values: [1, 2, 3, 4, 5, 6], onChange: setTocDepth, suffix: " 级" },
-            { label: "文档标题", type: "text", value: metaTitle, onChange: setMetaTitle, placeholder: "自动从 Markdown 获取" },
-            { label: "作者", type: "text", value: metaAuthor, onChange: setMetaAuthor, placeholder: "你的名字" },
-          ].map((row) => (
-            <Box key={row.label} sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-              <Typography sx={{ fontSize: 12, color: "text.secondary", width: 60, flexShrink: 0, fontFamily: "Inter" }}>{row.label}</Typography>
-              {row.type === "select" ? (
-                <Box key={row.label} sx={{ flex: 1, position: "relative" }}>
-                  <Box component="select" value={row.value as number}
-                    onChange={(e) => (row.onChange as (v: number) => void)(Number(e.target.value))}
-                    sx={{
-                      width: "100%", height: 28, borderRadius: 1.5, border: 1, borderColor: "divider",
-                      bgcolor: "background.paper", color: "text.primary", fontSize: 12, pl: 1.25, pr: 3,
-                      appearance: "none", cursor: "pointer", fontFamily: "Inter",
-                      "&:focus": { outline: "none", borderColor: "primary.main" },
-                    }}
-                  >
-                    {(row.values as number[]).map((v: number) => <option key={v} value={v}>{v}{row.suffix}</option>)}
-                  </Box>
-                  <Box sx={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "text.secondary", fontSize: 12 }}>▾</Box>
-                </Box>
-              ) : (
-                <Box key={row.label} component="input" type="text" value={row.value as string}
-                  onChange={(e) => (row.onChange as (v: string) => void)(e.target.value)}
-                  placeholder={(row as { label: string; type: string; value: string; onChange: (v: string) => void; placeholder?: string }).placeholder}
-                  sx={{
-                    flex: 1, height: 28, borderRadius: 1.5, border: 1, borderColor: "divider",
-                    bgcolor: "background.paper", color: "text.primary", fontSize: 12, px: 1.25,
-                    fontFamily: "Inter", outline: "none",
-                    "&:focus": { borderColor: "primary.main" },
-                    "&::placeholder": { color: "text.secondary" },
-                  }}
-                />
-              )}
-            </Box>
-          ))}
-        </Box>
-      </Collapse>
-    </Box>
+          {/* TOC 深度 */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
+              目录深度
+            </span>
+            <div className="flex-1">
+              <Select
+                value={String(tocDepth)}
+                onValueChange={(v) => setTocDepth(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6].map((v) => (
+                    <SelectItem key={v} value={String(v)}>
+                      {v} 级
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* 文档标题 */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
+              文档标题
+            </span>
+            <input
+              type="text"
+              value={metaTitle}
+              onChange={(e) => setMetaTitle(e.target.value)}
+              placeholder="自动从 Markdown 获取"
+              className="flex-1 h-7 rounded-md border border-border bg-card text-foreground text-xs py-1 px-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground"
+            />
+          </div>
+
+          {/* 作者 */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
+              作者
+            </span>
+            <input
+              type="text"
+              value={metaAuthor}
+              onChange={(e) => setMetaAuthor(e.target.value)}
+              placeholder="你的名字"
+              className="flex-1 h-7 rounded-md border border-border bg-card text-foreground text-xs py-1 px-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

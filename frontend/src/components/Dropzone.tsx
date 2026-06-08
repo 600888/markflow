@@ -1,6 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-import { Box, Typography, IconButton } from "@mui/material";
-import { Close } from "@mui/icons-material";
+import { X } from "lucide-react";
 import { useStore } from "../stores/useStore";
 
 export function Dropzone() {
@@ -12,48 +11,75 @@ export function Dropzone() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [hover, setHover] = useState(false);
 
-  const handleFile = useCallback((f: File | null) => {
-    if (!f) return;
-    if (!f.name.endsWith(".md")) { alert("仅支持 .md 文件"); return; }
-    setFile(f);
-    // 读取文件内容到 store
-    const r = new FileReader();
-    r.onload = () => setMarkdownContent(r.result as string);
-    r.readAsText(f);
-  }, [setFile, setMarkdownContent]);
+  const handleFile = useCallback(
+    (f: File | null) => {
+      if (!f) return;
+      if (!f.name.endsWith(".md")) {
+        alert("仅支持 .md 文件");
+        return;
+      }
+      setFile(f);
+      const r = new FileReader();
+      r.onload = () => setMarkdownContent(r.result as string);
+      r.readAsText(f);
+    },
+    [setFile, setMarkdownContent],
+  );
 
   return (
-    <Box>
-      <Typography sx={{ fontSize: 11, fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5, mb: 1.25, fontFamily: "Inter" }}>
+    <div>
+      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
         📄 文件上传
-      </Typography>
+      </p>
 
-      <Box
+      <div
         onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setHover(true); }}
-        onDragLeave={() => setHover(false)}
-        onDrop={(e) => { e.preventDefault(); setHover(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-        sx={{
-          height: 112, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0.75,
-          borderRadius: 1, cursor: "pointer", border: 2, borderStyle: "dashed",
-          borderColor: hover ? "primary.main" : "divider",
-          bgcolor: hover ? "action.hover" : "background.paper",
-          transition: "all 0.15s",
+        onDragOver={(e) => {
+          e.preventDefault();
+          setHover(true);
         }}
+        onDragLeave={() => setHover(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setHover(false);
+          const f = e.dataTransfer.files[0];
+          if (f) handleFile(f);
+        }}
+        className={`h-28 flex flex-col items-center justify-center gap-1.5 rounded-lg cursor-pointer border-2 border-dashed transition-all ${
+          hover ? "border-primary bg-accent" : "border-border bg-card"
+        }`}
       >
-        <Box component="span" sx={{ fontSize: 28, opacity: 0.7 }}>📂</Box>
-        <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.primary", fontFamily: "Inter" }}>点击或拖拽 Markdown 文件</Typography>
-        <Typography sx={{ fontSize: 11, color: "text.secondary", fontFamily: "Inter" }}>支持 .md 格式，最大 50MB</Typography>
-        <input ref={inputRef} type="file" accept=".md,.markdown" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-      </Box>
+        <span className="text-[28px] opacity-70">📂</span>
+        <p className="text-sm font-medium text-foreground">
+          点击或拖拽 Markdown 文件
+        </p>
+        <p className="text-[11px] text-muted-foreground">
+          支持 .md 格式，最大 50MB
+        </p>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".md,.markdown"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+          }}
+        />
+      </div>
 
       {file && (
-        <Box sx={{ mt: 1.25, display: "inline-flex", alignItems: "center", gap: 0.75, px: 1.75, py: 0.75, border: 1, borderRadius: 5, borderColor: "primary.main", bgcolor: "primary.light", color: "primary.main", fontSize: 12, fontFamily: "Inter" }}>
+        <div className="mt-1.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-primary bg-accent text-primary text-xs">
           <span>📝</span>
           <span>{fileName}</span>
-          <IconButton size="small" onClick={clearFile} sx={{ p: 0, ml: 0.25, color: "inherit", opacity: 0.6, "&:hover": { opacity: 1 } }}><Close sx={{ fontSize: 14 }} /></IconButton>
-        </Box>
+          <button
+            onClick={clearFile}
+            className="ml-1 text-primary/60 hover:text-primary transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

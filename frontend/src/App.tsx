@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Box, Paper } from "@mui/material";
 import { useStore } from "./stores/useStore";
 import { checkHealth } from "./services/api";
 import { Titlebar } from "./components/Titlebar";
@@ -10,16 +9,14 @@ import { AdvancedOptions } from "./components/AdvancedOptions";
 import { ConvertSection } from "./components/ConvertSection";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { StatusBar } from "./components/StatusBar";
-import { ToastProvider } from "./components/Toast";
+import { ToastProvider } from "./components/ui/toast";
 
 export default function App() {
   const setBackendOnline = useStore((s) => s.setBackendOnline);
   const initBackend = useStore((s) => s.initBackend);
 
   useEffect(() => {
-    // Step 1: 使用 Tauri invoke 初始化后端 URL
     initBackend().then(() => {
-      // Step 2: 健康检查确认后端已就绪
       checkHealth()
         .then(() => setBackendOnline(true))
         .catch(() => setBackendOnline(false));
@@ -28,27 +25,27 @@ export default function App() {
 
   return (
     <ToastProvider>
-    <Paper elevation={8} sx={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", borderRadius: 0, bgcolor: "background.paper" }}>
-      <Titlebar />
+      <div className="w-screen h-screen flex flex-col overflow-hidden bg-background text-foreground">
+        <Titlebar />
 
-      <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* 左侧面板：440px */}
-        <Box sx={{ width: 440, flexShrink: 0, borderRight: 1, borderColor: "divider", display: "flex", flexDirection: "column", gap: 3, px: 2.5, py: 3, overflow: "auto", bgcolor: "background.paper" }}>
-          <Dropzone />
-          <FormatSelector />
-          <TemplateSelector />
-          <AdvancedOptions />
-          <ConvertSection />
-        </Box>
+        <div className="flex-1 flex overflow-hidden">
+          {/* 左侧面板 */}
+          <div className="w-[440px] flex-shrink-0 border-r border-border flex flex-col gap-6 px-5 py-6 overflow-auto bg-card">
+            <Dropzone />
+            <FormatSelector />
+            <TemplateSelector />
+            <AdvancedOptions />
+            <ConvertSection />
+          </div>
 
-        {/* 右侧预览 */}
-        <Box sx={{ flex: 1, overflow: "hidden" }}>
-          <PreviewPanel />
-        </Box>
-      </Box>
+          {/* 右侧预览 */}
+          <div className="flex-1 overflow-hidden">
+            <PreviewPanel />
+          </div>
+        </div>
 
-      <StatusBar />
-    </Paper>
+        <StatusBar />
+      </div>
     </ToastProvider>
   );
 }

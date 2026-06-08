@@ -36,4 +36,4 @@ repos:
         language: system
         files: ^backend/
         pass_filenames: false
-        stages: [push]
+        stages: [pre-push]
