@@ -48,6 +48,7 @@ styles:
     size: "五号"
     line_spacing: 1.0
     alignment: "center"
+    full_width: true      # 表格撑满页面宽度
 
     # 段落控制
     first_line_indent: "0 字符" # ✅ 单元格无缩进

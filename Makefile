@@ -3,7 +3,10 @@
 # ========= 后端 =========
 
 backend-install:
-	cd backend && pip install -e ".[dev]"
+	cd backend && pip install -e ".[dev]" && python -m playwright install chromium
+
+backend-install-playwright:
+	cd backend && python -m playwright install chromium
 
 backend-dev:
 	cd backend && uvicorn app.main:app --reload --port 62581
@@ -17,20 +20,24 @@ backend-test:
 # 使用 PyInstaller 打包后端为独立可执行文件
 backend-pack:
 	cd backend && pyinstaller --onedir \
-		--name pandoc-service \
+		--name markflow-service \
 		--distpath ../src-tauri/binaries \
 		--workpath build/pyinstaller \
 		--add-data "app;app" \
 		--add-data "config;config" \
+		--add-data "templates;templates" \
+		--add-data "filters;filters" \
+		--add-data "static;static" \
 		--hidden-import uvicorn \
 		--hidden-import uvicorn.logging \
 		--hidden-import uvicorn.loops.auto \
 		--hidden-import uvicorn.protocols.http.auto \
 		--hidden-import uvicorn.protocols.websockets.auto \
 		--hidden-import sse_starlette \
+		--hidden-import playwright.async_api \
 		--collect-all app \
 		app/main.py
-	@echo "后端打包完成: src-tauri/binaries/pandoc-service/"
+	@echo "后端打包完成: src-tauri/binaries/markflow-service/"
 
 # ========= 前端 =========
 

@@ -51,6 +51,10 @@ interface AppState {
   theme: "light" | "dark";
   toggleTheme: () => void;
 
+  // 日志面板
+  logPanelOpen: boolean;
+  toggleLogPanel: () => void;
+
   // 后端
   backendUrl: string;
   backendOnline: boolean;
@@ -64,7 +68,13 @@ export const useStore = create<AppState>((set) => ({
   fileName: "",
   setFile: (file) => set({ file, fileName: file?.name ?? "" }),
   clearFile: () =>
-    set({ file: null, fileName: "", status: "", progress: 0, markdownContent: "" }),
+    set({
+      file: null,
+      fileName: "",
+      status: "",
+      progress: 0,
+      markdownContent: "",
+    }),
 
   markdownContent: "",
   setMarkdownContent: (markdownContent) => set({ markdownContent }),
@@ -89,7 +99,7 @@ export const useStore = create<AppState>((set) => ({
 
   formulaPosition: "inline",
   setFormulaPosition: (formulaPosition) => set({ formulaPosition }),
-  keepSeparator: true,
+  keepSeparator: false,
   setKeepSeparator: (keepSeparator) => set({ keepSeparator }),
 
   status: "",
@@ -97,7 +107,11 @@ export const useStore = create<AppState>((set) => ({
   setProgress: (status, progress) => set({ status, progress }),
 
   theme: "light",
-  toggleTheme: () => set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
+  toggleTheme: () =>
+    set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
+
+  logPanelOpen: false,
+  toggleLogPanel: () => set((s) => ({ logPanelOpen: !s.logPanelOpen })),
 
   backendUrl: DEV_BACKEND_URL,
   backendOnline: false,

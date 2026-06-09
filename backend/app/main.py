@@ -16,6 +16,8 @@ from app.core.engine import PandocEngine
 from app.core.file_manager import TempFileManager
 from app.core.template_manager import TemplateManager
 from app.services.converter import ConversionService
+from app.services.log_service import LogService, install_loguru_sink
+from app.services.template_generator import TemplateGenerator
 from app.utils.config import AppSettings
 from app.utils.logger import Log
 
@@ -44,6 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     engine = PandocEngine(settings)
     file_mgr = TempFileManager(settings)
     template_mgr = TemplateManager()
+    template_gen = TemplateGenerator()
     conv_svc = ConversionService(
         engine=engine,
         file_manager=file_mgr,
@@ -51,8 +54,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
         max_concurrent=settings.max_concurrent_tasks,
     )
 
+    # 日志服务（内存环形缓冲区 + loguru sink 自动采集）
+    log_svc = LogService()
+    install_loguru_sink(log_svc)
+
     # 注入到路由层
-    init(conv_svc, template_mgr)
+    init(conv_svc, template_mgr, template_gen, log_svc=log_svc)
 
     yield
 

@@ -15,26 +15,47 @@ from app.api.log import log
 from app.api.schemas import (
     ConvertResponse,
     HealthResponse,
+    LogEntryResponse,
+    LogListResponse,
     TaskStatusResponse,
+    TemplateGenerateRequest,
+    TemplateGenerateResponse,
     TemplateItem,
     TemplateListResponse,
 )
 from app.core.template_manager import TemplateManager
 from app.models.models import ConversionStatus, OutputFormat
 from app.services.converter import ConversionService
+from app.services.log_service import LogService
+from app.services.template_generator import TemplateGenerator
 
 router = APIRouter()
 
 # ---- 单例（由 main.py 注入） ----
 _conv_service: ConversionService | None = None
 _template_mgr: TemplateManager | None = None
+_template_gen: TemplateGenerator | None = None
+_log_svc: LogService | None = None
 
 
-def init(svc: ConversionService, mgr: TemplateManager) -> None:
+def init(
+    svc: ConversionService,
+    mgr: TemplateManager,
+    gen: TemplateGenerator,
+    log_svc: LogService | None = None,
+) -> None:
     """初始化全局服务实例"""
-    global _conv_service, _template_mgr
+    global _conv_service, _template_mgr, _template_gen, _log_svc
     _conv_service = svc
     _template_mgr = mgr
+    _template_gen = gen
+    _log_svc = log_svc
+
+
+def get_log_svc() -> LogService:
+    if _log_svc is None:
+        raise RuntimeError("LogService 未初始化")
+    return _log_svc
 
 
 def get_svc() -> ConversionService:
@@ -49,6 +70,12 @@ def get_mgr() -> TemplateManager:
     return _template_mgr
 
 
+def get_gen() -> TemplateGenerator:
+    if _template_gen is None:
+        raise RuntimeError("TemplateGenerator 未初始化")
+    return _template_gen
+
+
 # ========== 健康检查 ==========
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
@@ -60,6 +87,61 @@ async def health() -> HealthResponse:
 async def list_templates(mgr: Annotated[TemplateManager, Depends(get_mgr)]) -> TemplateListResponse:
     items = [TemplateItem(**t.model_dump()) for t in mgr.list_templates()]
     return TemplateListResponse(templates=items)
+
+
+# ========== 自定义模版生成 ==========
+@router.post("/templates/generate", response_model=TemplateGenerateResponse)
+async def generate_template(
+    req: TemplateGenerateRequest,
+    gen: Annotated[TemplateGenerator, Depends(get_gen)],
+    mgr: Annotated[TemplateManager, Depends(get_mgr)],
+) -> TemplateGenerateResponse:
+    # 检查 slug 是否已存在（内置或自定义）
+    existing = mgr.get_template(req.slug)
+    if existing is not None:
+        raise HTTPException(status_code=409, detail=f"模版 slug '{req.slug}' 已存在")
+
+    # 将 Pydantic models 转为普通 dict（TemplateGenerator 的 styles_config 需要）
+    styles_dict: dict = {}
+    for key, sc in req.styles.items():
+        styles_dict[key] = sc.model_dump(exclude_none=True)
+
+    gen.save_custom_template(
+        name=req.name,
+        slug=req.slug,
+        styles_config=styles_dict,
+        description=req.description,
+        author=req.author,
+        target_formats=req.target_formats,
+        version=req.version,
+    )
+
+    return TemplateGenerateResponse(
+        slug=req.slug,
+        name=req.name,
+        path=f"custom/{req.slug}",
+    )
+
+
+@router.get("/templates/custom", response_model=TemplateListResponse)
+async def list_custom_templates(
+    gen: Annotated[TemplateGenerator, Depends(get_gen)],
+) -> TemplateListResponse:
+    items = gen.list_custom_templates()
+    return TemplateListResponse(templates=[TemplateItem(**t) for t in items])
+
+
+@router.delete("/templates/{slug}")
+async def delete_template(
+    slug: str,
+    gen: Annotated[TemplateGenerator, Depends(get_gen)],
+) -> dict:
+    # 仅允许删除自定义模版
+    custom_gen = gen.list_custom_templates()
+    if not any(t["slug"] == slug for t in custom_gen):
+        raise HTTPException(status_code=404, detail=f"自定义模版 '{slug}' 不存在")
+    gen.delete_custom_template(slug)
+    return {"detail": f"模版 '{slug}' 已删除"}
 
 
 # ========== 文件转换 ==========
@@ -191,6 +273,30 @@ async def download_result(
         media_type="application/octet-stream",
         headers={"Content-Disposition": "inline"},
     )
+
+
+# ========== 日志 ==========
+@router.get("/logs", response_model=LogListResponse)
+async def get_logs(
+    level: str = "ALL",
+    search: str = "",
+    limit: int = 200,
+    log_svc: Annotated[LogService, Depends(get_log_svc)] = None,
+) -> LogListResponse:
+    logs = log_svc.get_logs(
+        level=None if level.upper() == "ALL" else level.upper(),
+        search=search or None,
+        limit=limit,
+    )
+    return LogListResponse(logs=[LogEntryResponse(**e) for e in logs], total=len(logs))
+
+
+@router.delete("/logs")
+async def clear_logs(
+    log_svc: Annotated[LogService, Depends(get_log_svc)] = None,
+) -> dict:
+    log_svc.clear()
+    return {"detail": "日志已清空"}
 
 
 # ========== 辅助 ==========

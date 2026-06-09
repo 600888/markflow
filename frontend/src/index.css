@@ -24,6 +24,12 @@
     --input: 220 13% 91%;
     --ring: 267 83% 65%;
     --radius: 0.5rem;
+    --info: 240 14% 89%;
+    --info-foreground: 240 100% 20%;
+    --warning: 36 28% 88%;
+    --warning-foreground: 30 100% 25%;
+    --error: 9 19% 88%;
+    --error-foreground: 10 100% 27%;
   }
 
   .dark {
@@ -46,6 +52,12 @@
     --border: 240 4% 15%;
     --input: 240 4% 15%;
     --ring: 267 83% 65%;
+    --info: 240 9% 15%;
+    --info-foreground: 240 100% 85%;
+    --warning: 30 47% 11%;
+    --warning-foreground: 30 100% 50%;
+    --error: 6 57% 10%;
+    --error-foreground: 6 100% 60%;
   }
 }
 

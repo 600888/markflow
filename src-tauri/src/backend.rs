@@ -102,7 +102,7 @@ pub async fn wait_backend_ready(url: &str) {
 
 /// 尝试通过 Tauri sidecar 启动 Python 后端（打包后使用）
 fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
-    let sidecar_cmd = app.shell().sidecar("pandoc-service").ok()?;
+    let sidecar_cmd = app.shell().sidecar("markflow-service").ok()?;
     let (_, child) = sidecar_cmd
         .args(["--port", &port.to_string()])
         .spawn()

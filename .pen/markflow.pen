@@ -95,6 +95,30 @@
             },
             {
               "type": "frame",
+              "id": "logBtn",
+              "name": "LogBtn",
+              "width": 28,
+              "height": 28,
+              "cornerRadius": 4,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logBtnIcon",
+                  "name": "LogBtnIcon",
+                  "fill": "$foregroundMuted",
+                  "content": "📋",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "windowControls",
               "name": "WindowControls",
               "layout": "horizontal",

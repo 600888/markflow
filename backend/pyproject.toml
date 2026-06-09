@@ -16,6 +16,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "loguru>=0.7.3",
     "pyyaml>=6.0",
+    "playwright>=1.50.0",
 ]
 
 [project.optional-dependencies]
@@ -73,7 +74,7 @@ per-file-ignores."app/services/converter.py" = [
 per-file-ignores."app/core/engine.py" = [
     "N806", "SLF001", "C901", "PLR0912", "FBT001", "D301",
     "S603", "S607", "BLE001", "ANN202", "SIM105", "PLW1510",
-    "ANN401",
+    "ANN401", "ASYNC221",
 ]
 per-file-ignores."app/core/template_manager.py" = [
     "C901",

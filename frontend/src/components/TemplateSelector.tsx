@@ -3,6 +3,7 @@ import { useStore } from "../stores/useStore";
 import { fetchTemplates } from "../services/api";
 import type { TemplateInfo } from "../types";
 import { cn } from "../lib/utils";
+import { TemplateEditor } from "./TemplateEditor";
 
 const FALLBACK: TemplateInfo[] = [
   {
@@ -64,7 +65,7 @@ export function TemplateSelector() {
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
         🎨 文档模版
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap mb-2.5">
         {list.map((tpl) => {
           const sel = tpl.slug === template;
           return (
@@ -72,7 +73,7 @@ export function TemplateSelector() {
               key={tpl.slug}
               onClick={() => setTemplate(tpl.slug)}
               className={cn(
-                "flex-1 min-h-[100px] rounded-lg border transition-all cursor-pointer",
+                "flex-1 min-h-[100px] rounded-lg border transition-all cursor-pointer min-w-[100px]",
                 sel
                   ? "border-primary bg-accent border-2"
                   : "border-border bg-card border",
@@ -83,7 +84,7 @@ export function TemplateSelector() {
                 <p className="text-[10px] text-muted-foreground whitespace-pre-line leading-relaxed">
                   {tpl.description}
                 </p>
-                <div className="mt-auto">
+                <div className="mt-auto flex items-center gap-1 flex-wrap">
                   {tpl.slug === "academic" && (
                     <span className="inline-block px-0.75 py-0.25 rounded-full bg-accent text-[9px] font-semibold text-primary">
                       推荐
@@ -94,12 +95,18 @@ export function TemplateSelector() {
                       轻量
                     </span>
                   )}
+                  {(tpl as { is_custom?: boolean }).is_custom && (
+                    <span className="inline-block px-0.75 py-0.25 rounded-full bg-purple-100 text-[9px] font-semibold text-purple-600 dark:bg-purple-900 dark:text-purple-400">
+                      自定义
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+      <TemplateEditor />
     </div>
   );
 }

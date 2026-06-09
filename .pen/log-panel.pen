@@ -1,0 +1,589 @@
+{
+  "version": "2.13",
+  "children": [
+    {
+      "type": "frame",
+      "id": "logPanel",
+      "name": "Log Panel",
+      "x": 100,
+      "y": 100,
+      "clip": true,
+      "width": 600,
+      "height": 520,
+      "fill": "#F2F3F0",
+      "cornerRadius": 8,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "logHeader",
+          "name": "LogHeader",
+          "width": "fill_container",
+          "height": 44,
+          "fill": "#E7E8E5",
+          "stroke": "#CBCCC9",
+          "strokeWidth": {"bottom": 1},
+          "padding": [0, 16],
+          "alignItems": "center",
+          "gap": 8,
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "headerSpacer",
+              "name": "HeaderTitleSpacer",
+              "width": "fill_container",
+              "height": 1,
+              "opacity": 0
+            },
+            {
+              "type": "text",
+              "id": "logTitle",
+              "name": "LogTitle",
+              "fill": "#111111",
+              "content": "日志 / Log",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "logCloseBtn2",
+              "name": "LogCloseBtn",
+              "width": 28,
+              "height": 28,
+              "cornerRadius": 4,
+              "stroke": "#CBCCC9",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "closeIcon2",
+                  "name": "CloseIcon",
+                  "fill": "#666666",
+                  "content": "✕",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "filterBar2",
+          "name": "FilterBar",
+          "width": "fill_container",
+          "height": 40,
+          "padding": [0, 16],
+          "alignItems": "center",
+          "gap": 6,
+          "children": [
+            {
+              "type": "frame",
+              "id": "filterAll2",
+              "name": "FilterAll",
+              "width": 48,
+              "height": 26,
+              "cornerRadius": 4,
+              "fill": "#FF8400",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "filterAllLabel2",
+                  "name": "FilterAllLabel",
+                  "fill": "#111111",
+                  "content": "全部",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "filterInfo2",
+              "name": "FilterInfo",
+              "width": 52,
+              "height": 26,
+              "cornerRadius": 4,
+              "stroke": "#CBCCC9",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "filterInfoLabel2",
+                  "name": "FilterInfoLabel",
+                  "fill": "#111111",
+                  "content": "信息",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "filterWarn2",
+              "name": "FilterWarn",
+              "width": 52,
+              "height": 26,
+              "cornerRadius": 4,
+              "stroke": "#CBCCC9",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "filterWarnLabel2",
+                  "name": "FilterWarnLabel",
+                  "fill": "#111111",
+                  "content": "警告",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "filterError2",
+              "name": "FilterError",
+              "width": 52,
+              "height": 26,
+              "cornerRadius": 4,
+              "stroke": "#CBCCC9",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "filterErrorLabel2",
+                  "name": "FilterErrorLabel",
+                  "fill": "#111111",
+                  "content": "错误",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "filterSpacer2",
+              "name": "FilterSpacer",
+              "width": "fill_container",
+              "height": 1,
+              "opacity": 0
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "searchRow2",
+          "name": "SearchRow",
+          "width": "fill_container",
+          "height": 36,
+          "padding": [0, 16],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "searchInput2",
+              "name": "SearchInput",
+              "width": "fill_container",
+              "height": 30,
+              "cornerRadius": 4,
+              "fill": "#FFFFFF",
+              "stroke": "#CBCCC9",
+              "strokeWidth": 1,
+              "padding": [0, 10],
+              "justifyContent": "start",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "searchPlaceholder2",
+                  "name": "SearchPlaceholder",
+                  "fill": "#666666",
+                  "content": "搜索日志...",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "logList2",
+          "name": "LogList",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 2,
+          "padding": [8, 16],
+          "children": [
+            {
+              "type": "frame",
+              "id": "logRow1p",
+              "name": "LogRow1",
+              "width": "fill_container",
+              "height": 36,
+              "cornerRadius": 4,
+              "gap": 10,
+              "padding": [0, 12],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logTime1p",
+                  "name": "LogTime1",
+                  "fill": "#666666",
+                  "content": "22:45:12",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "500",
+                  "width": 80,
+                  "textGrowth": "fixed-width"
+                },
+                {
+                  "type": "frame",
+                  "id": "badgeInfo1p",
+                  "name": "Badge1",
+                  "width": 52,
+                  "height": 18,
+                  "cornerRadius": 3,
+                  "fill": "#DFDFE6",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "badgeInfoLabel1p",
+                      "name": "BadgeLabel1",
+                      "fill": "#000066",
+                      "content": "INFO",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "logMsg1p",
+                  "name": "LogMsg1",
+                  "fill": "#111111",
+                  "content": "Markdown 解析完成，共处理 3 个文档块",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "logRow2p",
+              "name": "LogRow2",
+              "width": "fill_container",
+              "height": 36,
+              "cornerRadius": 4,
+              "gap": 4,
+              "padding": [0, 12],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logTime2p",
+                  "name": "LogTime2",
+                  "fill": "#666666",
+                  "content": "22:45:15",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "500",
+                  "width": 80,
+                  "textGrowth": "fixed-width"
+                },
+                {
+                  "type": "frame",
+                  "id": "badgeWarn2p",
+                  "name": "Badge2",
+                  "width": 52,
+                  "height": 18,
+                  "cornerRadius": 3,
+                  "fill": "#E9E3D8",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "badgeWarnLabel2p",
+                      "name": "BadgeLabel2",
+                      "fill": "#804200",
+                      "content": "WARN",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "logMsg2p",
+                  "name": "LogMsg2",
+                  "fill": "#111111",
+                  "content": "模板 report 中缺少字体配置，使用默认字体",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "logRow3p",
+              "name": "LogRow3",
+              "width": "fill_container",
+              "height": 36,
+              "cornerRadius": 4,
+              "gap": 4,
+              "padding": [0, 12],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logTime3p",
+                  "name": "LogTime3",
+                  "fill": "#666666",
+                  "content": "22:45:18",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "500",
+                  "width": 80,
+                  "textGrowth": "fixed-width"
+                },
+                {
+                  "type": "frame",
+                  "id": "badgeError3p",
+                  "name": "Badge3",
+                  "width": 60,
+                  "height": 18,
+                  "cornerRadius": 3,
+                  "fill": "#E5DCDA",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "badgeErrorLabel3p",
+                      "name": "BadgeLabel3",
+                      "fill": "#8C1C00",
+                      "content": "ERROR",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "logMsg3p",
+                  "name": "LogMsg3",
+                  "fill": "#111111",
+                  "content": "文件转换超时：development_plan.md (120s)",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "logRow4p",
+              "name": "LogRow4",
+              "width": "fill_container",
+              "height": 36,
+              "cornerRadius": 4,
+              "gap": 4,
+              "padding": [0, 12],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logTime4p",
+                  "name": "LogTime4",
+                  "fill": "#666666",
+                  "content": "22:45:20",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "500",
+                  "width": 80,
+                  "textGrowth": "fixed-width"
+                },
+                {
+                  "type": "frame",
+                  "id": "badgeInfo4p",
+                  "name": "Badge4",
+                  "width": 52,
+                  "height": 18,
+                  "cornerRadius": 3,
+                  "fill": "#DFDFE6",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "badgeInfoLabel4p",
+                      "name": "BadgeLabel4",
+                      "fill": "#000066",
+                      "content": "INFO",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "logMsg4p",
+                  "name": "LogMsg4",
+                  "fill": "#111111",
+                  "content": "预览渲染已准备就绪",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "logRow5p",
+              "name": "LogRow5",
+              "width": "fill_container",
+              "height": 36,
+              "cornerRadius": 4,
+              "gap": 4,
+              "padding": [0, 12],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logTime5p",
+                  "name": "LogTime5",
+                  "fill": "#666666",
+                  "content": "22:45:22",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "500",
+                  "width": 80,
+                  "textGrowth": "fixed-width"
+                },
+                {
+                  "type": "frame",
+                  "id": "badgeWarn5p",
+                  "name": "Badge5",
+                  "width": 52,
+                  "height": 18,
+                  "cornerRadius": 3,
+                  "fill": "#E9E3D8",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "badgeWarnLabel5p",
+                      "name": "BadgeLabel5",
+                      "fill": "#804200",
+                      "content": "WARN",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "logMsg5p",
+                  "name": "LogMsg5",
+                  "fill": "#111111",
+                  "content": "Mermaid 图表渲染耗时 2.3s",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "logRow6p",
+              "name": "LogRow6",
+              "width": "fill_container",
+              "height": 36,
+              "cornerRadius": 4,
+              "gap": 4,
+              "padding": [0, 12],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "logTime6p",
+                  "name": "LogTime6",
+                  "fill": "#666666",
+                  "content": "22:45:25",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "500",
+                  "width": 80,
+                  "textGrowth": "fixed-width"
+                },
+                {
+                  "type": "frame",
+                  "id": "badgeInfo6p",
+                  "name": "Badge6",
+                  "width": 52,
+                  "height": 18,
+                  "cornerRadius": 3,
+                  "fill": "#DFDFE6",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "badgeInfoLabel6p",
+                      "name": "BadgeLabel6",
+                      "fill": "#000066",
+                      "content": "INFO",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "logMsg6p",
+                  "name": "LogMsg6",
+                  "fill": "#111111",
+                  "content": "输出文件保存至 ~/Downloads/development_plan.docx",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

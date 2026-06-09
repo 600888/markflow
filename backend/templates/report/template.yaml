@@ -31,7 +31,69 @@ styles:
     font: "微软雅黑"
     size: "五号"
     line_spacing: 1.25
+    space_before: "0 行"
+    space_after: "0 行"
   code:
     font: "Cascadia Code"
     size: "小五"
     background: "#F0F6FC"
+  table:
+    # 基础样式
+    font: "微软雅黑"
+    size: "五号"
+    line_spacing: 1.15
+    alignment: "center"
+
+    # 段落控制
+    first_line_indent: "0 字符"
+    space_before: "0.5 行"
+    space_after: "0.5 行"
+
+    # 表头样式（蓝色主题，与 heading1 一致）
+    header_font: "微软雅黑"
+    header_size: "五号"
+    header_bold: true
+    header_alignment: "center"
+    header_background: "#2E75B6"
+
+    # 表体样式
+    body_font: "微软雅黑"
+    body_size: "五号"
+    body_alignment: "center"
+
+    # 单元格内边距（单位：pt）
+    cell_padding:
+      top: 3
+      bottom: 3
+      left: 6
+      right: 6
+
+    # 三线表边框（报告简洁风格）
+    full_width: true
+    border_style: "three_line_table"
+    border_top:
+      weight: 1.5
+      color: "#2E75B6"
+    border_header_bottom:
+      weight: 1.0
+      color: "#2E75B6"
+    border_bottom:
+      weight: 1.5
+      color: "#2E75B6"
+    border_vertical: false
+    border_horizontal_internal: false
+
+    # 可选：斑马纹（报告场景推荐开启）
+    stripe_rows: true
+    stripe_color: "#F0F7FD"
+
+    # 跨页设置
+    page_break:
+      allow: true
+      repeat_header: true
+
+    # 标题配置
+    caption_position: "above"
+    caption_font: "微软雅黑"
+    caption_size: "小五"
+    caption_bold: true

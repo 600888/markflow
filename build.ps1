@@ -13,7 +13,28 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 function backend-install {
     Push-Location (Join-Path $root "backend")
     pip install -e ".[dev]"
-    if ($LASTEXITCODE -eq 0) { Write-Host "[OK] backend dependencies installed" -ForegroundColor Green }
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] backend dependencies installed" -ForegroundColor Green
+        Write-Host ">>> Installing Playwright Chromium (~150MB, first time only)..." -ForegroundColor Cyan
+        python -m playwright install chromium 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] Playwright Chromium installed" -ForegroundColor Green
+        } else {
+            Write-Host "[WARN] Chromium download failed, run 'build.ps1 backend-install-playwright' later" -ForegroundColor Yellow
+        }
+    }
+    Pop-Location
+}
+
+function backend-install-playwright {
+    <#
+    .SYNOPSIS
+      Install / repair Playwright Chromium browser separately
+    #>
+    Push-Location (Join-Path $root "backend")
+    Write-Host ">>> Installing Playwright Chromium (~150MB)..." -ForegroundColor Cyan
+    python -m playwright install chromium
+    if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Playwright Chromium installed" -ForegroundColor Green }
     Pop-Location
 }
 
@@ -47,27 +68,31 @@ function backend-pack {
     if (Test-Path $binDir) { Remove-Item -Recurse -Force $binDir -ErrorAction SilentlyContinue }
 
     pyinstaller --onefile `
-        --name pandoc-service `
+        --name markflow-service `
         --distpath ../src-tauri/binaries `
         --workpath build/pyinstaller `
         --add-data "app;app" `
         --add-data "config;config" `
+        --add-data "templates;templates" `
+        --add-data "filters;filters" `
+        --add-data "static;static" `
         --hidden-import uvicorn `
         --hidden-import uvicorn.logging `
         --hidden-import uvicorn.loops.auto `
         --hidden-import uvicorn.protocols.http.auto `
         --hidden-import uvicorn.protocols.websockets.auto `
         --hidden-import sse_starlette `
+        --hidden-import playwright.async_api `
         --collect-all app `
         app/main.py
 
     if ($LASTEXITCODE -eq 0) {
         # Tauri externalBin 要求文件名带目标平台后缀
         $targetTriple = "x86_64-pc-windows-msvc"
-        $src = Join-Path $binDir "pandoc-service.exe"
-        $dst = Join-Path $binDir "pandoc-service-$targetTriple.exe"
+        $src = Join-Path $binDir "markflow-service.exe"
+        $dst = Join-Path $binDir "markflow-service-$targetTriple.exe"
         if (Test-Path $src) {
-            Rename-Item -Path $src -NewName "pandoc-service-$targetTriple.exe" -Force
+            Rename-Item -Path $src -NewName "markflow-service-$targetTriple.exe" -Force
             Write-Host "[OK] backend packed -> $dst" -ForegroundColor Green
         }
     }
@@ -106,7 +131,7 @@ function tauri-dev {
 }
 
 function tauri-build {
-    $binary = Join-Path $root "src-tauri\binaries\pandoc-service-x86_64-pc-windows-msvc.exe"
+    $binary = Join-Path $root "src-tauri\binaries\markflow-service-x86_64-pc-windows-msvc.exe"
     if (-not (Test-Path $binary)) {
         Write-Host "[ERROR] sidecar binary not found: $binary" -ForegroundColor Red
         Write-Host "  Run '.\build.ps1 backend-pack' first" -ForegroundColor Yellow
@@ -167,11 +192,12 @@ function help {
  Usage: .\build.ps1 <command>
 
  --- Backend ---
-  backend-install  Install backend dependencies (pip)
-  backend-dev      Start backend dev server (uvicorn :62581)
-  backend-lint     Run ruff check
-  backend-test     Run pytest
-  backend-pack     PyInstaller -> standalone exe
+  backend-install           Install backend deps (pip) + playwright chromium
+  backend-install-playwright Install/repair Playwright Chromium browser
+  backend-dev               Start backend dev server (uvicorn :62581)
+  backend-lint              Run ruff check
+  backend-test              Run pytest
+  backend-pack              PyInstaller -> standalone exe
 
  --- Frontend ---
   frontend-install Install frontend dependencies (npm)
@@ -200,11 +226,12 @@ function help {
 }
 
 switch ($command) {
-    "backend-install" { backend-install }
-    "backend-dev"     { backend-dev }
-    "backend-lint"    { backend-lint }
-    "backend-test"    { backend-test }
-    "backend-pack"    { backend-pack }
+    "backend-install"            { backend-install }
+    "backend-install-playwright" { backend-install-playwright }
+    "backend-dev"                { backend-dev }
+    "backend-lint"               { backend-lint }
+    "backend-test"               { backend-test }
+    "backend-pack"               { backend-pack }
     "frontend-install"{ frontend-install }
     "frontend-dev"    { frontend-dev }
     "frontend-lint"   { frontend-lint }

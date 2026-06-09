@@ -9,6 +9,7 @@ import { AdvancedOptions } from "./components/AdvancedOptions";
 import { ConvertSection } from "./components/ConvertSection";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { StatusBar } from "./components/StatusBar";
+import { LogPanel } from "./components/LogPanel";
 import { ToastProvider } from "./components/ui/toast";
 
 export default function App() {
@@ -45,6 +46,8 @@ export default function App() {
         </div>
 
         <StatusBar />
+
+        <LogPanel />
       </div>
     </ToastProvider>
   );

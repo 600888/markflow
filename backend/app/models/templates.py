@@ -27,3 +27,4 @@ class TemplateInfo(BaseModel):
     target_formats: list[str] = Field(default_factory=lambda: ["docx"])
     has_reference_doc: bool = False
     has_lua_filters: bool = False
+    is_custom: bool = False

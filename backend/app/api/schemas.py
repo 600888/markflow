@@ -40,7 +40,86 @@ class TemplateItem(BaseModel):
     target_formats: list[str]
     has_reference_doc: bool
     has_lua_filters: bool
+    is_custom: bool = False
 
 
 class TemplateListResponse(BaseModel):
     templates: list[TemplateItem]
+
+
+# ========== 自定义模版生成 ==========
+class StyleConfig(BaseModel):
+    """单个样式配置（如 heading1, body, code 等）"""
+
+    font: str | None = None
+    size: str | None = None
+    bold: bool | None = None
+    color: str | None = None
+    alignment: str | None = None
+    space_before: str | None = None
+    space_after: str | None = None
+    line_spacing: float | None = None
+    first_line_indent: str | None = None
+    background: str | None = None
+
+
+class TableStyleConfig(BaseModel):
+    """表格样式配置"""
+
+    font: str | None = None
+    size: str | None = None
+    line_spacing: float | None = None
+    alignment: str | None = None
+    first_line_indent: str | None = None
+    space_before: str | None = None
+    space_after: str | None = None
+    header_font: str | None = None
+    header_size: str | None = None
+    header_bold: bool | None = None
+    header_alignment: str | None = None
+    header_background: str | None = None
+    body_font: str | None = None
+    body_size: str | None = None
+    body_alignment: str | None = None
+    caption_font: str | None = None
+    caption_size: str | None = None
+    caption_bold: bool | None = None
+
+
+class TemplateGenerateRequest(BaseModel):
+    """模版生成请求"""
+
+    name: str = Field(..., description="模版显示名称")
+    slug: str = Field(..., description="模版唯一标识符", pattern=r"^[a-z0-9_-]+$")
+    description: str = ""
+    author: str = "MarkFlow"
+    target_formats: list[str] = Field(default_factory=lambda: ["docx"])
+    version: str = "1.0.0"
+    styles: dict[str, StyleConfig | TableStyleConfig] = Field(
+        ..., description="样式配置，key 为 heading1/heading2/heading3/heading4/body/code/table"
+    )
+
+
+class TemplateGenerateResponse(BaseModel):
+    """模版生成响应"""
+
+    slug: str
+    name: str
+    path: str
+
+
+# ========== 日志 ==========
+class LogEntryResponse(BaseModel):
+    """单条日志响应"""
+
+    timestamp: str
+    level: str
+    message: str
+    source: str
+
+
+class LogListResponse(BaseModel):
+    """日志列表响应"""
+
+    logs: list[LogEntryResponse]
+    total: int

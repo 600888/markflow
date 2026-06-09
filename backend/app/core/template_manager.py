@@ -8,10 +8,7 @@ import yaml
 
 from app.core.log import log
 from app.models.templates import ConversionOptions, TemplateInfo
-from config.paths import TEMPLATES_DIR
-
-# 内置过滤器路径
-_FILTERS_DIR = Path(__file__).resolve().parent.parent.parent / "filters"
+from config.paths import FILTERS_DIR, TEMPLATES_DIR
 
 
 class TemplateManager:
@@ -22,7 +19,7 @@ class TemplateManager:
         self._yaml_cache: dict[str, dict] = {}
 
     def list_templates(self) -> list[TemplateInfo]:
-        """列出所有可用模版"""
+        """列出所有可用模版（包括内置和自定义）"""
         templates: list[TemplateInfo] = []
 
         if not self._dir.exists():
@@ -32,18 +29,32 @@ class TemplateManager:
         for entry in sorted(self._dir.iterdir()):
             if not entry.is_dir() or entry.name.startswith("."):
                 continue
-            info = self._load_template(entry)
+            if entry.name == "custom":
+                # custom 目录下的子目录才是自定义模板
+                for sub in sorted(entry.iterdir()):
+                    if not sub.is_dir() or sub.name.startswith("."):
+                        continue
+                    info = self._load_template(sub, is_custom=True)
+                    if info:
+                        templates.append(info)
+                continue
+            info = self._load_template(entry, is_custom=False)
             if info:
                 templates.append(info)
 
         return templates
 
     def get_template(self, slug: str) -> TemplateInfo | None:
-        """根据 slug 获取模版信息"""
+        """根据 slug 获取模版信息（内置 > 自定义）"""
+        # 先查内置
         template_dir = self._dir / slug
-        if not template_dir.is_dir():
-            return None
-        return self._load_template(template_dir)
+        if template_dir.is_dir():
+            return self._load_template(template_dir, is_custom=False)
+        # 再查自定义
+        custom_dir = self._dir / "custom" / slug
+        if custom_dir.is_dir():
+            return self._load_template(custom_dir, is_custom=True)
+        return None
 
     def build_extra_args(self, options: ConversionOptions | None = None) -> list[str]:
         """
@@ -56,9 +67,9 @@ class TemplateManager:
             options = ConversionOptions()
 
         args: list[str] = []
-        template_dir = self._dir / options.template_slug
+        template_dir = self._resolve_template_dir(options.template_slug)
 
-        if template_dir.is_dir():
+        if template_dir is not None:
             # reference doc
             ref_path = template_dir / "reference.docx"
             if ref_path.exists():
@@ -81,17 +92,16 @@ class TemplateManager:
 
         # 公式位置过滤器
         if options.formula_position != "smart":
-            formula_filter = _FILTERS_DIR / "formula_position.lua"
+            formula_filter = FILTERS_DIR / "formula_position.lua"
             if formula_filter.exists():
                 args.extend(["--lua-filter", str(formula_filter.resolve())])
                 args.extend(["--metadata", f"formula-position={options.formula_position}"])
 
         # 分割线过滤器
         if not options.keep_separator:
-            hrule_filter = _FILTERS_DIR / "remove_hrule.lua"
+            hrule_filter = FILTERS_DIR / "remove_hrule.lua"
             if hrule_filter.exists():
                 args.extend(["--lua-filter", str(hrule_filter.resolve())])
-                args.extend(["--metadata", "keep-separator=false"])
 
         return args
 
@@ -107,16 +117,34 @@ class TemplateManager:
         return data.get("styles", {}).get("table")
 
     def _load_yaml(self, slug: str) -> dict | None:
-        """按 slug 加载 template.yaml"""
+        """按 slug 加载 template.yaml（内置 > 自定义）"""
+        # 先查内置
         yaml_path = self._dir / slug / "template.yaml"
-        if not yaml_path.exists():
-            return None
-        try:
-            return yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
-        except (yaml.YAMLError, OSError):
-            return None
+        if yaml_path.exists():
+            try:
+                return yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+            except (yaml.YAMLError, OSError):
+                return None
+        # 再查自定义
+        custom_path = self._dir / "custom" / slug / "template.yaml"
+        if custom_path.exists():
+            try:
+                return yaml.safe_load(custom_path.read_text(encoding="utf-8"))
+            except (yaml.YAMLError, OSError):
+                return None
+        return None
 
-    def _load_template(self, template_dir: Path) -> TemplateInfo | None:
+    def _resolve_template_dir(self, slug: str) -> Path | None:
+        """查找模板目录（内置 > 自定义）"""
+        builtin = self._dir / slug
+        if builtin.is_dir():
+            return builtin
+        custom = self._dir / "custom" / slug
+        if custom.is_dir():
+            return custom
+        return None
+
+    def _load_template(self, template_dir: Path, *, is_custom: bool = False) -> TemplateInfo | None:
         """从目录加载单个模版"""
         yaml_path = template_dir / "template.yaml"
         if not yaml_path.exists():
@@ -145,4 +173,5 @@ class TemplateManager:
             target_formats=data.get("target_formats", ["docx"]),
             has_reference_doc=ref_doc,
             has_lua_filters=has_filters,
+            is_custom=is_custom,
         )

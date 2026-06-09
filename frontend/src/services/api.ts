@@ -1,5 +1,12 @@
 import ky from "ky";
-import type { HealthCheck, TemplateInfo, TaskStatus } from "../types";
+import type {
+  HealthCheck,
+  TemplateInfo,
+  TaskStatus,
+  TemplateGenerateRequest,
+  TemplateGenerateResponse,
+  LogListResponse,
+} from "../types";
 
 let _api: typeof ky | null = null;
 let _baseUrl = "http://127.0.0.1:62581";
@@ -70,8 +77,19 @@ export async function submitConvertFromContent(
   keepSeparator: boolean = true,
 ): Promise<{ task_id: string; status: string; message: string }> {
   const blob = new Blob([content], { type: "text/markdown" });
-  const file = new File([blob], fileName || "document.md", { type: "text/markdown" });
-  return submitConvert(file, outputFormat, templateSlug, toc, tocDepth, metadata, formulaPosition, keepSeparator);
+  const file = new File([blob], fileName || "document.md", {
+    type: "text/markdown",
+  });
+  return submitConvert(
+    file,
+    outputFormat,
+    templateSlug,
+    toc,
+    tocDepth,
+    metadata,
+    formulaPosition,
+    keepSeparator,
+  );
 }
 
 export async function fetchTaskStatus(taskId: string): Promise<TaskStatus> {
@@ -106,4 +124,43 @@ export function streamProgress(
 
 export function getDownloadUrl(taskId: string): string {
   return `${_baseUrl}/api/v1/tasks/${taskId}/download`;
+}
+
+// ==== 自定义模板生成 ====
+
+export async function generateTemplate(
+  req: TemplateGenerateRequest,
+): Promise<TemplateGenerateResponse> {
+  return api().post("templates/generate", { json: req }).json();
+}
+
+export async function fetchCustomTemplates(): Promise<{
+  templates: TemplateInfo[];
+}> {
+  return api().get("templates/custom").json();
+}
+
+export async function deleteTemplate(slug: string): Promise<void> {
+  await api().delete(`templates/${slug}`);
+}
+
+// ==== 日志 ====
+
+export async function fetchLogs(
+  level?: string,
+  search?: string,
+  limit?: number,
+): Promise<LogListResponse> {
+  const params = new URLSearchParams();
+  if (level && level !== "ALL") params.set("level", level);
+  if (search) params.set("search", search);
+  if (limit) params.set("limit", String(limit));
+  const qs = params.toString();
+  return api()
+    .get(`logs${qs ? `?${qs}` : ""}`)
+    .json();
+}
+
+export async function clearLogs(): Promise<void> {
+  await api().delete("logs");
 }
