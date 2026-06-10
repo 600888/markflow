@@ -62,6 +62,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     # 注入到路由层
     init(conv_svc, template_mgr, template_gen, log_svc=log_svc)
 
+    # ── 启动时检查 Mermaid 渲染环境（仅检测，不自动下载）───
+    from app.core.mermaid_renderer import get_diagnostic_message
+
+    logger.info(get_diagnostic_message())
+
     yield
 
     logger.info("MarkFlow 后端关闭")

@@ -1,16 +1,13 @@
 """
 Playwright 驱动的 Mermaid 图表渲染器
 
-替换原有的 mmdc (Node.js @mermaid-js/mermaid-cli) 子进程方案。
-依赖:
-  - pip install playwright
-  - playwright install chromium  (首次安装 Chromium 浏览器)
+在启动时通过 browser_check.ensure_chromium() 自动下载 Chromium。
+此文件仅保留渲染逻辑，不再包含 Chromium 安装或 mmdc 回退。
 
 使用方式:
-  from app.core.mermaid_renderer import render_diagrams, is_available
+  from app.core.mermaid_renderer import render_diagrams
 
-  if is_available():
-      success = await render_diagrams([(code1, path1), (code2, path2)])
+  success = await render_diagrams([(code1, path1), (code2, path2)])
 """
 
 from __future__ import annotations
@@ -95,30 +92,19 @@ mermaid.initialize({{
 
 
 def is_available() -> bool:
-    """检查 Playwright + mermaid.js 是否可用"""
+    """检查 Mermaid 渲染是否就绪（mermaid.js 已加载 + Chromium 已安装）"""
     if not _load_mermaid_js():
         return False
-    try:
-        import playwright  # noqa: F401
+    from app.core.browser_check import get_or_check_chromium
 
-        return True  # noqa: TRY300
-    except ImportError:
-        return False
-
-
-def check_chromium() -> tuple[bool, str]:
-    """检查 Playwright 的 Chromium 是否已安装"""
-    try:
-        return True, "chromium已安装"
-    except Exception:  # noqa: BLE001
-        return False, "Chromium 未安装，请运行: playwright install chromium"
+    return get_or_check_chromium()
 
 
 # 渲染视口尺寸（足够大，确保复杂流程图不会被 CSS 缩放）
 _VIEWPORT_SIZE = {"width": 4096, "height": 4096}
 
 
-async def render_diagrams(  # noqa: C901, PLR0912, PLR0915
+async def render_diagrams(
     diagrams: list[tuple[str, Path]],
     scale: float = 3.0,
 ) -> list[bool]:
@@ -193,7 +179,7 @@ async def render_diagrams(  # noqa: C901, PLR0912, PLR0915
                             ".mermaid svg",
                             timeout=30000,
                         )
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         log.warning(f"Mermaid 图表 #{i} 渲染超时（可能语法错误）")
                         results.append(False)
                         continue
@@ -215,7 +201,7 @@ async def render_diagrams(  # noqa: C901, PLR0912, PLR0915
                         log.warning(f"Mermaid 图表 #{i} 未找到渲染元素")
                         results.append(False)
 
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     log.warning(f"Mermaid 图表 #{i} 渲染异常: {e}")
                     results.append(False)
                 finally:
@@ -224,7 +210,7 @@ async def render_diagrams(  # noqa: C901, PLR0912, PLR0915
 
             await browser.close()
 
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning(f"Playwright 浏览器启动失败: {e}")
         results = [False] * len(diagrams)
 
@@ -252,26 +238,17 @@ def get_diagnostic_message() -> str:
     """返回渲染器状态诊断信息（用于日志/前端提示）"""
     parts: list[str] = []
 
-    # mermaid.js
     js = _load_mermaid_js()
     if js:
-        parts.append(f"✓ mermaid.js 已加载 ({len(js)} bytes)")
+        parts.append(f"✓ mermaid.js ({len(js)} bytes)")
     else:
         parts.append("✗ mermaid.min.js 未找到")
 
-    # playwright
-    try:
-        import playwright  # noqa: F401
+    from app.core.browser_check import get_or_check_chromium
 
-        parts.append("✓ playwright 已安装")
-        # 验证 Chromium 是否可执行（若可导入 driver 则说明已安装）
-        with contextlib.suppress(ImportError):
-            from playwright._impl._driver import compute_driver_executable  # noqa: F401
-
+    if get_or_check_chromium():
         parts.append("✓ Chromium 已安装")
-    except ImportError:
-        parts.append("✗ playwright 未安装 (pip install playwright)")
-    except Exception:  # noqa: BLE001
-        parts.append("✗ Chromium 未安装 (playwright install chromium)")
+    else:
+        parts.append("✗ Chromium 未安装")
 
     return " | ".join(parts)

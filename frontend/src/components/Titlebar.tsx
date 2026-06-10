@@ -1,4 +1,12 @@
-import { Moon, Sun, Minus, Square, X, ScrollText } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  Minus,
+  Square,
+  X,
+  ScrollText,
+  Settings,
+} from "lucide-react";
 import { useStore } from "../stores/useStore";
 import { isTauri } from "../services/tauri";
 
@@ -15,6 +23,7 @@ export function Titlebar() {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleLogPanel = useStore((s) => s.toggleLogPanel);
+  const toggleSettings = useStore((s) => s.toggleSettings);
 
   const onMinimize = async () => (await getWin())?.minimize();
   const onMaximize = async () => (await getWin())?.toggleMaximize();
@@ -41,6 +50,9 @@ export function Titlebar() {
         </button>
         <button onClick={toggleLogPanel} className={btnClass} title="日志">
           <ScrollText size={14} />
+        </button>
+        <button onClick={toggleSettings} className={btnClass} title="设置">
+          <Settings size={14} />
         </button>
         <button onClick={onMinimize} className={btnClass}>
           <Minus size={14} />

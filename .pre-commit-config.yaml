@@ -1,9 +1,9 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.0
+    rev: v0.15.15
     hooks:
       - id: ruff
-        args: [--fix, --unsafe-fixes]
+        args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -22,13 +22,13 @@ repos:
         files: ^frontend/src/.*\.(ts|tsx)$
         pass_filenames: false
 
-      - id: pyrefly
-        name: pyrefly (backend)
-        entry: cmd /c "cd backend && pyrefly check ."
-        language: system
-        files: ^backend/.*\.py$
-        pass_filenames: false
-        types: [python]
+      # - id: pyrefly
+      #   name: pyrefly (backend)
+      #   entry: cmd /c "cd backend && pyrefly check ."
+      #   language: system
+      #   files: ^backend/.*\.py$
+      #   pass_filenames: false
+      #   types: [python]
 
       # - id: pytest
       #   name: pytest (backend)

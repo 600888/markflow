@@ -53,6 +53,14 @@ ignore = [
     "D104",                        # __init__.py 包 docstring
     "TRY003",                      # 异常消息过长
     "EM101", "EM102",              # 异常字符串必须赋值给变量（过度）
+    "C901",                        # 函数复杂性（实用场景无需拆分）
+    "PLR0911", "PLR0912",          # return/分支过多（实用场景可接受）
+    "PLR0915",                     # 语句过多（预处理方法合理）
+
+    "BLE001",                      # 盲目捕获 Exception（简化错误处理）
+    "TRY300",                      # try 中 return（风格偏好）
+    "PLC0415",                     # 函数内 import（可选依赖、延迟加载合理）
+    "S603",                        # subprocess 执行当前 Python（sys.executable 可控）
 ]
 per-file-ignores."tests/**" = [
     "D", "S101", "PLR2004", "PLC0415", "RUF012", "TC003", "ANN", "ARG",
@@ -74,10 +82,19 @@ per-file-ignores."app/services/converter.py" = [
 per-file-ignores."app/core/engine.py" = [
     "N806", "SLF001", "C901", "PLR0912", "FBT001", "D301",
     "S603", "S607", "BLE001", "ANN202", "SIM105", "PLW1510",
-    "ANN401", "ASYNC221",
+    "ANN401", "ASYNC221", "ASYNC240",
 ]
 per-file-ignores."app/core/template_manager.py" = [
     "C901",
+]
+per-file-ignores."app/core/file_manager.py" = [
+    "ASYNC240",
+]
+per-file-ignores."app/core/mermaid_renderer.py" = [
+    "ASYNC240",
+]
+per-file-ignores."app/core/browser_check.py" = [
+    "ASYNC251",
 ]
 per-file-ignores."scripts/generate_reference.py" = [
     "INP001", "D103", "D205", "D213", "PLR2004", "C901",

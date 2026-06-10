@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
-import os
 import re
 import shutil
-import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -25,14 +22,12 @@ from app.core.log import log
 from app.core.mermaid_renderer import is_available as mermaid_renderer_available
 
 # ── 嵌入的 Mermaid 渲染器 ─────────────────────────────
-# 优先使用 Playwright 方案（无需 Node.js），fallback 到 mmdc
 from app.core.mermaid_renderer import render_diagrams
 from app.core.template_manager import TemplateManager
 from app.models import ConversionResult, OutputFormat
 from app.models.templates import ConversionOptions
 from app.utils.config import AppSettings
 from app.utils.exceptions import ConversionError, PandocNotFoundError, UnsupportedFormatError
-from config.paths import DATA_ROOT
 
 # ── 字号映射 ──────────────────────────────────────────────
 SIZE_MAP: dict[str, float] = {
@@ -463,25 +458,7 @@ class PandocEngine(ConversionEngine):
 
     # ── Mermaid 图表预处理 ────────────────────────────────
 
-    @staticmethod
-    def _mmdc_config_path() -> Path:
-        """Mmdc 无头浏览器配置文件路径"""
-        cfg = DATA_ROOT / "config" / "mmdc_puppeteer.json"
-        if not cfg.exists():
-            cfg.parent.mkdir(parents=True, exist_ok=True)
-            cfg.write_text(
-                json.dumps(
-                    {
-                        "puppeteerConfig": {
-                            "args": ["--no-sandbox", "--disable-setuid-sandbox"],
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
-        return cfg
-
-    async def _preprocess_mermaid(self, input_path: Path) -> list[Path]:  # noqa: PLR0915
+    async def _preprocess_mermaid(self, input_path: Path) -> list[Path]:
         """
         将 Markdown 中的 ```mermaid 代码块渲染为图片
 
@@ -490,9 +467,6 @@ class PandocEngine(ConversionEngine):
         2. 使用 Playwright + 内嵌 mermaid.js 渲染为 PNG
         3. 将原代码块替换为 ![](<图片路径>)
         4. 写回文件
-
-        如果 Playwright 不可用，尝试回退到 mmdc (Node.js mermaid-cli)。
-        两者都不可用时仅记录警告，不阻断转换。
 
         Returns:
             创建的临时目录列表（供后续清理使用）
@@ -563,66 +537,8 @@ class PandocEngine(ConversionEngine):
                     # 渲染失败的保留原文
                     log.warning(f"Mermaid 图表 #{idx} 渲染失败，保留原文")
         else:
-            log.info("Playwright 渲染器不可用，尝试 mmdc 回退")
-
-        # 2) 回退: 尝试 mmdc (Node.js mermaid-cli)
-        if not any_rendered:
-            mmdc_cmd = _find_mmdc()
-            if mmdc_cmd is not None:
-                config_path = PandocEngine._mmdc_config_path()
-                for idx, m in enumerate(reversed(matches)):
-                    code_content = m.group(1).strip()
-                    if not code_content:
-                        start, end = m.start(), m.end()
-                        new_text = new_text[:start] + "\n" + new_text[end:]
-                        continue
-
-                    mmd_file = tmp_dir / f"diagram_{idx}.mmd"
-                    png_file = tmp_dir / f"diagram_{idx}.png"
-
-                    try:
-                        mmd_file.write_text(code_content, encoding="utf-8")
-                        result_legacy = subprocess.run(
-                            [
-                                *mmdc_cmd,
-                                "-i",
-                                str(mmd_file),
-                                "-o",
-                                str(png_file),
-                                "-b",
-                                "transparent",
-                                "-s",
-                                "2",
-                                "-p",
-                                str(config_path),
-                            ],
-                            capture_output=True,
-                            timeout=30,
-                            check=False,
-                        )
-
-                        if png_file.exists() and png_file.stat().st_size > 0:
-                            abs_path_str = png_file.resolve().as_posix()
-                            img_md = f"![]({abs_path_str})\n"
-                            start, end = m.start(), m.end()
-                            new_text = new_text[:start] + img_md + new_text[end:]
-                            any_rendered = True
-                        else:
-                            stderr_legacy = result_legacy.stderr.decode(
-                                "utf-8", errors="replace"
-                            ).strip()[:500]
-                            log.warning(
-                                f"Mermaid 图表 #{idx} (mmdc) 渲染失败"
-                                f"{', stderr: ' + stderr_legacy if stderr_legacy else ''}"
-                            )
-                    except (subprocess.TimeoutExpired, OSError) as e:
-                        log.warning(f"Mermaid 图表 #{idx} (mmdc) 渲染异常: {e}")
-            else:
-                log.warning(
-                    "Mermaid 渲染器均不可用：Playwright 未安装 且 mmdc 未找到。"
-                    "请运行: pip install playwright && playwright install chromium"
-                )
-                return created_dirs
+            log.warning("Playwright 渲染器不可用，跳过 Mermaid 图表渲染")
+            return created_dirs
 
         # ── 写回文件 ──
         if any_rendered and new_text != text:
@@ -657,7 +573,7 @@ class PandocEngine(ConversionEngine):
 
     # ── 表格样式后处理 ─────────────────────────────────────
 
-    def _apply_table_styles(self, docx_path: Path, slug: str) -> None:  # noqa: PLR0915
+    def _apply_table_styles(self, docx_path: Path, slug: str) -> None:
         """对 docx 中所有表格应用模板的 table 样式配置"""
         tc = self._template_mgr.get_table_config(slug)
         if not tc:
@@ -764,62 +680,21 @@ class PandocEngine(ConversionEngine):
                         if stripe and stripe_color and row_idx % 2 == 0:
                             _set_cell_shading(cell, stripe_color)
 
+        # 在每个表格后插入一个空行（避免表格紧贴下一内容）
+        for table in reversed(tables):
+            tbl = table._tbl
+            # 构建空段落
+            new_p = OxmlElement("w:p")
+            pPr = OxmlElement("w:pPr")
+            # 设置一个合理的行间距（约 6pt 空行）
+            spacing = OxmlElement("w:spacing")
+            spacing.set(qn("w:line"), "360")
+            spacing.set(qn("w:lineRule"), "auto")
+            pPr.append(spacing)
+            new_p.append(pPr)
+            tbl.addnext(new_p)
+
         try:
             doc.save(str(docx_path))
         except Exception as e:
             log.warning(f"保存 docx 表格样式失败: {e}")
-
-
-def _find_mmdc() -> list[str] | None:
-    """查找可用的 mmdc 命令（npx / 全局安装），返回命令前缀列表"""
-    # ---- 1) 直接找 mmdc（全局安装后通常在 PATH 中） ----
-    mmdc_path = shutil.which("mmdc")
-    if mmdc_path:
-        log.debug(f"找到 mmdc: {mmdc_path}")
-        return [mmdc_path]
-
-    # ---- 2) 通过 npx 按需下载 ----
-    # 先确认 npx 也在 PATH 中
-    npx_path = shutil.which("npx") or shutil.which("npx.cmd")
-    if npx_path:
-        try:
-            result = subprocess.run(
-                [npx_path, "--yes", "@mermaid-js/mermaid-cli", "--version"],
-                capture_output=True,
-                timeout=15,
-            )
-            if result.returncode == 0:
-                return [npx_path, "-y", "@mermaid-js/mermaid-cli"]
-            stderr = result.stderr.decode("utf-8", errors="replace").strip()
-            log.debug(f"npx 执行失败 (exit={result.returncode}): {stderr[:200]}")
-        except (subprocess.TimeoutExpired, OSError) as e:
-            log.debug(f"npx 调用异常: {e}")
-
-    # ---- 3) Windows: 尝试通过 shell 执行（cmd 的 PATH 可能不同） ----
-    if os.name == "nt":
-        try:
-            result = subprocess.run(  # noqa: S602
-                "npx --yes @mermaid-js/mermaid-cli --version",
-                capture_output=True,
-                timeout=15,
-                shell=True,
-            )
-            if result.returncode == 0:
-                return ["npx", "-y", "@mermaid-js/mermaid-cli"]
-        except (subprocess.TimeoutExpired, OSError) as e:
-            log.debug(f"npx(shell) 调用异常: {e}")
-
-        # 在 Windows 上 mmdc.cmd 可能在 %APPDATA%/npm 下
-        appdata_npm = Path(os.environ.get("APPDATA", "")) / "npm" / "mmdc.cmd"
-        if appdata_npm.exists():
-            log.debug(f"找到 mmdc.cmd: {appdata_npm}")
-            return [str(appdata_npm)]
-        local_npm = Path.cwd() / "node_modules" / ".bin" / "mmdc.cmd"
-        if local_npm.exists():
-            return [str(local_npm)]
-
-    log.warning(
-        "Mermaid-cli 未找到，DOCX 中的 Mermaid 图表将无法渲染。"
-        "请运行: npm install -g @mermaid-js/mermaid-cli"
-    )
-    return None

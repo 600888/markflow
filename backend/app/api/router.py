@@ -17,11 +17,19 @@ from app.api.schemas import (
     HealthResponse,
     LogEntryResponse,
     LogListResponse,
+    MermaidStatusResponse,
     TaskStatusResponse,
     TemplateGenerateRequest,
     TemplateGenerateResponse,
     TemplateItem,
     TemplateListResponse,
+)
+from app.core.browser_check import (
+    ensure_chromium,
+    get_install_progress,
+    get_or_check_chromium,
+    is_chromium_ready,
+    remove_chromium,
 )
 from app.core.template_manager import TemplateManager
 from app.models.models import ConversionStatus, OutputFormat
@@ -80,6 +88,21 @@ def get_gen() -> TemplateGenerator:
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     return HealthResponse()
+
+
+# ========== Mermaid 渲染器状态 ==========
+@router.get("/mermaid-status", response_model=MermaidStatusResponse)
+async def mermaid_status() -> MermaidStatusResponse:
+    from app.core.mermaid_renderer import _load_mermaid_js, get_diagnostic_message
+
+    js_loaded = bool(_load_mermaid_js())
+    chromium_ok = get_or_check_chromium()
+    return MermaidStatusResponse(
+        chromium_ready=chromium_ok,
+        mermaid_js_loaded=js_loaded,
+        mermaid_available=chromium_ok and js_loaded,
+        diagnostic=get_diagnostic_message(),
+    )
 
 
 # ========== 模版列表 ==========
@@ -297,6 +320,85 @@ async def clear_logs(
 ) -> dict:
     log_svc.clear()
     return {"detail": "日志已清空"}
+
+
+# ========== 模块管理 ==========
+
+
+async def _install_mermaid_flow():
+    """内部：Mermaid 安装 SSE 事件流"""
+    if is_chromium_ready():
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已安装"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+        return
+
+    task = asyncio.create_task(ensure_chromium())
+    last_pct = -1
+    pulse = 0
+    while not task.done():
+        prog = get_install_progress()
+        pct = prog.get("progress", 0)
+        msg = prog.get("message", "安装中...")
+        if pct > last_pct:
+            last_pct = pct
+            pulse = 0
+            yield {"event": "progress", "data": json.dumps({"progress": pct, "message": msg})}
+        else:
+            pulse += 1
+            if pulse % 6 == 0:
+                yield {
+                    "event": "progress",
+                    "data": json.dumps({"progress": last_pct, "message": msg}),
+                }
+        await asyncio.sleep(0.5)
+
+    if task.result():
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "安装完成"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+    else:
+        yield {"event": "error", "data": json.dumps({"detail": "Chromium 安装失败"})}
+
+
+async def _uninstall_mermaid_flow():
+    """内部：Mermaid 卸载 SSE 事件流"""
+    if not is_chromium_ready():
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已卸载"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+        return
+
+    yield {
+        "event": "progress",
+        "data": json.dumps({"progress": 10, "message": "正在卸载 Chromium..."}),
+    }
+    loop = asyncio.get_running_loop()
+    success = await loop.run_in_executor(None, remove_chromium)
+
+    if success:
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "卸载完成"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+    else:
+        yield {"event": "error", "data": json.dumps({"detail": "Chromium 卸载失败"})}
+
+
+@router.get("/modules/{module_id}/progress")
+async def stream_module_progress(
+    module_id: str,
+    action: str = "install",
+) -> EventSourceResponse:
+    """SSE 流式返回模块安装/卸载进度"""
+
+    async def event_gen():
+        if action not in ("install", "uninstall"):
+            yield {"event": "error", "data": json.dumps({"detail": f"未知操作: {action}"})}
+            return
+        if module_id != "mermaid":
+            yield {"event": "error", "data": json.dumps({"detail": f"未知模块: {module_id}"})}
+            return
+        flow = _install_mermaid_flow if action == "install" else _uninstall_mermaid_flow
+        async for evt in flow():
+            yield evt
+
+    return EventSourceResponse(event_gen(), ping=5)
 
 
 # ========== 辅助 ==========

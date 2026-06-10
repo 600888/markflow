@@ -38,6 +38,14 @@ export interface HealthCheck {
   version: string;
 }
 
+// ===== Mermaid 渲染器状态 =====
+export interface MermaidStatus {
+  chromium_ready: boolean;
+  mermaid_js_loaded: boolean;
+  mermaid_available: boolean;
+  diagnostic: string;
+}
+
 // 模板生成相关
 export interface StyleConfig {
   font?: string;
@@ -100,4 +108,17 @@ export interface LogEntry {
 export interface LogListResponse {
   logs: LogEntry[];
   total: number;
+}
+
+// ===== 设置 =====
+export type Language = "zh" | "en";
+export type SettingsTab = "general" | "modules" | "about";
+
+export interface ModuleInfo {
+  id: string;
+  name: string;
+  description: string;
+  status: "installed" | "not_installed" | "installing" | "uninstalling";
+  progress: number;
+  builtin?: boolean;
 }

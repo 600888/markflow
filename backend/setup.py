@@ -23,11 +23,11 @@ def _run_playwright_install() -> None:
     try:
         # 如果可以获取到 driver 路径，说明已经安装了
         return
-    except Exception:  # noqa: BLE001, S110
+    except Exception:  # noqa: S110
         pass
 
     with contextlib.suppress(Exception):
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             [sys.executable, "-m", "playwright", "install", "chromium"],
             check=True,
             timeout=300,

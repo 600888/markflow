@@ -1,0 +1,192 @@
+{
+  "version": "2.13",
+  "children": [
+    {
+      "type": "frame",
+      "id": "settingsPage",
+      "layout": "horizontal",
+      "width": 900,
+      "height": 600,
+      "clip": true,
+      "x": 100,
+      "y": 100,
+      "name": "Settings Page",
+      "children": [
+        {
+          "type": "frame",
+          "id": "settingsSidebar",
+          "layout": "vertical",
+          "width": 200,
+          "padding": [20, 20],
+          "gap": 8,
+          "fill": "#F9FAFB",
+          "name": "Sidebar",
+          "children": [
+            {
+              "type": "text",
+              "id": "settingsSidebarTitle",
+              "fill": "#111827",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600",
+              "content": "设置",
+              "name": "SidebarTitle"
+            },
+            {
+              "type": "frame",
+              "id": "menuGeneral",
+              "layout": "horizontal",
+              "width": "fill_container",
+              "padding": [12, 14],
+              "gap": 10,
+              "fill": "#EEF2FF",
+              "cornerRadius": 6,
+              "name": "MenuGeneral",
+              "children": [
+                {"type": "text", "id": "menuGeneralIcon", "fill": "#6366F1", "fontFamily": "Inter", "fontSize": 16, "content": "\u2699", "name": "Icon"},
+                {"type": "text", "id": "menuGeneralLabel", "fill": "#6366F1", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "500", "content": "\u901A\u7528 General", "name": "Label"}
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "menuModules",
+              "layout": "horizontal",
+              "width": "fill_container",
+              "padding": [12, 14],
+              "gap": 10,
+              "cornerRadius": 6,
+              "name": "MenuModules",
+              "children": [
+                {"type": "text", "id": "menuModulesIcon", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 16, "content": "\uD83E\uDDE9", "name": "Icon"},
+                {"type": "text", "id": "menuModulesLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 14, "content": "\u6A21\u5757 Modules", "name": "Label"}
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "menuAbout",
+              "layout": "horizontal",
+              "width": "fill_container",
+              "padding": [12, 14],
+              "gap": 10,
+              "cornerRadius": 6,
+              "name": "MenuAbout",
+              "children": [
+                {"type": "text", "id": "menuAboutIcon", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 16, "content": "\u2139", "name": "Icon"},
+                {"type": "text", "id": "menuAboutLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 14, "content": "\u5173\u4E8E About", "name": "Label"}
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "settingsContent",
+          "layout": "vertical",
+          "width": "fill_container",
+          "padding": [28, 28],
+          "gap": 24,
+          "fill": "#FFFFFF",
+          "name": "Content",
+          "children": [
+            {
+              "type": "frame",
+              "id": "settingsContentHeader",
+              "layout": "vertical",
+              "gap": 4,
+              "name": "ContentHeader",
+              "children": [
+                {"type": "text", "id": "settingsContentTitle", "fill": "#111827", "fontFamily": "Inter", "fontSize": 20, "fontWeight": "600", "content": "\u6A21\u5757 Modules", "name": "Title"},
+                {"type": "text", "id": "settingsContentDesc", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 13, "content": "\u7BA1\u7406 MarkFlow \u7684\u989D\u5916\u529F\u80FD\u6A21\u5757", "name": "Desc"}
+              ]
+            },
+            {"type": "rectangle", "id": "settingsDivider", "width": "fill_container", "height": 1, "fill": "#E5E7EB", "name": "Divider"},
+            {
+              "type": "frame",
+              "id": "mermaidCard",
+              "layout": "vertical",
+              "width": "fill_container",
+              "padding": [20, 20],
+              "gap": 16,
+              "fill": "#F9FAFB",
+              "cornerRadius": 10,
+              "name": "MermaidCard",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "mermaidCardHeader",
+                  "layout": "horizontal",
+                  "width": "fill_container",
+                  "gap": 14,
+                  "alignItems": "center",
+                  "name": "CardHeader",
+                  "children": [
+                    {"type": "frame", "id": "mermaidIconFrame", "padding": 10, "fill": "#EEF2FF", "cornerRadius": 8, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "IconFrame", "children": [{"type": "path", "id": "mermaidIcon", "width": 24, "height": 24, "viewBox": [0,0,24,24], "geometry": "M4 2h16a2 2 0 010 2v16a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zm0 2v16h16V4H4zm3 3h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z", "fill": "#6366F1", "name": "Icon"}]},
+                    {"type": "frame", "id": "mermaidNameCol", "layout": "vertical", "gap": 3, "width": "fill_container", "name": "NameCol", "children": [
+                      {"type": "text", "id": "mermaidNameLabel", "fill": "#111827", "fontFamily": "Inter", "fontSize": 15, "fontWeight": "600", "content": "Mermaid \u56FE\u8868\u6E32\u67D3", "name": "Name"},
+                      {"type": "text", "id": "mermaidDescLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 12, "content": "\u6D41\u7A0B\u56FE / \u65F6\u5E8F\u56FE / \u7518\u7279\u56FE\u7B49\u56FE\u8868\u6E32\u67D3\u652F\u6301", "name": "Desc"}
+                    ]},
+                    {"type": "frame", "id": "mermaidBadge", "padding": [8, 12], "fill": "#FEF3C7", "cornerRadius": 4, "name": "Badge", "children": [{"type": "text", "id": "mermaidBadgeText", "fill": "#D97706", "fontFamily": "Inter", "fontSize": 11, "fontWeight": "500", "content": "\u672A\u5B89\u88C5", "name": "BadgeText"}]}
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "mermaidCardActions",
+                  "layout": "horizontal",
+                  "width": "fill_container",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "name": "CardActions",
+                  "children": [
+                    {"type": "frame", "id": "mermaidProgressBarBg", "height": 8, "fill": "#E5E7EB", "cornerRadius": 4, "width": 200, "layout": "none", "name": "ProgressBarBg", "children": [{"type": "rectangle", "id": "mermaidProgressFill", "x": 0, "y": 0, "width": 120, "height": 8, "fill": "#6366F1", "cornerRadius": 4, "name": "ProgressFill"}]},
+                    {"type": "text", "id": "mermaidProgressPct", "fill": "#6366F1", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "600", "content": "45%", "name": "ProgressPct"},
+                    {"type": "frame", "id": "mermaidInstallBtn", "padding": [10, 20], "fill": "#6366F1", "cornerRadius": 6, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "InstallBtn", "children": [{"type": "text", "id": "mermaidInstallBtnText", "fill": "#FFFFFF", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "500", "content": "\u5B89\u88C5", "name": "BtnText"}]}
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pandocCard",
+              "layout": "vertical",
+              "width": "fill_container",
+              "padding": [20, 20],
+              "gap": 16,
+              "fill": "#F9FAFB",
+              "cornerRadius": 10,
+              "name": "PandocCard",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "pandocCardHeader",
+                  "layout": "horizontal",
+                  "width": "fill_container",
+                  "gap": 14,
+                  "alignItems": "center",
+                  "name": "CardHeader",
+                  "children": [
+                    {"type": "frame", "id": "pandocIconFrame", "padding": 10, "fill": "#F0FDF4", "cornerRadius": 8, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "IconFrame", "children": [{"type": "path", "id": "pandocIcon", "width": 24, "height": 24, "viewBox": [0,0,24,24], "geometry": "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6z", "fill": "#22C55E", "name": "Icon"}]},
+                    {"type": "frame", "id": "pandocNameCol", "layout": "vertical", "gap": 3, "width": "fill_container", "name": "NameCol", "children": [
+                      {"type": "text", "id": "pandocNameLabel", "fill": "#111827", "fontFamily": "Inter", "fontSize": 15, "fontWeight": "600", "content": "Pandoc \u8F6C\u6362\u5F15\u64CE", "name": "Name"},
+                      {"type": "text", "id": "pandocDescLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 12, "content": "\u6587\u6863\u683C\u5F0F\u8F6C\u6362\u6838\u5FC3\u5F15\u64CE\u652F\u6301", "name": "Desc"}
+                    ]},
+                    {"type": "frame", "id": "pandocBadge", "padding": [8, 12], "fill": "#DCFCE7", "cornerRadius": 4, "name": "Badge", "children": [{"type": "text", "id": "pandocBadgeText", "fill": "#16A34A", "fontFamily": "Inter", "fontSize": 11, "fontWeight": "500", "content": "\u5DF2\u5B89\u88C5", "name": "BadgeText"}]}
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pandocCardActions",
+                  "layout": "horizontal",
+                  "width": "fill_container",
+                  "justifyContent": "flex_end",
+                  "name": "CardActions",
+                  "children": [
+                    {"type": "frame", "id": "pandocUninstallBtn", "padding": [10, 20], "fill": "#FEE2E2", "cornerRadius": 6, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "UninstallBtn", "children": [{"type": "text", "id": "pandocUninstallBtnText", "fill": "#DC2626", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "500", "content": "\u5378\u8F7D", "name": "BtnText"}]}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

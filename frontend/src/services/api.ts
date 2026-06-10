@@ -1,6 +1,7 @@
 import ky from "ky";
 import type {
   HealthCheck,
+  MermaidStatus,
   TemplateInfo,
   TaskStatus,
   TemplateGenerateRequest,
@@ -32,6 +33,10 @@ function api(): typeof ky {
 
 export async function checkHealth(): Promise<HealthCheck> {
   return api().get("health").json();
+}
+
+export async function fetchMermaidStatus(): Promise<MermaidStatus> {
+  return api().get("mermaid-status").json();
 }
 
 export async function fetchTemplates(): Promise<{ templates: TemplateInfo[] }> {
@@ -163,4 +168,30 @@ export async function fetchLogs(
 
 export async function clearLogs(): Promise<void> {
   await api().delete("logs");
+}
+
+// ==== 模块管理 ====
+
+export function streamModuleProgress(
+  moduleId: string,
+  action: "install" | "uninstall",
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const es = new EventSource(
+      `${_baseUrl}/api/v1/modules/${moduleId}/progress?action=${action}`,
+    );
+    es.addEventListener("progress", (e) => {
+      const data = JSON.parse(e.data) as { progress: number; message: string };
+      onProgress(data.progress);
+    });
+    es.addEventListener("completed", () => {
+      es.close();
+      resolve();
+    });
+    es.addEventListener("error", () => {
+      es.close();
+      reject(new Error("模块操作失败"));
+    });
+  });
 }

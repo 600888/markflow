@@ -1,6 +1,14 @@
 import { create } from "zustand";
-import type { OutputFormat, ConversionStatus, TemplateInfo } from "../types";
-import { setBaseUrl } from "../services/api";
+import type {
+  Language,
+  MermaidStatus,
+  ModuleInfo,
+  OutputFormat,
+  ConversionStatus,
+  SettingsTab,
+  TemplateInfo,
+} from "../types";
+import { fetchMermaidStatus, setBaseUrl } from "../services/api";
 import { initializeBackend, checkBackendReady } from "../services/tauri";
 
 const DEV_BACKEND_URL = "http://127.0.0.1:62581";
@@ -61,6 +69,32 @@ interface AppState {
   setBackendOnline: (v: boolean) => void;
   /** 初始化后端连接（Tauri 环境调用 invoke，浏览器环境用硬编码地址） */
   initBackend: () => Promise<void>;
+
+  // Mermaid 渲染器状态
+  mermaidStatus: MermaidStatus | null;
+  setMermaidStatus: (s: MermaidStatus | null) => void;
+  refreshMermaidStatus: () => Promise<void>;
+
+  // 设置面板
+  settingsOpen: boolean;
+  setSettingsOpen: (v: boolean) => void;
+  toggleSettings: () => void;
+  settingsTab: SettingsTab;
+  setSettingsTab: (t: SettingsTab) => void;
+
+  // 语言
+  language: Language;
+  setLanguage: (l: Language) => void;
+
+  // 模块管理
+  modules: ModuleInfo[];
+  setModuleStatus: (
+    id: string,
+    status: ModuleInfo["status"],
+    progress?: number,
+  ) => void;
+  installModule: (id: string) => Promise<void>;
+  uninstallModule: (id: string) => Promise<void>;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -130,6 +164,116 @@ export const useStore = create<AppState>((set) => ({
       // 浏览器开发模式：使用默认地址
       setBaseUrl(DEV_BACKEND_URL);
       set({ backendUrl: DEV_BACKEND_URL });
+    }
+  },
+
+  mermaidStatus: null,
+  setMermaidStatus: (mermaidStatus) => set({ mermaidStatus }),
+  refreshMermaidStatus: async () => {
+    try {
+      const status = await fetchMermaidStatus();
+      set({ mermaidStatus: status });
+    } catch {
+      // 后端尚未就绪时静默忽略
+    }
+  },
+
+  // 设置面板
+  settingsOpen: false,
+  setSettingsOpen: (settingsOpen) => {
+    set({ settingsOpen });
+    if (settingsOpen) {
+      useStore.getState().refreshModulesStatus();
+    }
+  },
+  toggleSettings: () => {
+    const next = !useStore.getState().settingsOpen;
+    set({ settingsOpen: next });
+    if (next) {
+      useStore.getState().refreshModulesStatus();
+    }
+  },
+  settingsTab: "modules",
+  setSettingsTab: (settingsTab) => set({ settingsTab }),
+
+  // 语言
+  language: "zh",
+  setLanguage: (language) => set({ language }),
+
+  // 模块管理
+  modules: [
+    {
+      id: "pandoc",
+      name: "Pandoc 转换引擎",
+      description: "文档格式转换核心引擎支持",
+      status: "installed",
+      progress: 0,
+      builtin: true,
+    },
+    {
+      id: "mermaid",
+      name: "Mermaid 图表渲染引擎",
+      description: "流程图 / 时序图 / 甘特图等图表渲染支持",
+      status: "not_installed",
+      progress: 0,
+    },
+  ],
+  refreshModulesStatus: async () => {
+    try {
+      const mermaidStatus = await fetchMermaidStatus();
+      const mermaidInstalled =
+        mermaidStatus.mermaid_available && mermaidStatus.chromium_ready;
+      set((s) => ({
+        modules: s.modules.map((m) =>
+          m.id === "mermaid"
+            ? { ...m, status: mermaidInstalled ? "installed" : "not_installed" }
+            : m,
+        ),
+      }));
+    } catch {
+      // 后端不可达时保持现有状态
+    }
+  },
+  setModuleStatus: (id, status, progress) =>
+    set((s) => ({
+      modules: s.modules.map((m) =>
+        m.id === id ? { ...m, status, progress: progress ?? m.progress } : m,
+      ),
+    })),
+  installModule: async (id) => {
+    const { setModuleStatus } = useStore.getState();
+    setModuleStatus(id, "installing", 0);
+
+    try {
+      const { streamModuleProgress } = await import("../services/api");
+      await streamModuleProgress(id, "install", (pct) => {
+        setModuleStatus(id, "installing", pct);
+      });
+      setModuleStatus(id, "installed", 100);
+    } catch {
+      setModuleStatus(id, "not_installed", 0);
+    }
+
+    if (id === "mermaid") {
+      useStore.getState().refreshMermaidStatus();
+    }
+  },
+  uninstallModule: async (id) => {
+    const { setModuleStatus } = useStore.getState();
+    setModuleStatus(id, "uninstalling", 0);
+
+    try {
+      const { streamModuleProgress } = await import("../services/api");
+      await streamModuleProgress(id, "uninstall", (pct) => {
+        setModuleStatus(id, "uninstalling", pct);
+      });
+      setModuleStatus(id, "not_installed", 0);
+    } catch {
+      setModuleStatus(id, "installed", 0);
+    }
+
+    if (id === "mermaid") {
+      useStore.getState().refreshMermaidStatus();
     }
   },
 }));

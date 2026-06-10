@@ -11,6 +11,14 @@ class HealthResponse(BaseModel):
     version: str = "0.1.0"
 
 
+# ========== Mermaid 渲染器状态 ==========
+class MermaidStatusResponse(BaseModel):
+    chromium_ready: bool = False
+    mermaid_js_loaded: bool = False
+    mermaid_available: bool = False
+    diagnostic: str = ""
+
+
 # ========== 转换 ==========
 class ConvertResponse(BaseModel):
     task_id: str

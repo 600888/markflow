@@ -9,20 +9,25 @@ import { AdvancedOptions } from "./components/AdvancedOptions";
 import { ConvertSection } from "./components/ConvertSection";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { StatusBar } from "./components/StatusBar";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { LogPanel } from "./components/LogPanel";
 import { ToastProvider } from "./components/ui/toast";
 
 export default function App() {
   const setBackendOnline = useStore((s) => s.setBackendOnline);
   const initBackend = useStore((s) => s.initBackend);
+  const refreshMermaidStatus = useStore((s) => s.refreshMermaidStatus);
 
   useEffect(() => {
     initBackend().then(() => {
       checkHealth()
-        .then(() => setBackendOnline(true))
+        .then(() => {
+          setBackendOnline(true);
+          refreshMermaidStatus();
+        })
         .catch(() => setBackendOnline(false));
     });
-  }, [initBackend, setBackendOnline]);
+  }, [initBackend, setBackendOnline, refreshMermaidStatus]);
 
   return (
     <ToastProvider>
@@ -46,6 +51,8 @@ export default function App() {
         </div>
 
         <StatusBar />
+
+        <SettingsPanel />
 
         <LogPanel />
       </div>

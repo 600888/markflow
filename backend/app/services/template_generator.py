@@ -277,7 +277,7 @@ class TemplateGenerator:
         return None
 
     @staticmethod
-    def _apply_font(style, config: dict) -> None:  # noqa: C901, PLR0912
+    def _apply_font(style, config: dict) -> None:
         font = style.font
         name = config.get("font", "").strip()
         if name:
@@ -334,7 +334,7 @@ class TemplateGenerator:
                     rpr.remove(c)
 
     @staticmethod
-    def _apply_para(style, config: dict) -> None:  # noqa: C901, PLR0912
+    def _apply_para(style, config: dict) -> None:
         pf = style.paragraph_format
 
         if "alignment" in config:
