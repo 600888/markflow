@@ -2,7 +2,7 @@
 
 import threading
 from collections import deque
-from datetime import datetime
+from datetime import UTC, datetime
 
 from loguru import logger
 
@@ -13,7 +13,7 @@ class LogEntry:
     """单条日志。"""
 
     def __init__(self, level: str, message: str, source: str = "") -> None:
-        self.timestamp = datetime.now(datetime.UTC).isoformat(sep=" ", timespec="seconds")
+        self.timestamp = datetime.now(UTC).isoformat(sep=" ", timespec="seconds")
         self.level = level  # INFO / WARN / ERROR
         self.message = message
         self.source = source

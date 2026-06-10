@@ -20,6 +20,7 @@ from app.services.log_service import LogService, install_loguru_sink
 from app.services.template_generator import TemplateGenerator
 from app.utils.config import AppSettings
 from app.utils.logger import Log
+from config.paths import LOG_DIR
 
 
 def _parse_cli_args() -> argparse.Namespace:
@@ -36,7 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     Log(
         cmdlevel=settings.log_level,
         filelevel=settings.log_level,
-        filename="logs/markflow.log",
+        filename=str(LOG_DIR / "markflow.log"),
         backup_count=7,
         limit="20 MB",
     )
