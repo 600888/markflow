@@ -95,7 +95,7 @@ function ModuleCard({
   };
 
   const badgeKey = builtin ? "builtin" : status;
-  const badge = badgeConfig[badgeKey] ?? badgeConfig.not_installed;
+  const badge = badgeConfig[badgeKey] ?? badgeConfig.not_installed!;
   const isBusy = status === "installing" || status === "uninstalling";
 
   return (

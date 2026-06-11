@@ -93,6 +93,7 @@ interface AppState {
     status: ModuleInfo["status"],
     progress?: number,
   ) => void;
+  refreshModulesStatus: () => Promise<void>;
   installModule: (id: string) => Promise<void>;
   uninstallModule: (id: string) => Promise<void>;
 }

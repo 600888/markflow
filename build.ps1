@@ -82,7 +82,10 @@ function backend-pack {
         --hidden-import uvicorn.protocols.http.auto `
         --hidden-import uvicorn.protocols.websockets.auto `
         --hidden-import sse_starlette `
-        --hidden-import playwright.async_api `
+        --hidden-import playwright._impl._install `
+        --hidden-import playwright._impl._driver `
+        --hidden-import playwright._impl._build_driver `
+        --collect-all playwright `
         --collect-all app `
         app/main.py
 
