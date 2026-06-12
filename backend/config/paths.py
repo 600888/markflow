@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -19,5 +20,10 @@ else:
     FILTERS_DIR = DATA_ROOT / "backend" / "filters"
     LOG_DIR = DATA_ROOT / "logs"
 
-# 测试数据目录（markflow/data/ 或 _MEIPASS/data/）
-DATA_DIR = DATA_ROOT / "data"
+# data 目录：优先使用 Tauri 传入的 MARKFLOW_DATA_DIR（打包后），
+# 否则使用项目目录下的 data/（开发模式）或 _MEIPASS/data/（PyInstaller 内嵌）
+_env_data = os.environ.get("MARKFLOW_DATA_DIR")
+if _env_data:
+    DATA_DIR = Path(_env_data)
+else:
+    DATA_DIR = DATA_ROOT / "data"

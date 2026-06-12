@@ -95,9 +95,9 @@ def is_available() -> bool:
     """检查 Mermaid 渲染是否就绪（mermaid.js 已加载 + Chromium 已安装）"""
     if not _load_mermaid_js():
         return False
-    from app.core.browser_check import get_or_check_chromium
+    from app.core.browser_check import chromium_manager
 
-    return get_or_check_chromium()
+    return chromium_manager.check()
 
 
 # 渲染视口尺寸（足够大，确保复杂流程图不会被 CSS 缩放）
@@ -244,9 +244,9 @@ def get_diagnostic_message() -> str:
     else:
         parts.append("✗ mermaid.min.js 未找到")
 
-    from app.core.browser_check import get_or_check_chromium
+    from app.core.browser_check import chromium_manager
 
-    if get_or_check_chromium():
+    if chromium_manager.check():
         parts.append("✓ Chromium 已安装")
     else:
         parts.append("✗ Chromium 未安装")

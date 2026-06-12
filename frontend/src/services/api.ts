@@ -2,6 +2,7 @@ import ky from "ky";
 import type {
   HealthCheck,
   MermaidStatus,
+  PandocStatus,
   TemplateInfo,
   TaskStatus,
   TemplateGenerateRequest,
@@ -37,6 +38,10 @@ export async function checkHealth(): Promise<HealthCheck> {
 
 export async function fetchMermaidStatus(): Promise<MermaidStatus> {
   return api().get("mermaid-status").json();
+}
+
+export async function fetchPandocStatus(): Promise<PandocStatus> {
+  return api().get("pandoc-status").json();
 }
 
 export async function fetchTemplates(): Promise<{ templates: TemplateInfo[] }> {

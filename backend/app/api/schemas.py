@@ -131,3 +131,23 @@ class LogListResponse(BaseModel):
 
     logs: list[LogEntryResponse]
     total: int
+
+
+# ========== Pandoc 状态 ==========
+class PandocStatusResponse(BaseModel):
+    """Pandoc 模块状态响应"""
+
+    available: bool = False
+    version: str = ""
+    installer_found: bool = False
+    installer_path: str = ""
+
+
+# ========== 模块状态 ==========
+class ModuleStatusResponse(BaseModel):
+    """模块状态统一响应"""
+
+    id: str
+    available: bool
+    version: str = ""
+    installer_found: bool = False

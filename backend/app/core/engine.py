@@ -285,18 +285,22 @@ class PandocEngine(ConversionEngine):
     def __init__(self, settings: AppSettings | None = None) -> None:
         self.settings = settings or AppSettings()
         self._template_mgr = TemplateManager()
-        self._validate_pandoc()
+        # 不再在 __init__ 中强校验 Pandoc，改为在 convert() 时检查
+        self._pandoc_available = self._check_pandoc()
+        if not self._pandoc_available:
+            log.warning("Pandoc 未安装，转换功能暂不可用。请在设置中安装 Pandoc 模块。")
 
-    def _validate_pandoc(self) -> None:
-        """启动时验证 Pandoc 是否可用"""
+    def _check_pandoc(self) -> bool:
+        """检查 Pandoc 是否可用（非强制）"""
         try:
             path = pypandoc.get_pandoc_path()
             log.info(f"Pandoc 路径: {path}")
+            return True
         except OSError as e:
-            raise PandocNotFoundError(
-                "Pandoc 未安装或不在 PATH 中，请先安装 Pandoc",
-                detail={"error": str(e)},
-            ) from e
+            log.debug(f"Pandoc 检查: {e}")
+            return False
+        except Exception:
+            return False
 
     async def convert(
         self,
@@ -307,6 +311,15 @@ class PandocEngine(ConversionEngine):
         on_progress: ProgressCallback | None = None,
     ) -> ConversionResult:
         """执行 Pandoc 转换"""
+        # 运行时检查 Pandoc 是否可用
+        if not self._pandoc_available:
+            self._pandoc_available = self._check_pandoc()
+        if not self._pandoc_available:
+            raise PandocNotFoundError(
+                "Pandoc 未安装，请在设置中安装 Pandoc 模块后再试。",
+                detail={"hint": "打开设置 → 模块 → Pandoc → 安装"},
+            )
+
         pandoc_target = self.FORMAT_MAP.get(output_format)
         if pandoc_target is None:
             raise UnsupportedFormatError(f"不支持的格式: {output_format.value}")

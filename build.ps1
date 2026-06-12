@@ -67,6 +67,18 @@ function backend-pack {
     $binDir = Join-Path $root "src-tauri\binaries"
     if (Test-Path $binDir) { Remove-Item -Recurse -Force $binDir -ErrorAction SilentlyContinue }
 
+    # 检查 data/ 目录是否有依赖包
+    $dataDir = Join-Path $root "data"
+    $hasMsi = [bool](Get-ChildItem $dataDir -Recurse -Filter *.msi -ErrorAction SilentlyContinue)
+    $hasZip = [bool](Get-ChildItem $dataDir -Recurse -Filter *.zip -ErrorAction SilentlyContinue)
+    if (-not $hasMsi -and -not $hasZip) {
+        Write-Host "[WARN] no dependency packages found in data/, skip bundling" -ForegroundColor Yellow
+        Write-Host "  Put pandoc*.msi / chromium/*.zip into data/ dir and rebuild" -ForegroundColor Cyan
+    } else {
+        if ($hasMsi) { Write-Host "[INFO] Pandoc installer found" -ForegroundColor Green }
+        if ($hasZip) { Write-Host "[INFO] Chromium bundle found" -ForegroundColor Green }
+    }
+
     pyinstaller --onefile `
         --name markflow-service `
         --distpath ../src-tauri/binaries `
@@ -87,6 +99,31 @@ function backend-pack {
         --hidden-import playwright._impl._build_driver `
         --collect-all playwright `
         --collect-all app `
+        --exclude-module PySide6 `
+        --exclude-module PySide6.QtWidgets `
+        --exclude-module PySide6.QtCore `
+        --exclude-module PySide6.QtGui `
+        --exclude-module PySide6.QtNetwork `
+        --exclude-module PySide6.QtOpenGL `
+        --exclude-module PySide6.QtWebEngine `
+        --exclude-module PySide6.QtWebChannel `
+        --exclude-module scipy `
+        --exclude-module pandas `
+        --exclude-module numpy `
+        --exclude-module matplotlib `
+        --exclude-module PIL `
+        --exclude-module OpenGL `
+        --exclude-module sqlalchemy `
+        --exclude-module pythonwin `
+        --exclude-module win32ui `
+        --exclude-module win32api `
+        --exclude-module tkinter `
+        --exclude-module _tkinter `
+        --exclude-module unittest `
+        --exclude-module xmlrpc `
+        --exclude-module pydoc `
+        --exclude-module doctest `
+        --exclude-module curses `
         app/main.py
 
     if ($LASTEXITCODE -eq 0) {

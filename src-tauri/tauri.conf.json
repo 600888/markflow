@@ -35,6 +35,7 @@
       "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/markflow-service"]
+    "externalBin": ["binaries/markflow-service"],
+    "resources": ["../data/**/*"]
   }
 }

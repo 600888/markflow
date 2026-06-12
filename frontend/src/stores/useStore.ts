@@ -8,7 +8,11 @@ import type {
   SettingsTab,
   TemplateInfo,
 } from "../types";
-import { fetchMermaidStatus, setBaseUrl } from "../services/api";
+import {
+  fetchMermaidStatus,
+  fetchPandocStatus,
+  setBaseUrl,
+} from "../services/api";
 import { initializeBackend, checkBackendReady } from "../services/tauri";
 
 const DEV_BACKEND_URL = "http://127.0.0.1:62581";
@@ -207,9 +211,8 @@ export const useStore = create<AppState>((set) => ({
       id: "pandoc",
       name: "Pandoc 转换引擎",
       description: "文档格式转换核心引擎支持",
-      status: "installed",
+      status: "not_installed",
       progress: 0,
-      builtin: true,
     },
     {
       id: "mermaid",
@@ -221,15 +224,29 @@ export const useStore = create<AppState>((set) => ({
   ],
   refreshModulesStatus: async () => {
     try {
-      const mermaidStatus = await fetchMermaidStatus();
+      const [mermaidStatus, pandocStatus] = await Promise.all([
+        fetchMermaidStatus(),
+        fetchPandocStatus(),
+      ]);
       const mermaidInstalled =
         mermaidStatus.mermaid_available && mermaidStatus.chromium_ready;
+      const pandocInstalled = pandocStatus.available;
       set((s) => ({
-        modules: s.modules.map((m) =>
-          m.id === "mermaid"
-            ? { ...m, status: mermaidInstalled ? "installed" : "not_installed" }
-            : m,
-        ),
+        modules: s.modules.map((m) => {
+          if (m.id === "mermaid") {
+            return {
+              ...m,
+              status: mermaidInstalled ? "installed" : "not_installed",
+            };
+          }
+          if (m.id === "pandoc") {
+            return {
+              ...m,
+              status: pandocInstalled ? "installed" : "not_installed",
+            };
+          }
+          return m;
+        }),
       }));
     } catch {
       // 后端不可达时保持现有状态
@@ -257,6 +274,8 @@ export const useStore = create<AppState>((set) => ({
 
     if (id === "mermaid") {
       useStore.getState().refreshMermaidStatus();
+    } else if (id === "pandoc") {
+      useStore.getState().refreshModulesStatus();
     }
   },
   uninstallModule: async (id) => {
@@ -275,6 +294,8 @@ export const useStore = create<AppState>((set) => ({
 
     if (id === "mermaid") {
       useStore.getState().refreshMermaidStatus();
+    } else if (id === "pandoc") {
+      useStore.getState().refreshModulesStatus();
     }
   },
 }));

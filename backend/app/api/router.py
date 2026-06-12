@@ -18,19 +18,15 @@ from app.api.schemas import (
     LogEntryResponse,
     LogListResponse,
     MermaidStatusResponse,
+    PandocStatusResponse,
     TaskStatusResponse,
     TemplateGenerateRequest,
     TemplateGenerateResponse,
     TemplateItem,
     TemplateListResponse,
 )
-from app.core.browser_check import (
-    ensure_chromium,
-    get_install_progress,
-    get_or_check_chromium,
-    is_chromium_ready,
-    remove_chromium,
-)
+from app.core.browser_check import chromium_manager
+from app.core.pandoc_check import pandoc_manager
 from app.core.template_manager import TemplateManager
 from app.models.models import ConversionStatus, OutputFormat
 from app.services.converter import ConversionService
@@ -96,7 +92,7 @@ async def mermaid_status() -> MermaidStatusResponse:
     from app.core.mermaid_renderer import _load_mermaid_js, get_diagnostic_message
 
     js_loaded = bool(_load_mermaid_js())
-    chromium_ok = get_or_check_chromium()
+    chromium_ok = chromium_manager.check()
     return MermaidStatusResponse(
         chromium_ready=chromium_ok,
         mermaid_js_loaded=js_loaded,
@@ -325,18 +321,31 @@ async def clear_logs(
 # ========== 模块管理 ==========
 
 
+# ========== Pandoc 状态 ==========
+@router.get("/pandoc-status", response_model=PandocStatusResponse)
+async def pandoc_status() -> PandocStatusResponse:
+    """获取 Pandoc 模块状态"""
+    info = pandoc_manager.get_info()
+    return PandocStatusResponse(
+        available=bool(info.get("available", False)),
+        version=str(info.get("version", "")),
+        installer_found=bool(info.get("installer_found", False)),
+        installer_path=str(info.get("installer_path", "")),
+    )
+
+
 async def _install_mermaid_flow():
     """内部：Mermaid 安装 SSE 事件流"""
-    if is_chromium_ready():
+    if chromium_manager.is_ready():
         yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已安装"})}
         yield {"event": "completed", "data": json.dumps({"success": True})}
         return
 
-    task = asyncio.create_task(ensure_chromium())
+    task = asyncio.create_task(chromium_manager.ensure())
     last_pct = -1
     pulse = 0
     while not task.done():
-        prog = get_install_progress()
+        prog = chromium_manager.get_install_progress()
         pct = prog.get("progress", 0)
         msg = prog.get("message", "安装中...")
         if pct > last_pct:
@@ -361,7 +370,7 @@ async def _install_mermaid_flow():
 
 async def _uninstall_mermaid_flow():
     """内部：Mermaid 卸载 SSE 事件流"""
-    if not is_chromium_ready():
+    if not chromium_manager.is_ready():
         yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已卸载"})}
         yield {"event": "completed", "data": json.dumps({"success": True})}
         return
@@ -371,13 +380,82 @@ async def _uninstall_mermaid_flow():
         "data": json.dumps({"progress": 10, "message": "正在卸载 Chromium..."}),
     }
     loop = asyncio.get_running_loop()
-    success = await loop.run_in_executor(None, remove_chromium)
+    success = await loop.run_in_executor(None, chromium_manager.remove)
 
     if success:
         yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "卸载完成"})}
         yield {"event": "completed", "data": json.dumps({"success": True})}
     else:
         yield {"event": "error", "data": json.dumps({"detail": "Chromium 卸载失败"})}
+
+
+# ── Pandoc ────────────────────────────────────────────────
+
+
+async def _install_pandoc_flow():
+    """内部：Pandoc 安装 SSE 事件流"""
+    if pandoc_manager.is_installed():
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已安装"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+        return
+
+    task = asyncio.create_task(pandoc_manager.ensure())
+    last_pct = -1
+    pulse = 0
+    while not task.done():
+        prog = pandoc_manager.get_install_progress()
+        pct = prog.get("progress", 0)
+        msg = prog.get("message", "安装中...")
+        if pct > last_pct:
+            last_pct = pct
+            pulse = 0
+            yield {"event": "progress", "data": json.dumps({"progress": pct, "message": msg})}
+        else:
+            pulse += 1
+            if pulse % 6 == 0:
+                yield {
+                    "event": "progress",
+                    "data": json.dumps({"progress": last_pct, "message": msg}),
+                }
+        await asyncio.sleep(0.5)
+
+    if task.result():
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Pandoc 安装完成"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+    else:
+        # 获取最终进度信息
+        prog = pandoc_manager.get_install_progress()
+        detail = prog.get("message", "Pandoc 安装失败")
+        yield {"event": "error", "data": json.dumps({"detail": detail})}
+
+
+async def _uninstall_pandoc_flow():
+    """内部：Pandoc 卸载 SSE 事件流"""
+    if not pandoc_manager.is_installed():
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已卸载"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+        return
+
+    yield {
+        "event": "progress",
+        "data": json.dumps({"progress": 10, "message": "正在卸载 Pandoc..."}),
+    }
+
+    yield {
+        "event": "progress",
+        "data": json.dumps({"progress": 30, "message": "正在查找 Pandoc 产品信息..."}),
+    }
+
+    loop = asyncio.get_running_loop()
+    success = await loop.run_in_executor(None, pandoc_manager.remove)
+
+    if success:
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Pandoc 卸载完成"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+    else:
+        prog = pandoc_manager.get_install_progress()
+        detail = prog.get("message", "Pandoc 卸载失败")
+        yield {"event": "error", "data": json.dumps({"detail": detail})}
 
 
 @router.get("/modules/{module_id}/progress")
@@ -391,12 +469,18 @@ async def stream_module_progress(
         if action not in ("install", "uninstall"):
             yield {"event": "error", "data": json.dumps({"detail": f"未知操作: {action}"})}
             return
-        if module_id != "mermaid":
+
+        if module_id == "mermaid":
+            flow = _install_mermaid_flow if action == "install" else _uninstall_mermaid_flow
+            async for evt in flow():
+                yield evt
+        elif module_id == "pandoc":
+            flow = _install_pandoc_flow if action == "install" else _uninstall_pandoc_flow
+            async for evt in flow():
+                yield evt
+        else:
             yield {"event": "error", "data": json.dumps({"detail": f"未知模块: {module_id}"})}
             return
-        flow = _install_mermaid_flow if action == "install" else _uninstall_mermaid_flow
-        async for evt in flow():
-            yield evt
 
     return EventSourceResponse(event_gen(), ping=5)
 

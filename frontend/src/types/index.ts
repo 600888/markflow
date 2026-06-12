@@ -122,3 +122,11 @@ export interface ModuleInfo {
   progress: number;
   builtin?: boolean;
 }
+
+// ===== Pandoc 状态 =====
+export interface PandocStatus {
+  available: boolean;
+  version: string;
+  installer_found: boolean;
+  installer_path: string;
+}

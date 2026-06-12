@@ -7,6 +7,7 @@ use std::os::windows::process::CommandExt;
 
 use reqwest::Client;
 use tauri::AppHandle;
+use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
 
@@ -103,10 +104,20 @@ pub async fn wait_backend_ready(url: &str) {
 /// 尝试通过 Tauri sidecar 启动 Python 后端（打包后使用）
 fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
     let sidecar_cmd = app.shell().sidecar("markflow-service").ok()?;
-    let (_, child) = sidecar_cmd
-        .args(["--port", &port.to_string()])
-        .spawn()
-        .ok()?;
+
+    // 将 Tauri 资源目录传给 sidecar，以便找到捆绑的依赖安装包
+    let resource_dir = app.path().resource_dir().ok();
+    let mut cmd = sidecar_cmd.args(["--port", &port.to_string()]);
+
+    if let Some(ref dir) = resource_dir {
+        let data_dir = dir.join("data");
+        if data_dir.exists() {
+            cmd = cmd.env("MARKFLOW_DATA_DIR", data_dir.to_string_lossy().to_string());
+            eprintln!("[MarkFlow] data resource dir: {:?}", data_dir);
+        }
+    }
+
+    let (_, child) = cmd.spawn().ok()?;
     Some(child)
 }
 

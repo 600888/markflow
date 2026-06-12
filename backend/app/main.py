@@ -62,10 +62,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     # 注入到路由层
     init(conv_svc, template_mgr, template_gen, log_svc=log_svc)
 
-    # ── 启动时检查 Mermaid 渲染环境（仅检测，不自动下载）───
-    from app.core.mermaid_renderer import get_diagnostic_message
+    # ── 启动时检查 Mermaid 和 Pandoc 环境 ──
+    from app.core.mermaid_renderer import get_diagnostic_message as mermaid_diag
 
-    logger.info(get_diagnostic_message())
+    logger.info(mermaid_diag())
+
+    from app.core.pandoc_check import pandoc_manager
+
+    if pandoc_manager.is_installed():
+        info = pandoc_manager.get_info()
+        logger.info(f"Pandoc 已就绪, 版本: {info.get('version', 'unknown')}")
+    else:
+        logger.warning("Pandoc 未安装，转换功能暂不可用。请在设置中安装 Pandoc 模块。")
 
     yield
 
