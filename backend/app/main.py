@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -24,9 +25,10 @@ from config.paths import LOG_DIR
 
 
 def _parse_cli_args() -> argparse.Namespace:
-    """解析命令行参数（Tauri sidecar 传入 --port）"""
+    """解析命令行参数（Tauri sidecar 传入 --port 和 --data-dir）"""
     parser = argparse.ArgumentParser(description="MarkFlow Backend")
     parser.add_argument("--port", type=int, default=None, help="服务端口号")
+    parser.add_argument("--data-dir", type=str, default=None, help="数据资源目录（含 Pandoc MSI 等）")
     args, _ = parser.parse_known_args()
     return args
 
@@ -116,6 +118,11 @@ if __name__ == "__main__":
     # Tauri sidecar 传入的 --port 覆盖配置
     if cli_args.port is not None:
         settings.port = cli_args.port
+
+    # Tauri sidecar 传入的 --data-dir（备选：当环境变量未成功传递时使用）
+    if cli_args.data_dir is not None:
+        os.environ.setdefault("MARKFLOW_DATA_DIR", cli_args.data_dir)
+        logger.info(f"通过 --data-dir 设置 MARKFLOW_DATA_DIR: {cli_args.data_dir}")
 
     uvicorn.run(
         "app.main:app",

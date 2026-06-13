@@ -79,52 +79,61 @@ function backend-pack {
         if ($hasZip) { Write-Host "[INFO] Chromium bundle found" -ForegroundColor Green }
     }
 
-    pyinstaller --onefile `
-        --name markflow-service `
-        --distpath ../src-tauri/binaries `
-        --workpath build/pyinstaller `
-        --add-data "app;app" `
-        --add-data "config;config" `
-        --add-data "templates;templates" `
-        --add-data "filters;filters" `
-        --add-data "static;static" `
-        --hidden-import uvicorn `
-        --hidden-import uvicorn.logging `
-        --hidden-import uvicorn.loops.auto `
-        --hidden-import uvicorn.protocols.http.auto `
-        --hidden-import uvicorn.protocols.websockets.auto `
-        --hidden-import sse_starlette `
-        --hidden-import playwright._impl._install `
-        --hidden-import playwright._impl._driver `
-        --hidden-import playwright._impl._build_driver `
-        --collect-all playwright `
-        --collect-all app `
-        --exclude-module PySide6 `
-        --exclude-module PySide6.QtWidgets `
-        --exclude-module PySide6.QtCore `
-        --exclude-module PySide6.QtGui `
-        --exclude-module PySide6.QtNetwork `
-        --exclude-module PySide6.QtOpenGL `
-        --exclude-module PySide6.QtWebEngine `
-        --exclude-module PySide6.QtWebChannel `
-        --exclude-module scipy `
-        --exclude-module pandas `
-        --exclude-module numpy `
-        --exclude-module matplotlib `
-        --exclude-module PIL `
-        --exclude-module OpenGL `
-        --exclude-module sqlalchemy `
-        --exclude-module pythonwin `
-        --exclude-module win32ui `
-        --exclude-module win32api `
-        --exclude-module tkinter `
-        --exclude-module _tkinter `
-        --exclude-module unittest `
-        --exclude-module xmlrpc `
-        --exclude-module pydoc `
-        --exclude-module doctest `
-        --exclude-module curses `
-        app/main.py
+    # 构建 PyInstaller 参数列表
+    $pyiArgs = @(
+        '--onefile'
+        '--name', 'markflow-service'
+        '--distpath', (Join-Path $root 'src-tauri\binaries')
+        '--workpath', 'build/pyinstaller'
+        '--add-data', 'app;app'
+        '--add-data', 'config;config'
+        '--add-data', 'templates;templates'
+        '--add-data', 'filters;filters'
+        '--add-data', 'static;static'
+        '--hidden-import', 'uvicorn'
+        '--hidden-import', 'uvicorn.logging'
+        '--hidden-import', 'uvicorn.loops.auto'
+        '--hidden-import', 'uvicorn.protocols.http.auto'
+        '--hidden-import', 'uvicorn.protocols.websockets.auto'
+        '--hidden-import', 'sse_starlette'
+        '--hidden-import', 'playwright._impl._install'
+        '--hidden-import', 'playwright._impl._driver'
+        '--hidden-import', 'playwright._impl._build_driver'
+        '--collect-all', 'playwright'
+        '--collect-all', 'app'
+        '--exclude-module', 'PySide6'
+        '--exclude-module', 'PySide6.QtWidgets'
+        '--exclude-module', 'PySide6.QtCore'
+        '--exclude-module', 'PySide6.QtGui'
+        '--exclude-module', 'PySide6.QtNetwork'
+        '--exclude-module', 'PySide6.QtOpenGL'
+        '--exclude-module', 'PySide6.QtWebEngine'
+        '--exclude-module', 'PySide6.QtWebChannel'
+        '--exclude-module', 'scipy'
+        '--exclude-module', 'pandas'
+        '--exclude-module', 'numpy'
+        '--exclude-module', 'matplotlib'
+        '--exclude-module', 'PIL'
+        '--exclude-module', 'OpenGL'
+        '--exclude-module', 'sqlalchemy'
+        '--exclude-module', 'pythonwin'
+        '--exclude-module', 'win32ui'
+        '--exclude-module', 'win32api'
+        '--exclude-module', 'tkinter'
+        '--exclude-module', '_tkinter'
+        '--exclude-module', 'unittest'
+        '--exclude-module', 'xmlrpc'
+        '--exclude-module', 'pydoc'
+        '--exclude-module', 'doctest'
+        '--exclude-module', 'curses'
+    )
+    # 如果有 Pandoc MSI 安装包，也打包进 data/ 目录
+    if ($hasMsi) {
+        $pyiArgs += '--add-data', '../data/pandoc-3.9.0.2-windows-x86_64.msi;data'
+    }
+    $pyiArgs += 'app/main.py'
+
+    pyinstaller @pyiArgs
 
     if ($LASTEXITCODE -eq 0) {
         # Tauri externalBin 要求文件名带目标平台后缀

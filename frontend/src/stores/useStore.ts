@@ -5,6 +5,7 @@ import type {
   ModuleInfo,
   OutputFormat,
   ConversionStatus,
+  PandocStatus,
   SettingsTab,
   TemplateInfo,
 } from "../types";
@@ -78,6 +79,11 @@ interface AppState {
   mermaidStatus: MermaidStatus | null;
   setMermaidStatus: (s: MermaidStatus | null) => void;
   refreshMermaidStatus: () => Promise<void>;
+
+  // Pandoc 引擎状态
+  pandocStatus: PandocStatus | null;
+  setPandocStatus: (s: PandocStatus | null) => void;
+  refreshPandocStatus: () => Promise<void>;
 
   // 设置面板
   settingsOpen: boolean;
@@ -178,6 +184,17 @@ export const useStore = create<AppState>((set) => ({
     try {
       const status = await fetchMermaidStatus();
       set({ mermaidStatus: status });
+    } catch {
+      // 后端尚未就绪时静默忽略
+    }
+  },
+
+  pandocStatus: null,
+  setPandocStatus: (pandocStatus) => set({ pandocStatus }),
+  refreshPandocStatus: async () => {
+    try {
+      const status = await fetchPandocStatus();
+      set({ pandocStatus: status });
     } catch {
       // 后端尚未就绪时静默忽略
     }

@@ -144,11 +144,14 @@ class PandocManager:
         loop = asyncio.get_running_loop()
         success = await loop.run_in_executor(None, self._install_sync)
 
+        # 注意：_install_sync() 内部已经设置了详细的进度消息（如"未找到 Pandoc 安装包"），
+        # 这里不要再覆盖它，让上层 SSE 生成器能获取到具体的失败原因
         if success:
             self._set_progress(100, "completed", "Pandoc 安装完成")
             return True
 
-        self._set_progress(0, "failed", "Pandoc 安装失败")
+        # 保留 _install_sync() 中设置的原始错误消息，不覆盖
+        log.error("Pandoc 安装失败")
         return False
 
     def remove(self) -> bool:
@@ -252,44 +255,100 @@ class PandocManager:
     # ── 查找安装包 ────────────────────────────────────────
 
     def _find_installer(self) -> Path | None:
-        """查找捆绑的 Pandoc MSI 安装包路径"""
+        """查找捆绑的 Pandoc MSI 安装包路径
+
+        搜索优先级:
+        1. MARKFLOW_DATA_DIR 环境变量
+        2. config.paths.DATA_DIR
+        3. PyInstaller exe 同级 / data 目录
+        4. 项目 data/ 目录（DATA_ROOT / data）
+        5. 脚本所在目录 ../data/
+        6. 当前工作目录下的 data/
+        """
+
+        def _log_search(source: str, path: Path, found: bool) -> None:
+            status = "找到" if found else "未找到"
+            log.debug(f"[pandoc-installer] {source}: {status} -> {path}")
+
+        # 1. MARKFLOW_DATA_DIR 环境变量（Tauri/外部传入）
         env_dir = os.environ.get("MARKFLOW_DATA_DIR")
         if env_dir:
-            msi = self._find_msi(Path(env_dir))
+            path = Path(env_dir)
+            msi = self._find_msi(path)
+            _log_search("MARKFLOW_DATA_DIR", path, msi is not None)
             if msi:
                 log.info(f"从 MARKFLOW_DATA_DIR 找到 Pandoc 安装包: {msi}")
                 return msi
 
+        # 2. config.paths.DATA_DIR（PyInstaller 内嵌或开发模式配置）
         try:
             from config.paths import DATA_DIR  # noqa: PLC0415
 
-            msi = self._find_msi(Path(DATA_DIR))
+            path = Path(DATA_DIR)
+            msi = self._find_msi(path)
+            _log_search("DATA_DIR", path, msi is not None)
             if msi:
                 log.info(f"从 DATA_DIR 找到 Pandoc 安装包: {msi}")
                 return msi
         except ImportError:
-            pass
+            log.debug("[pandoc-installer] 无法导入 config.paths.DATA_DIR")
+        except Exception as exc:
+            log.debug(f"[pandoc-installer] DATA_DIR 搜索异常: {exc}")
 
+        # 3. PyInstaller exe 同级路径 + _MEIPASS 路径
         frozen = getattr(sys, "frozen", False)
         if frozen:
+            # 3a. _MEIPASS/data（PyInstaller 打包的数据目录）
+            try:
+                meipass_data = Path(sys._MEIPASS) / "data"  # type: ignore[attr-defined]
+                msi = self._find_msi(meipass_data)
+                _log_search("_MEIPASS/data", meipass_data, msi is not None)
+                if msi:
+                    log.info(f"从 _MEIPASS/data 找到 Pandoc 安装包: {msi}")
+                    return msi
+            except AttributeError:
+                pass
+
+            # 3b. exe 同级 data/ 和 ../data/
             exe_dir = Path(sys.executable).resolve().parent
             for rel in ["data", "../data"]:
-                msi = self._find_msi((exe_dir / rel).resolve())
+                path = (exe_dir / rel).resolve()
+                msi = self._find_msi(path)
+                _log_search(f"exe/{rel}", path, msi is not None)
                 if msi:
                     log.info(f"从 exe 相对路径找到 Pandoc 安装包: {msi}")
                     return msi
         else:
+            # 4. 开发模式：项目 data/ 目录
             try:
                 from config.paths import DATA_ROOT  # noqa: PLC0415
 
-                msi = self._find_msi(DATA_ROOT / "data")
+                path = DATA_ROOT / "data"
+                msi = self._find_msi(path)
+                _log_search("DATA_ROOT/data", path, msi is not None)
                 if msi:
                     log.info(f"从项目 data/ 找到 Pandoc 安装包: {msi}")
                     return msi
             except ImportError:
-                pass
+                log.debug("[pandoc-installer] 无法导入 config.paths.DATA_ROOT")
+            except Exception as exc:
+                log.debug(f"[pandoc-installer] DATA_ROOT 搜索异常: {exc}")
 
-        log.warning("未找到 Pandoc 安装包")
+            # 5. 基于脚本所在目录回溯
+            script_dir = Path(__file__).resolve().parent
+            candidates = [
+                script_dir / "data",                          # backend/app/core/data/
+                script_dir.parent.parent.parent / "data",     # 项目根 data/（可脚本位于 backend/app/core/）
+                Path.cwd() / "data",                          # 当前工作目录下 data/
+            ]
+            for candidate in candidates:
+                msi = self._find_msi(candidate)
+                _log_search(f"fallback/{candidate.name}", candidate, msi is not None)
+                if msi:
+                    log.info(f"从后备路径找到 Pandoc 安装包: {msi}")
+                    return msi
+
+        log.warning("未找到 Pandoc 安装包（已搜索所有路径）")
         return None
 
     @staticmethod
@@ -383,8 +442,12 @@ class PandocManager:
 
         installer = self._find_installer()
         if not installer:
-            self._set_progress(0, "failed", "未找到 Pandoc 安装包")
-            log.error("未找到 Pandoc MSI 安装包，请先将 MSI 放入 data/ 目录")
+            self._set_progress(
+                0,
+                "failed",
+                "未找到 Pandoc 安装包，请确认 data/ 目录下存在 pandoc*.msi 文件，或重新安装应用",
+            )
+            log.error("未找到 Pandoc MSI 安装包")
             return False
 
         self._set_progress(10, "starting", f"准备安装 Pandoc ({installer.name})...")

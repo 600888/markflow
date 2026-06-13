@@ -109,12 +109,37 @@ fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
     let resource_dir = app.path().resource_dir().ok();
     let mut cmd = sidecar_cmd.args(["--port", &port.to_string()]);
 
-    if let Some(ref dir) = resource_dir {
-        let data_dir = dir.join("data");
-        if data_dir.exists() {
-            cmd = cmd.env("MARKFLOW_DATA_DIR", data_dir.to_string_lossy().to_string());
-            eprintln!("[MarkFlow] data resource dir: {:?}", data_dir);
-        }
+    let data_dir = resource_dir
+        .as_ref()
+        .map(|d| d.join("data"))
+        .or_else(|| {
+            // 若 resource_dir() 不可用时，尝试 app_local_data_dir
+            eprintln!("[MarkFlow] resource_dir unavailable, trying app_local_data_dir");
+            app.path().app_local_data_dir()
+                .ok()
+                .map(|d| d.join("data"))
+        })
+        .filter(|p| p.exists());
+
+    if let Some(ref dir) = data_dir {
+        let dir_str = dir.to_string_lossy().to_string();
+        eprintln!("[MarkFlow] MARKFLOW_DATA_DIR -> {:?}", dir);
+        // 方式 1: 通过环境变量传递
+        cmd = cmd.env("MARKFLOW_DATA_DIR", &dir_str);
+        // 方式 2: 同时写入当前进程环境变量，确保子进程继承
+        let _ = std::env::set_var("MARKFLOW_DATA_DIR", &dir_str);
+        // 方式 3: 通过命令行参数传递（Python 端会读取 --data-dir）
+        cmd = cmd.args(["--data-dir", &dir_str]);
+    } else {
+        eprintln!("[MarkFlow] WARN: cannot find data resource directory");
+        eprintln!(
+            "[MarkFlow]   resource_dir (ok): {:?}",
+            app.path().resource_dir()
+        );
+        eprintln!(
+            "[MarkFlow]   app_local_data_dir: {:?}",
+            app.path().app_local_data_dir()
+        );
     }
 
     let (_, child) = cmd.spawn().ok()?;
