@@ -10,6 +10,60 @@ param([string]$command = "help")
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+function sync-version {
+    <#
+    .SYNOPSIS
+      从 backend/pyproject.toml 读取版本号，同步到所有需要的地方。
+      单一版本入口，避免手动维护多个版本号。
+    #>
+    $pyproject = Join-Path $root "backend\pyproject.toml"
+    if (-not (Test-Path $pyproject)) {
+        Write-Host "[ERROR] pyproject.toml not found: $pyproject" -ForegroundColor Red
+        return
+    }
+
+    # 从 TOML 中提取 version = "x.y.z"
+    $content = Get-Content $pyproject -Raw
+    if ($content -match 'version\s*=\s*"([^"]+)"') {
+        $version = $matches[1]
+        Write-Host "[INFO] Version from pyproject.toml: $version" -ForegroundColor Cyan
+    } else {
+        Write-Host "[ERROR] Cannot parse version from pyproject.toml" -ForegroundColor Red
+        return
+    }
+
+    # 同步到 tauri.conf.json（用 regex 保持原格式，避免 ConvertTo-Json 改变缩进）
+    $tauriConf = Join-Path $root "src-tauri\tauri.conf.json"
+    if (Test-Path $tauriConf) {
+        $jsonContent = Get-Content $tauriConf -Raw -Encoding UTF8
+        $jsonContent = $jsonContent -replace '("version"\s*:\s*)"[^"]+"', "`$1`"$version`""
+        [System.IO.File]::WriteAllText($tauriConf, $jsonContent, (New-Object System.Text.UTF8Encoding $false))
+        Write-Host "  -> tauri.conf.json version = $version" -ForegroundColor Green
+    }
+
+    # 同步到 Cargo.toml
+    $cargoToml = Join-Path $root "src-tauri\Cargo.toml"
+    if (Test-Path $cargoToml) {
+        $cargoContent = Get-Content $cargoToml -Raw
+        $cargoContent = $cargoContent -replace '(?m)(?<=^version\s*=\s*")[^"]+', $version
+        [System.IO.File]::WriteAllText($cargoToml, $cargoContent, (New-Object System.Text.UTF8Encoding $false))
+        Write-Host "  -> Cargo.toml version = $version" -ForegroundColor Green
+    }
+
+    # 同步到 frontend/package.json
+    $pkgJson = Join-Path $root "frontend\package.json"
+    if (Test-Path $pkgJson) {
+        $pkgContent = Get-Content $pkgJson -Raw
+        $pkgContent = $pkgContent -replace '(?<="version"\s*:\s*")[^"]+', $version
+        [System.IO.File]::WriteAllText($pkgJson, $pkgContent, (New-Object System.Text.UTF8Encoding $false))
+        Write-Host "  -> frontend/package.json version = $version" -ForegroundColor Green
+    }
+
+    # 设置为环境变量，供前端 vite build 使用
+    $env:VITE_APP_VERSION = $version
+    Write-Host "[OK] Version synced: $version`n" -ForegroundColor Green
+}
+
 function backend-install {
     Push-Location (Join-Path $root "backend")
     pip install -e ".[dev]"
@@ -67,16 +121,14 @@ function backend-pack {
     $binDir = Join-Path $root "src-tauri\binaries"
     if (Test-Path $binDir) { Remove-Item -Recurse -Force $binDir -ErrorAction SilentlyContinue }
 
-    # 检查 data/ 目录是否有依赖包
+    # 检查 data/ 目录是否有 Pandoc 安装包（Tauri resources 会打包整个 data/）
     $dataDir = Join-Path $root "data"
     $hasMsi = [bool](Get-ChildItem $dataDir -Recurse -Filter *.msi -ErrorAction SilentlyContinue)
-    $hasZip = [bool](Get-ChildItem $dataDir -Recurse -Filter *.zip -ErrorAction SilentlyContinue)
-    if (-not $hasMsi -and -not $hasZip) {
-        Write-Host "[WARN] no dependency packages found in data/, skip bundling" -ForegroundColor Yellow
-        Write-Host "  Put pandoc*.msi / chromium/*.zip into data/ dir and rebuild" -ForegroundColor Cyan
+    if (-not $hasMsi) {
+        Write-Host "[WARN] no Pandoc installer found in data/" -ForegroundColor Yellow
+        Write-Host "  Put pandoc*.msi into data/ dir and rebuild" -ForegroundColor Cyan
     } else {
-        if ($hasMsi) { Write-Host "[INFO] Pandoc installer found" -ForegroundColor Green }
-        if ($hasZip) { Write-Host "[INFO] Chromium bundle found" -ForegroundColor Green }
+        Write-Host "[INFO] Pandoc installer found" -ForegroundColor Green
     }
 
     # 构建 PyInstaller 参数列表
@@ -99,7 +151,6 @@ function backend-pack {
         '--hidden-import', 'playwright._impl._install'
         '--hidden-import', 'playwright._impl._driver'
         '--hidden-import', 'playwright._impl._build_driver'
-        '--collect-all', 'playwright'
         '--collect-all', 'app'
         '--exclude-module', 'PySide6'
         '--exclude-module', 'PySide6.QtWidgets'
@@ -127,10 +178,6 @@ function backend-pack {
         '--exclude-module', 'doctest'
         '--exclude-module', 'curses'
     )
-    # 如果有 Pandoc MSI 安装包，也打包进 data/ 目录
-    if ($hasMsi) {
-        $pyiArgs += '--add-data', '../data/pandoc-3.9.0.2-windows-x86_64.msi;data'
-    }
     $pyiArgs += 'app/main.py'
 
     pyinstaller @pyiArgs
@@ -168,6 +215,8 @@ function frontend-lint {
 }
 
 function frontend-build {
+    # 同步版本号到前端环境变量
+    sync-version
     Push-Location (Join-Path $root "frontend")
     npm run build
     Pop-Location
@@ -180,6 +229,9 @@ function tauri-dev {
 }
 
 function tauri-build {
+    # 同步版本号到 Tauri/Cargo/前端配置
+    sync-version
+
     $binary = Join-Path $root "src-tauri\binaries\markflow-service-x86_64-pc-windows-msvc.exe"
     if (-not (Test-Path $binary)) {
         Write-Host "[ERROR] sidecar binary not found: $binary" -ForegroundColor Red
@@ -260,6 +312,7 @@ function help {
 
  --- General ---
   all              Install all dependencies
+  sync-version     Sync version from pyproject.toml to all configs
   lint             Run all linters
   test             Run all tests
   clean            Clean build artifacts
@@ -288,6 +341,7 @@ switch ($command) {
     "tauri-dev"       { tauri-dev }
     "tauri-build"     { tauri-build }
     "all"             { all }
+    "sync-version"    { sync-version }
     "lint"            { lint }
     "test"            { test }
     "clean"           { clean }

@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** 应用版本号（构建时由 build.ps1 通过 VITE_APP_VERSION 注入） */
+declare const __APP_VERSION__: string;
+
 /** Tauri 全局对象（在 `app.withGlobalTauri: true` 时可用） */
 interface Window {
   __TAURI__?: Record<string, unknown>;

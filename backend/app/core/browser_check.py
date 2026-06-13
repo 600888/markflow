@@ -1,9 +1,8 @@
 """
 Chromium 浏览器检测与自动安装
 
-在 PyInstaller 打包后，playwright Python 库被打进 exe，
-但 Chromium 浏览器二进制 (~200MB) 不包含在安装包中。
-此模块通过 ChromiumManager 类管理 Chromium 的检测、安装与卸载。
+Chromium 浏览器二进制 (~200MB) 从网络下载，不包含在安装包中，
+以减少安装包体积。此模块通过 ChromiumManager 类管理 Chromium 的检测、安装与卸载。
 
 用法:
     from app.core.browser_check import chromium_manager
@@ -26,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error as _urlerror
 import urllib.request as _request
 import zipfile as _zipfile
 from pathlib import Path
@@ -115,7 +115,7 @@ class ChromiumManager:
         确保 Chromium 浏览器可用。
 
         如果已可用则直接返回 True；
-        否则安装 Chromium（优先从捆绑包解压，否则在线下载）。
+        否则在线下载 Chromium。
         安装进度可通过 get_install_progress() 获取。
         """
         if self.check():
@@ -126,6 +126,10 @@ class ChromiumManager:
         success = await loop.run_in_executor(None, self._install_sync)
 
         if success:
+            # 安装完成后清除缓存，强制重新扫描验证
+            self._chrome_path = None
+            self._ready = None
+
             # 快速验证：给系统一点时间刷新
             for _ in range(6):
                 if self.check():
@@ -158,7 +162,7 @@ class ChromiumManager:
     # ── 检测 ──────────────────────────────────────────────
 
     def _check_sync(self) -> bool:
-        """同步执行 Chromium 检测"""
+        """同步执行 Chromium 检测（支持路径失效时自动恢复）"""
         try:
             from playwright.sync_api import sync_playwright
         except ImportError:
@@ -171,36 +175,68 @@ class ChromiumManager:
         browsers_path = self._get_browsers_dir()
         os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(browsers_path))
 
-        # 如果 _chrome_path 为空，自动在浏览器目录中扫描已安装的可执行文件
-        # 解决应用重启后 _chrome_path 丢失的问题
-        if not self._chrome_path:
+        # 如果 _chrome_path 为空或文件已不存在，重新扫描
+        if not self._chrome_path or not Path(self._chrome_path).exists():
+            if self._chrome_path and not Path(self._chrome_path).exists():
+                log.warning(f"缓存的 Chromium 路径已失效: {self._chrome_path}")
+            self._chrome_path = None
             chrome_exe = self._find_chrome_in_browsers_dir(browsers_path)
             if chrome_exe:
                 self._chrome_path = chrome_exe
                 log.info(f"自动发现已安装的 Chromium: {self._chrome_path}")
+            else:
+                log.warning(f"在 {browsers_path} 中未找到 Chromium 可执行文件")
 
-        try:
-            with sync_playwright() as p:
-                if self._chrome_path:
+        # 第 1 次尝试：使用缓存的路径
+        if self._chrome_path:
+            try:
+                with sync_playwright() as p:
                     log.info(f"使用指定路径启动 Chromium: {self._chrome_path}")
                     browser = p.chromium.launch(
                         executable_path=self._chrome_path,
                         headless=True,
                         args=args,
                     )
-                else:
-                    browser = p.chromium.launch(headless=True, args=args)
+                    browser.close()
+                    return True
+            except Exception as e:
+                log.warning(f"Chromium 指定路径启动失败，清除缓存后重试: {e}")
+                self._chrome_path = None
+
+        # 第 2 次尝试：重新扫描浏览器目录
+        chrome_exe = self._find_chrome_in_browsers_dir(browsers_path)
+        if chrome_exe:
+            try:
+                with sync_playwright() as p:
+                    self._chrome_path = chrome_exe
+                    log.info(f"重新扫描后使用路径启动 Chromium: {self._chrome_path}")
+                    browser = p.chromium.launch(
+                        executable_path=self._chrome_path,
+                        headless=True,
+                        args=args,
+                    )
+                    browser.close()
+                    return True
+            except Exception as e:
+                log.warning(f"Chromium 重新扫描路径启动失败: {e}")
+                self._chrome_path = None
+
+        # 第 3 次尝试：让 playwright 自行查找（不指定 executable_path）
+        try:
+            with sync_playwright() as p:
+                log.info("尝试让 playwright 自行查找 Chromium...")
+                browser = p.chromium.launch(headless=True, args=args)
                 browser.close()
                 return True
         except Exception as e:
-            log.warning(f"Chromium 启动失败: {e}")
+            log.warning(f"Chromium 自动查找启动失败: {e}")
             return False
 
     # ── Chromium 版本号查找 ────────────────────────────────
 
     def _find_revision(self) -> int | None:
-        """从 playwright 捆绑数据或已安装的浏览器中查找 Chromium 版本号"""
-        # 方案 0: 从已存在的浏览器安装目录中读取版本号（最可靠）
+        """从 playwright 获取 Chromium 版本号（用于构建下载 URL）"""
+        # 方案 0: 从已存在的浏览器安装目录中读取版本号
         browsers_dir = self._get_browsers_dir()
         if browsers_dir.exists():
             for d in sorted(browsers_dir.iterdir(), reverse=True):
@@ -211,15 +247,7 @@ class ChromiumManager:
                         log.info(f"从已存在的浏览器目录获取 revision: {rev} ({d.name})")
                         return rev
 
-        # 方案 1: 尝试直接导入 playwright 内部模块
-        try:
-            from playwright._impl._build_driver import CHROMIUM_REVISION
-            if CHROMIUM_REVISION:
-                log.info(f"从 playwright._impl 获取 revision: {CHROMIUM_REVISION}")
-                return int(CHROMIUM_REVISION)
-        except (ImportError, AttributeError):
-            pass
-
+        # 方案 1: 从 playwright 内部模块获取
         try:
             from playwright._impl._driver import BROWSERS
             if "chromium" in BROWSERS and "revision" in BROWSERS["chromium"]:
@@ -229,43 +257,18 @@ class ChromiumManager:
         except (ImportError, AttributeError, KeyError):
             pass
 
-        # 方案 2: 搜索 Python 源文件（支持新版 Playwright 的多种命名格式）
-        py_files: list[Path] = []
-        frozen = getattr(sys, "frozen", False)
-        if frozen and hasattr(sys, "_MEIPASS"):
-            pw_dir = Path(sys._MEIPASS) / "playwright"  # noqa: SLF001
-            if pw_dir.exists():
-                py_files = sorted(pw_dir.rglob("*.py"))
-        else:
-            try:
-                import playwright as _pw
-                pw_dir = Path(_pw.__file__).resolve().parent
-                py_files = sorted(pw_dir.rglob("*.py"))
-            except Exception:
-                log.warning("无法通过 playwright 包查找 revision")
+        try:
+            from playwright._impl._build_driver import CHROMIUM_REVISION
+            if CHROMIUM_REVISION:
+                log.info(f"从 playwright._impl 获取 revision: {CHROMIUM_REVISION}")
+                return int(CHROMIUM_REVISION)
+        except (ImportError, AttributeError):
+            pass
 
-        # 匹配多种可能的 revision 定义格式
-        revision_patterns = [
-            _re.compile(r'(?:chrome|chromium)_revision\s*[=:]\s*[\'"]?(\d+)[\'"]?', _re.IGNORECASE),
-            _re.compile(r'revision\s*[:=]\s*(\d+)\s*[,}\n]', _re.IGNORECASE),
-            _re.compile(r'["\']chromium["\'].*?["\']revision["\']\s*[:=]\s*(\d+)', _re.IGNORECASE | _re.DOTALL),
-            _re.compile(r'BROWSERS\s*=\s*\{.*?chromium.*?revision.*?(\d+)', _re.IGNORECASE | _re.DOTALL),
-        ]
-
-        for py_file in py_files:
-            try:
-                text = py_file.read_text(encoding="utf-8", errors="replace")
-                for pattern in revision_patterns:
-                    m = pattern.search(text)
-                    if m:
-                        log.info(f"从文件 {py_file.name} 获取 revision: {m.group(1)}")
-                        return int(m.group(1))
-            except Exception:
-                pass
-
-        # 方案 3: 尝试解析 playwright 的 driver 数据文件
+        # 方案 2: 解析 browsers.json（PyInstaller 打包后数据文件）
         try:
             import json as _json
+            frozen = getattr(sys, "frozen", False)
             if frozen and hasattr(sys, "_MEIPASS"):
                 data_files = list(Path(sys._MEIPASS).rglob("**/browsers.json"))  # noqa: SLF001
                 for df in data_files:
@@ -280,109 +283,9 @@ class ChromiumManager:
         except Exception:
             pass
 
-        # 方案 4: 尝试读取 playwright 内置的 driver 源文件中的浏览器定义
-        try:
-            from playwright._impl._driver import _DRIVER_PATH  # type: ignore[attr-defined]
-            match = _re.search(rb'revision["\']?\s*[:=]\s*(\d+)', open(_DRIVER_PATH, 'rb').read())  # noqa: SIM115, PTH123
-            if match:
-                log.info(f"从 _DRIVER_PATH 获取 revision: {match.group(1).decode()}")
-                return int(match.group(1).decode())
-        except Exception:
-            pass
-
+        # 方案 3: 回退版本（Playwright 较老版本的稳定 revision）
         log.warning("无法自动检测 revision，使用回退版本: 1140")
         return 1140
-
-    # ── 查找捆绑包 ─────────────────────────────────────────
-
-    def _find_bundled_chromium(self) -> Path | None:
-        """查找 data/chromium/ 下的 Chromium 捆绑 zip 包
-
-        搜索策略（frozen 模式下）:
-        1. MARKFLOW_DATA_DIR/chromium/（Tauri env var）
-        2. config.paths.DATA_DIR/chromium/（PyInstaller 打包目录）
-        3. exe 所在目录及其所有祖先目录的 data/chromium/（适配各种安装布局）
-        4. sys._MEIPASS/data/chromium/（PyInstaller internal temp dir）
-        """
-        search_dirs: list[Path] = []
-
-        # 1. MARKFLOW_DATA_DIR 环境变量（Tauri/外部传入）
-        env_dir = os.environ.get("MARKFLOW_DATA_DIR")
-        if env_dir:
-            search_dirs.append(Path(env_dir) / "chromium")
-
-        # 2. config.paths.DATA_DIR（PyInstaller 内嵌或开发模式配置）
-        try:
-            from config.paths import DATA_DIR  # noqa: PLC0415
-            search_dirs.append(Path(DATA_DIR) / "chromium")
-        except ImportError:
-            pass
-
-        frozen = getattr(sys, "frozen", False)
-
-        # 3. 从 exe 所在目录向上遍历各级祖先目录的 data/chromium/
-        #    适配 Tauri 资源可能被解压到的各种位置
-        if frozen:
-            exe_dir = Path(sys.executable).resolve().parent
-            # 先从最近的上三级目录搜索（最常出现的位置）
-            for level in range(3):
-                candidate = exe_dir
-                for _ in range(level):
-                    candidate = candidate.parent
-                search_dirs.append(candidate / "data" / "chromium")
-
-            # 再往上一路搜到根目录（兜底）
-            parent = exe_dir.parent
-            while parent != parent.parent:  # 直到根目录
-                candidate = parent / "data" / "chromium"
-                if candidate not in search_dirs:
-                    search_dirs.append(candidate)
-                parent = parent.parent
-
-            # 4. PyInstaller internal temp 目录
-            try:
-                meipass = Path(sys._MEIPASS) / "data" / "chromium"  # noqa: SLF001
-                if meipass not in search_dirs:
-                    search_dirs.append(meipass)
-            except AttributeError:
-                pass
-        else:
-            # 开发模式
-            try:
-                from config.paths import DATA_ROOT  # noqa: PLC0415
-                search_dirs.append(DATA_ROOT / "data" / "chromium")
-            except ImportError:
-                pass
-            # 也搜工作目录
-            search_dirs.append(Path.cwd() / "data" / "chromium")
-
-        # 过滤不存在的目录并搜索 zip
-        found_paths: list[str] = []
-        for d in search_dirs:
-            if not d.exists():
-                found_paths.append(f"{d} (不存在)")
-                continue
-            for f in sorted(d.iterdir()):
-                if f.suffix.lower() == ".zip" and "chromium" in f.name.lower():
-                    log.info(f"找到捆绑的 Chromium 包: {f}")
-                    return f
-            found_paths.append(f"{d} (无 zip 文件)")
-
-        log.debug(f"未找到 Chromium 捆绑包，已搜索: {', '.join(found_paths)}")
-        return None
-
-    @staticmethod
-    def _get_browser_dirname(revision: int) -> str:
-        """获取 Playwright 期望的浏览器目录名（如 chromium-1140 或 chromium_headless_shell-1223）"""
-        try:
-            from playwright._impl._driver import BROWSERS  # type: ignore[attr-defined]
-            browser_name = BROWSERS.get("chromium", {}).get("name", "chromium")
-            return f"{browser_name}-{revision}"
-        except (ImportError, AttributeError, KeyError):
-            # 回退：检测 headless_shell 命名格式
-            if revision >= 1200:
-                return f"chromium_headless_shell-{revision}"
-            return f"chromium-{revision}"
 
     @staticmethod
     def _get_chrome_candidates(dest_dir: Path) -> list[Path]:
@@ -412,7 +315,7 @@ class ChromiumManager:
     # ── 安装 ──────────────────────────────────────────────
 
     def _install_sync(self) -> bool:
-        """同步安装 playwright 包并下载 Chromium 浏览器（分步更新进度）"""
+        """同步安装 playwright 包并在线下载 Chromium 浏览器（分步更新进度）"""
         self._set_progress(0, "starting", "准备安装...")
         start = time.monotonic()
         frozen = getattr(sys, "frozen", False)
@@ -438,78 +341,13 @@ class ChromiumManager:
                 self._set_progress(0, "failed", f"安装 playwright 包异常: {e}")
                 return False
 
-        # 优先使用捆绑的 Chromium zip 包
-        bundled = self._find_bundled_chromium()
-        if bundled:
-            self._set_progress(20, "extract_bundled", "发现捆绑的 Chromium 包，正在解压...")
-            return self._install_from_bundle(start, bundled)
-
+        # 在线下载 Chromium 浏览器
         self._set_progress(20, "download_chromium", "正在下载 Chromium 浏览器 (~200MB)...")
 
         if frozen:
             return self._install_frozen(start)
 
         return self._install_dev(start)
-
-    def _install_from_bundle(self, start: float, bundle: Path) -> bool:
-        """从捆绑的 zip 包解压安装 Chromium，并注册到 playwright"""
-        revision = self._find_revision()
-        if revision is None:
-            self._set_progress(0, "failed", "无法确定 Chromium 版本号")
-            return False
-
-        browsers_path = self._get_browsers_dir()
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_path)
-        dirname = self._get_browser_dirname(revision)
-        dest_dir = browsers_path / dirname
-        dest_dir.mkdir(parents=True, exist_ok=True)
-
-        self._set_progress(40, "extracting", f"正在解压 {bundle.name}...")
-        log.info(f"解压 {bundle} → {dest_dir}")
-
-        try:
-            with _zipfile.ZipFile(bundle) as zf:
-                zf.extractall(dest_dir)
-            elapsed = int(time.monotonic() - start)
-
-            # 验证可执行文件存在并记录路径
-            chrome_candidates = self._get_chrome_candidates(dest_dir)
-            chrome_exe = next((p for p in chrome_candidates if p.exists()), None)
-
-            # 如果预期路径没有找到，扫描整个 browsers 目录（兼容目录名不匹配的情况）
-            if not chrome_exe:
-                chrome_exe_path = self._find_chrome_in_browsers_dir(browsers_path)
-                if chrome_exe_path:
-                    self._chrome_path = chrome_exe_path
-                    log.info(f"通过扫描找到 Chromium 可执行文件: {self._chrome_path}")
-                    chrome_exe = True  # 标记为找到
-
-            if chrome_exe:
-                if not self._chrome_path:
-                    self._chrome_path = str(chrome_exe.resolve())
-                    log.info(f"Chromium 可执行文件: {self._chrome_path}")
-
-                # 解压后尝试注册到 playwright（可选，非必需）
-                try:
-                    from playwright._impl._install import install_browsers
-                    install_browsers(["chromium"], with_deps=False)
-                except ImportError:
-                    pass
-                except Exception:
-                    pass
-
-                self._set_progress(100, "completed", f"Chromium 安装完成 (耗时 {elapsed}s)")
-                self._ready = None
-                return True
-
-            log.error(f"解压后未找到 chrome.exe 或 chrome-headless-shell.exe，检查目录: {dest_dir}")
-            self._set_progress(0, "failed", "Chromium 解压后未找到可执行文件")
-            return False
-
-        except Exception as e:
-            log.error(f"Chromium 解压失败: {e}")
-            self._set_progress(0, "failed", f"Chromium 解压失败: {e}")
-            return False
 
     def _install_frozen(self, start: float) -> bool:
         """PyInstaller 环境下的安装逻辑（先尝试 Playwright 内置安装器，失败后降级到直接下载）"""
@@ -577,18 +415,24 @@ class ChromiumManager:
             return False
 
     def _download_direct(self, start: float, dest_parent: str) -> bool:
-        """直接下载 Chromium 浏览器（备用方案）"""
+        """直接下载 Chromium 浏览器（备用方案，支持新旧 Playwright 版本）
+
+        解压到固定目录 {dest_parent}/chromium/，不依赖版本号命名。
+        之后由 _find_chrome_in_browsers_dir 递归扫描找到 exe。
+        """
         revision = self._find_revision()
         if revision is None:
             self._set_progress(0, "failed", "无法确定 Chromium 版本号")
             return False
 
-        dirname = self._get_browser_dirname(revision)
-        dest_dir = Path(dest_parent) / dirname
+        # 固定目录名，不依赖 playwright 版本命名约定
+        dest_dir = Path(dest_parent) / "chromium"
         self._set_progress(25, "downloading", f"正在下载 Chromium r{revision} (~200MB)...")
 
+        # 如果已存在可执行文件，跳过下载
         chrome_paths = self._get_chrome_candidates(dest_dir)
         if dest_dir.exists() and any(p.exists() for p in chrome_paths):
+            log.info(f"Chromium 已存在于 {dest_dir}")
             self._set_progress(100, "completed", "Chromium 已存在")
             self._ready = None
             return True
@@ -597,50 +441,87 @@ class ChromiumManager:
             self._set_progress(0, "failed", "当前仅支持 Windows 平台下载")
             return False
 
-        url = f"https://playwright.azureedge.net/builds/chromium/{revision}/chromium-win64.zip"
-        try:
-            req = _request.Request(url, headers={"User-Agent": "MarkFlow/1.0"})  # noqa: S310
-            resp = _request.urlopen(req, timeout=300)  # noqa: S310
-            total = int(resp.headers.get("Content-Length", 0))
+        # 构建下载 URL 列表（主 URL + 备选 URL 兼容新版 playwright）
+        urls = [
+            f"https://playwright.azureedge.net/builds/chromium/{revision}/chromium-win64.zip",
+        ]
+        # 新版 Playwright (>= 1.51) 可能使用 headless-shell 专用包
+        if revision >= 1200:
+            urls.append(f"https://playwright.azureedge.net/builds/chromium/{revision}/chromium-headless-shell-win64.zip")
 
-            chunk_size = 8192
-            downloaded = 0
-            buf = io.BytesIO()
-            last_pct = -1
-            while True:
-                chunk = resp.read(chunk_size)
-                if not chunk:
-                    break
-                buf.write(chunk)
-                downloaded += len(chunk)
-                if total > 0:
-                    pct = 25 + int(55 * downloaded / total)
-                    if pct > last_pct:
-                        mb_dl = downloaded // 1048576
-                        mb_total = total // 1048576
-                        self._set_progress(min(pct, 80), "downloading", f"下载中 {mb_dl}MB / {mb_total}MB")
-                        last_pct = pct
+        last_error: str | None = None
+        for url_idx, url in enumerate(urls):
+            try:
+                log.info(f"尝试下载 URL [{url_idx + 1}/{len(urls)}]: {url}")
+                req = _request.Request(url, headers={"User-Agent": "MarkFlow/1.0"})  # noqa: S310
+                resp = _request.urlopen(req, timeout=300)  # noqa: S310
+                total = int(resp.headers.get("Content-Length", 0))
+                log.info(f"下载开始，文件大小: {total // 1048576} MB")
 
-            self._set_progress(80, "extracting", "正在解压 Chromium...")
-            dest_dir.mkdir(parents=True, exist_ok=True)
-            buf.seek(0)
-            with _zipfile.ZipFile(buf) as zf:
-                zf.extractall(dest_dir)
+                chunk_size = 8192
+                downloaded = 0
+                buf = io.BytesIO()
+                last_pct = -1
+                while True:
+                    chunk = resp.read(chunk_size)
+                    if not chunk:
+                        break
+                    buf.write(chunk)
+                    downloaded += len(chunk)
+                    if total > 0:
+                        pct = 25 + int(55 * downloaded / total)
+                        if pct > last_pct:
+                            mb_dl = downloaded // 1048576
+                            mb_total = total // 1048576
+                            self._set_progress(min(pct, 80), "downloading", f"下载中 {mb_dl}MB / {mb_total}MB")
+                            last_pct = pct
 
-            # 扫描浏览器目录自动发现可执行文件（兼容新旧命名格式）
-            browsers_path = Path(dest_parent)
-            chrome_path = self._find_chrome_in_browsers_dir(browsers_path)
-            if chrome_path:
-                self._chrome_path = chrome_path
-                log.info(f"已记录 Chromium 路径: {self._chrome_path}")
+                self._set_progress(80, "extracting", "正在解压 Chromium...")
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                buf.seek(0)
+                with _zipfile.ZipFile(buf) as zf:
+                    # 记录 zip 顶层结构用于调试
+                    top_dirs = {Path(n).parts[0] for n in zf.namelist() if "/" in n}
+                    log.info(f"ZIP 顶层目录: {top_dirs}")
+                    zf.extractall(dest_dir)
 
-            self._set_progress(100, "completed", "Chromium 下载完成")
-            self._ready = None
-            return True
-        except Exception as e:
-            log.error(f"Chromium 直接下载失败: {e}")
-            self._set_progress(0, "failed", f"Chromium 下载失败: {e}")
-            return False
+                # 列出解压后的目录内容用于调试
+                extracted_items = sorted(dest_dir.iterdir())
+                log.info(f"解压后目录内容 ({len(extracted_items)} 项): {[i.name for i in extracted_items[:10]]}")
+                if len(extracted_items) > 10:
+                    log.info(f"  ... 还有 {len(extracted_items) - 10} 项")
+
+                # 扫描浏览器目录自动发现可执行文件
+                browsers_path = Path(dest_parent)
+                chrome_path = self._find_chrome_in_browsers_dir(browsers_path)
+                if chrome_path:
+                    self._chrome_path = chrome_path
+                    log.info(f"已记录 Chromium 路径: {self._chrome_path}")
+                    self._set_progress(100, "completed", "Chromium 下载完成")
+                    self._ready = None
+                    return True
+
+                # 如果扫描没找到，尝试在 dest_dir 中搜索 .exe 文件（用于诊断）
+                all_exes = list(dest_dir.rglob("*.exe"))
+                if all_exes:
+                    exe_list = [str(p.relative_to(dest_dir)) for p in all_exes[:5]]
+                    log.warning(f"扫描未找到可执行文件，但目录中有 .exe: {exe_list}")
+                else:
+                    log.warning(f"解压后 {dest_dir} 中未找到任何 .exe 文件")
+                last_error = "解压后未找到 Chrome 可执行文件"
+
+            except _urlerror.HTTPError as e:
+                log.warning(f"URL 不可达 ({e.code}): {url}")
+                last_error = f"下载 URL 返回 {e.code}"
+                continue  # 尝试下一个 URL
+            except Exception as e:
+                log.warning(f"URL 下载异常: {url} -> {e}")
+                last_error = str(e)
+                continue  # 尝试下一个 URL
+
+        log.error(f"Chromium 下载失败（已尝试 {len(urls)} 个 URL）: {last_error}")
+        self._set_progress(0, "failed", f"Chromium 下载失败: {last_error}")
+        return False
 
     # ── 卸载 ──────────────────────────────────────────────
 

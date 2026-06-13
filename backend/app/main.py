@@ -87,10 +87,12 @@ settings = AppSettings()
 
 def create_app() -> FastAPI:
     """应用工厂"""
+    from config.version import APP_VERSION
+
     app = FastAPI(
         title="MarkFlow Converter",
         description="Markdown 转 Word / PDF / HTML 等格式的转换服务",
-        version="0.1.0",
+        version=APP_VERSION,
         lifespan=lifespan,
     )
 

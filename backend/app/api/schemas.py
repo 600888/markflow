@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from config.version import APP_VERSION
+
 
 # ========== 健康检查 ==========
 class HealthResponse(BaseModel):
     status: str = "ok"
-    version: str = "0.1.0"
+    version: str = APP_VERSION
 
 
 # ========== Mermaid 渲染器状态 ==========
