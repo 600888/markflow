@@ -1,18 +1,21 @@
 """
-Playwright 驱动的 Mermaid 图表渲染器
+Edge headless 驱动的 Mermaid 图表渲染器
 
-在启动时通过 browser_check.ensure_chromium() 自动下载 Chromium。
-此文件仅保留渲染逻辑，不再包含 Chromium 安装或 mmdc 回退。
+使用 Windows 自带的 Microsoft Edge (WebView2) 进行 headless 渲染，
+无需额外下载 Chromium 或安装任何浏览器。
 
-使用方式:
-  from app.core.mermaid_renderer import render_diagrams
-
-  success = await render_diagrams([(code1, path1), (code2, path2)])
+用法:
+    from app.core.mermaid_renderer import render_diagrams
+    success = await render_diagrams([(code1, path1), (code2, path2)])
 """
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import shutil
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -20,6 +23,31 @@ from app.core.log import log
 
 # ── 模块级缓存 ──────────────────────────────────────────
 _MERMAID_JS: str | None = None
+_EDGE_PATH: str | None = None
+
+
+def _find_edge() -> str | None:
+    """查找 Microsoft Edge 可执行文件路径"""
+    global _EDGE_PATH  # noqa: PLW0603
+    if _EDGE_PATH:
+        return _EDGE_PATH
+
+    candidates = [
+        Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
+        Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
+    ]
+    for c in candidates:
+        if c.exists():
+            _EDGE_PATH = str(c)
+            return _EDGE_PATH
+
+    # 尝试从 PATH 查找
+    found = shutil.which("msedge")
+    if found:
+        _EDGE_PATH = found
+        return _EDGE_PATH
+
+    return None
 
 
 def _load_mermaid_js() -> str:
@@ -28,11 +56,9 @@ def _load_mermaid_js() -> str:
     if _MERMAID_JS is not None:
         return _MERMAID_JS
 
-    # 使用 config.paths 获取正确的根目录（处理 PyInstaller 打包路径）
     from config.paths import DATA_ROOT
 
     candidates = [
-        # PyInstaller 打包后: _MEIPASS/static/mermaid.min.js
         DATA_ROOT / "static" / "mermaid.min.js",
         DATA_ROOT / "backend" / "static" / "mermaid.min.js",
         Path(__file__).resolve().parent.parent.parent / "static" / "mermaid.min.js",
@@ -49,76 +75,130 @@ def _load_mermaid_js() -> str:
 
 
 def _build_html(diagram_code: str) -> str:
-    """生成自包含的 HTML 页面，内嵌 mermaid.js 用于渲染图表"""
+    """生成自包含的 HTML 页面（含自动尺寸检测 JS）"""
     mermaid_js = _load_mermaid_js()
     if not mermaid_js:
         return ""
 
-    # 防止 XSS / script 闭合
     escaped_code = diagram_code.replace("</script>", "<\\/script>")
 
     return f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
+<html><head><meta charset="utf-8">
 <style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{
-    background: transparent;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-  }}
-  .mermaid {{ display: inline-block; }}
-</style>
-</head>
-<body>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:#fff; display:inline-block; min-width:100px; min-height:100px; }}
+  .mermaid {{ display:inline-block; }}
+</style></head><body>
 <div class="mermaid">
 {escaped_code}
 </div>
+<script>{mermaid_js}</script>
 <script>
-{mermaid_js}
-</script>
-<script>
-mermaid.initialize({{
-  startOnLoad: true,
-  theme: 'default',
-  securityLevel: 'loose'
-}});
-</script>
-</body>
-</html>"""
+(async function() {{
+  await mermaid.run({{ querySelector: '.mermaid' }});
+  var svg = document.querySelector('.mermaid svg');
+  if (svg) {{
+    var rect = svg.getBoundingClientRect();
+    var pad = 16;
+    document.title = Math.ceil(rect.width + pad) + 'x' + Math.ceil(rect.height + pad);
+  }} else {{
+    document.title = 'FAILED';
+  }}
+}})();
+</script></body></html>"""
 
 
 def is_available() -> bool:
-    """检查 Mermaid 渲染是否就绪（mermaid.js 已加载 + Chromium 已安装）"""
+    """检查渲染是否就绪（Edge + mermaid.js）"""
     if not _load_mermaid_js():
         return False
-    from app.core.browser_check import chromium_manager
-
-    return chromium_manager.check()
+    return _find_edge() is not None
 
 
-# 渲染视口尺寸（足够大，确保复杂流程图不会被 CSS 缩放）
-_VIEWPORT_SIZE = {"width": 4096, "height": 4096}
+async def _render_one(html_path: Path, output_path: Path) -> bool:
+    """用 Edge headless 渲染单个 HTML 到 PNG（自适应尺寸）"""
+    edge = _find_edge()
+    if not edge:
+        log.warning("未找到 Microsoft Edge，无法渲染 Mermaid 图表")
+        return False
+
+    try:
+        # 第 1 步：渲染并获取 SVG 实际尺寸（通过 document.title）
+        proc = await asyncio.create_subprocess_exec(
+            edge,
+            "--headless=new",
+            "--disable-gpu",
+            "--no-sandbox",
+            "--virtual-time-budget=8000",
+            "--dump-dom",
+            f"file:///{html_path.resolve().as_posix()}",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=15)
+        dom = stdout.decode("utf-8", errors="replace")
+
+        # 从 <title> 解析尺寸：WxH
+        import re as _re
+
+        size_match = _re.search(r"<title>(\d+)x(\d+)</title>", dom)
+        if size_match:
+            svg_w, svg_h = int(size_match[1]), int(size_match[2])
+        else:
+            # 回退：尝试从 viewBox 解析
+            vb = _re.search(r'viewBox="[\d.]+ [\d.]+ ([\d.]+) ([\d.]+)"', dom)
+            if vb:
+                svg_w, svg_h = int(float(vb[1])) + 16, int(float(vb[2])) + 16
+            else:
+                svg_w, svg_h = 800, 600
+
+        svg_w = max(svg_w, 100)  # 最小 100px
+        svg_h = max(svg_h, 100)
+
+        log.debug(f"Mermaid 尺寸: {svg_w}x{svg_h}")
+
+        # 第 2 步：用正确尺寸 + 3x 高清截图
+        proc2 = await asyncio.create_subprocess_exec(
+            edge,
+            "--headless=new",
+            "--disable-gpu",
+            "--no-sandbox",
+            f"--screenshot={output_path.resolve()}",
+            f"--window-size={svg_w},{svg_h}",
+            "--force-device-scale-factor=3",
+            "--virtual-time-budget=8000",
+            f"file:///{html_path.resolve().as_posix()}",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr2 = await asyncio.wait_for(proc2.communicate(), timeout=20)
+
+        if proc2.returncode != 0 or not output_path.exists():
+            err = stderr2.decode("utf-8", errors="replace")[:200] if stderr2 else ""
+            log.warning(f"Edge 截图失败 (exit={proc2.returncode}): {err}")
+            return False
+
+        if output_path.stat().st_size < 100:
+            log.warning(f"Mermaid 截图过小 ({output_path.stat().st_size} bytes)")
+            return False
+
+        return True
+
+    except asyncio.TimeoutError:
+        log.warning("Edge 渲染超时")
+        return False
+    except FileNotFoundError:
+        log.warning(f"Edge 可执行文件不存在: {edge}")
+        return False
+    except Exception as e:
+        log.warning(f"Edge 渲染异常: {e}")
+        return False
 
 
 async def render_diagrams(
     diagrams: list[tuple[str, Path]],
-    scale: float = 3.0,
 ) -> list[bool]:
-    """
-    批量渲染 Mermaid 图表（共享浏览器会话）
-
-    Args:
-        diagrams: [(diagram_code, output_png_path), ...]
-        scale: 设备像素比，3.0 表示 3x（高清输出）
-
-    Returns:
-        每个图表的渲染成功状态列表
-
-    """
+    """批量渲染 Mermaid 图表（逐个处理，Edge 启动开销很小）"""
     if not diagrams:
         return []
 
@@ -126,129 +206,62 @@ async def render_diagrams(
         log.warning("mermaid.min.js 未加载，跳过 Mermaid 渲染")
         return [False] * len(diagrams)
 
-    try:
-        from playwright.async_api import async_playwright
-    except ImportError:
-        log.warning(
-            "playwright 未安装，无法渲染 Mermaid 图表。"
-            "请运行: pip install playwright && playwright install chromium"
-        )
+    if not _find_edge():
+        log.warning("未找到 Microsoft Edge，无法渲染 Mermaid 图表")
         return [False] * len(diagrams)
 
-    # 准备 HTML 文件
+    results: list[bool] = []
     html_files: list[Path] = []
+
+    # 准备 HTML 文件
     for code, _ in diagrams:
         html_content = _build_html(code)
         if not html_content:
             html_files.append(Path())
             continue
-        # 在系统临时目录创建 HTML 文件
         tmp = Path(tempfile.mktemp(suffix=".html"))  # noqa: S306
         tmp.write_text(html_content, encoding="utf-8")
         html_files.append(tmp)
 
-    results: list[bool] = []
+    # 逐个渲染
+    for i, (_, output_path) in enumerate(diagrams):
+        if i >= len(html_files) or not html_files[i].exists():
+            results.append(False)
+            continue
 
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
+        success = await _render_one(html_files[i], output_path)
+        results.append(success)
+        if success:
+            log.debug(
+                f"Mermaid 图表 #{i} 渲染成功: "
+                f"{output_path.name} ({output_path.stat().st_size} bytes)"
             )
+        else:
+            log.warning(f"Mermaid 图表 #{i} 渲染失败，保留原文")
 
-            for i, (_, output_path) in enumerate(diagrams):
-                if i >= len(html_files) or not html_files[i].exists():
-                    results.append(False)
-                    continue
-
-                page = None
-                try:
-                    page = await browser.new_page(
-                        viewport=_VIEWPORT_SIZE,
-                        device_scale_factor=scale,
-                    )
-                    await page.goto(
-                        html_files[i].as_uri(),
-                        wait_until="networkidle",
-                        timeout=30000,
-                    )
-
-                    # 等待 mermaid 渲染完成
-                    try:
-                        await page.wait_for_selector(
-                            ".mermaid svg",
-                            timeout=30000,
-                        )
-                    except Exception:
-                        log.warning(f"Mermaid 图表 #{i} 渲染超时（可能语法错误）")
-                        results.append(False)
-                        continue
-
-                    # 截图
-                    el = await page.query_selector(".mermaid")
-                    if el:
-                        await el.screenshot(path=str(output_path))
-                        success = output_path.exists() and output_path.stat().st_size > 0
-                        results.append(success)
-                        if success:
-                            log.debug(
-                                f"Mermaid 图表 #{i} 渲染成功: "
-                                f"{output_path.name} ({output_path.stat().st_size} bytes)"
-                            )
-                        else:
-                            log.warning(f"Mermaid 图表 #{i} 截图为空")
-                    else:
-                        log.warning(f"Mermaid 图表 #{i} 未找到渲染元素")
-                        results.append(False)
-
-                except Exception as e:
-                    log.warning(f"Mermaid 图表 #{i} 渲染异常: {e}")
-                    results.append(False)
-                finally:
-                    if page is not None:
-                        await page.close()
-
-            await browser.close()
-
-    except Exception as e:
-        log.warning(f"Playwright 浏览器启动失败: {e}")
-        results = [False] * len(diagrams)
-
-    finally:
-        # 清理临时 HTML 文件
-        for f in html_files:
-            if f.exists():
-                with contextlib.suppress(OSError):
-                    f.unlink()
+    # 清理临时文件
+    for f in html_files:
+        if f.exists():
+            with contextlib.suppress(OSError):
+                f.unlink()
 
     return results
 
 
 async def render_diagram(diagram_code: str, output_path: Path) -> bool:
-    """
-    渲染单个 Mermaid 图表
-
-    基于 render_diagrams 的便捷封装。
-    """
+    """渲染单个 Mermaid 图表"""
     results = await render_diagrams([(diagram_code, output_path)])
     return results[0] if results else False
 
 
 def get_diagnostic_message() -> str:
-    """返回渲染器状态诊断信息（用于日志/前端提示）"""
+    """返回渲染器状态诊断信息"""
     parts: list[str] = []
 
     js = _load_mermaid_js()
-    if js:
-        parts.append(f"✓ mermaid.js ({len(js)} bytes)")
-    else:
-        parts.append("✗ mermaid.min.js 未找到")
+    parts.append("✓ mermaid.js" if js else "✗ mermaid.min.js 未找到")
 
-    from app.core.browser_check import chromium_manager
-
-    if chromium_manager.check():
-        parts.append("✓ Chromium 已安装")
-    else:
-        parts.append("✗ Chromium 未安装")
+    edge = _find_edge()
+    parts.append(f"✓ Edge ({edge})" if edge else "✗ Edge 未找到")
 
     return " | ".join(parts)

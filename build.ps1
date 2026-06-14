@@ -69,26 +69,7 @@ function backend-install {
     pip install -e ".[dev]"
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] backend dependencies installed" -ForegroundColor Green
-        Write-Host ">>> Installing Playwright Chromium (~150MB, first time only)..." -ForegroundColor Cyan
-        python -m playwright install chromium 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "[OK] Playwright Chromium installed" -ForegroundColor Green
-        } else {
-            Write-Host "[WARN] Chromium download failed, run 'build.ps1 backend-install-playwright' later" -ForegroundColor Yellow
-        }
     }
-    Pop-Location
-}
-
-function backend-install-playwright {
-    <#
-    .SYNOPSIS
-      Install / repair Playwright Chromium browser separately
-    #>
-    Push-Location (Join-Path $root "backend")
-    Write-Host ">>> Installing Playwright Chromium (~150MB)..." -ForegroundColor Cyan
-    python -m playwright install chromium
-    if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Playwright Chromium installed" -ForegroundColor Green }
     Pop-Location
 }
 
@@ -121,6 +102,11 @@ function backend-pack {
     $binDir = Join-Path $root "src-tauri\binaries"
     if (Test-Path $binDir) { Remove-Item -Recurse -Force $binDir -ErrorAction SilentlyContinue }
 
+    # 清理 PyInstaller 构建缓存（避免 stale analysis）
+    $buildDir = Join-Path $PWD "build"
+    if (Test-Path $buildDir) { Remove-Item -Recurse -Force $buildDir -ErrorAction SilentlyContinue }
+    Write-Host "[OK] PyInstaller build cache cleaned" -ForegroundColor Green
+
     # 检查 data/ 目录是否有 Pandoc 安装包（Tauri resources 会打包整个 data/）
     $dataDir = Join-Path $root "data"
     $hasMsi = [bool](Get-ChildItem $dataDir -Recurse -Filter *.msi -ErrorAction SilentlyContinue)
@@ -133,6 +119,7 @@ function backend-pack {
 
     # 构建 PyInstaller 参数列表
     $pyiArgs = @(
+        '--clean'
         '--onefile'
         '--name', 'markflow-service'
         '--distpath', (Join-Path $root 'src-tauri\binaries')
@@ -148,9 +135,6 @@ function backend-pack {
         '--hidden-import', 'uvicorn.protocols.http.auto'
         '--hidden-import', 'uvicorn.protocols.websockets.auto'
         '--hidden-import', 'sse_starlette'
-        '--hidden-import', 'playwright._impl._install'
-        '--hidden-import', 'playwright._impl._driver'
-        '--hidden-import', 'playwright._impl._build_driver'
         '--collect-all', 'app'
         '--exclude-module', 'PySide6'
         '--exclude-module', 'PySide6.QtWidgets'
@@ -293,8 +277,7 @@ function help {
  Usage: .\build.ps1 <command>
 
  --- Backend ---
-  backend-install           Install backend deps (pip) + playwright chromium
-  backend-install-playwright Install/repair Playwright Chromium browser
+  backend-install           Install backend deps (pip)
   backend-dev               Start backend dev server (uvicorn :62581)
   backend-lint              Run ruff check
   backend-test              Run pytest
@@ -329,7 +312,6 @@ function help {
 
 switch ($command) {
     "backend-install"            { backend-install }
-    "backend-install-playwright" { backend-install-playwright }
     "backend-dev"                { backend-dev }
     "backend-lint"               { backend-lint }
     "backend-test"               { backend-test }

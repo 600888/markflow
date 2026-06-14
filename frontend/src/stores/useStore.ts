@@ -233,10 +233,11 @@ export const useStore = create<AppState>((set) => ({
     },
     {
       id: "mermaid",
-      name: "Mermaid 图表渲染引擎",
-      description: "流程图 / 时序图 / 甘特图等图表渲染支持",
+      name: "Mermaid 图表渲染",
+      description: "使用系统 Edge 渲染流程图/时序图/甘特图",
       status: "not_installed",
       progress: 0,
+      builtin: true,
     },
   ],
   refreshModulesStatus: async () => {
@@ -245,8 +246,7 @@ export const useStore = create<AppState>((set) => ({
         fetchMermaidStatus(),
         fetchPandocStatus(),
       ]);
-      const mermaidInstalled =
-        mermaidStatus.mermaid_available && mermaidStatus.chromium_ready;
+      const mermaidInstalled = mermaidStatus.mermaid_available;
       const pandocInstalled = pandocStatus.available;
       set((s) => ({
         modules: s.modules.map((m) => {

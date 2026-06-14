@@ -25,7 +25,7 @@ from app.api.schemas import (
     TemplateItem,
     TemplateListResponse,
 )
-from app.core.browser_check import chromium_manager
+from app.core.browser_check import edge_manager
 from app.core.pandoc_check import pandoc_manager
 from app.core.template_manager import TemplateManager
 from app.models.models import ConversionStatus, OutputFormat
@@ -92,11 +92,11 @@ async def mermaid_status() -> MermaidStatusResponse:
     from app.core.mermaid_renderer import _load_mermaid_js, get_diagnostic_message
 
     js_loaded = bool(_load_mermaid_js())
-    chromium_ok = chromium_manager.check()
+    edge_ok = edge_manager.check()
     return MermaidStatusResponse(
-        chromium_ready=chromium_ok,
+        chromium_ready=edge_ok,
         mermaid_js_loaded=js_loaded,
-        mermaid_available=chromium_ok and js_loaded,
+        mermaid_available=edge_ok and js_loaded,
         diagnostic=get_diagnostic_message(),
     )
 
@@ -335,58 +335,16 @@ async def pandoc_status() -> PandocStatusResponse:
 
 
 async def _install_mermaid_flow():
-    """内部：Mermaid 安装 SSE 事件流"""
-    if chromium_manager.is_ready():
-        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已安装"})}
-        yield {"event": "completed", "data": json.dumps({"success": True})}
-        return
-
-    task = asyncio.create_task(chromium_manager.ensure())
-    last_pct = -1
-    pulse = 0
-    while not task.done():
-        prog = chromium_manager.get_install_progress()
-        pct = prog.get("progress", 0)
-        msg = prog.get("message", "安装中...")
-        if pct > last_pct:
-            last_pct = pct
-            pulse = 0
-            yield {"event": "progress", "data": json.dumps({"progress": pct, "message": msg})}
-        else:
-            pulse += 1
-            if pulse % 6 == 0:
-                yield {
-                    "event": "progress",
-                    "data": json.dumps({"progress": last_pct, "message": msg}),
-                }
-        await asyncio.sleep(0.5)
-
-    if task.result():
-        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "安装完成"})}
-        yield {"event": "completed", "data": json.dumps({"success": True})}
-    else:
-        yield {"event": "error", "data": json.dumps({"detail": "Chromium 安装失败"})}
+    """Mermaid 使用系统 Edge，无需额外安装"""
+    ok = edge_manager.is_ready()
+    yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Edge 已就绪" if ok else "未找到 Edge"})}
+    yield {"event": "completed", "data": json.dumps({"success": ok})}
 
 
 async def _uninstall_mermaid_flow():
-    """内部：Mermaid 卸载 SSE 事件流"""
-    if not chromium_manager.is_ready():
-        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已卸载"})}
-        yield {"event": "completed", "data": json.dumps({"success": True})}
-        return
-
-    yield {
-        "event": "progress",
-        "data": json.dumps({"progress": 10, "message": "正在卸载 Chromium..."}),
-    }
-    loop = asyncio.get_running_loop()
-    success = await loop.run_in_executor(None, chromium_manager.remove)
-
-    if success:
-        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "卸载完成"})}
-        yield {"event": "completed", "data": json.dumps({"success": True})}
-    else:
-        yield {"event": "error", "data": json.dumps({"detail": "Chromium 卸载失败"})}
+    """Edge 是系统组件，不可卸载"""
+    yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Edge 是系统组件，无需卸载"})}
+    yield {"event": "completed", "data": json.dumps({"success": True})}
 
 
 # ── Pandoc ────────────────────────────────────────────────

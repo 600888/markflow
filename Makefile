@@ -3,10 +3,7 @@
 # ========= 后端 =========
 
 backend-install:
-	cd backend && pip install -e ".[dev]" && python -m playwright install chromium
-
-backend-install-playwright:
-	cd backend && python -m playwright install chromium
+	cd backend && pip install -e ".[dev]"
 
 backend-dev:
 	cd backend && uvicorn app.main:app --reload --port 62581
@@ -34,7 +31,6 @@ backend-pack:
 		--hidden-import uvicorn.protocols.http.auto \
 		--hidden-import uvicorn.protocols.websockets.auto \
 		--hidden-import sse_starlette \
-		--hidden-import playwright.async_api \
 		--collect-all app \
 		app/main.py
 	@echo "后端打包完成: src-tauri/binaries/markflow-service/"

@@ -477,7 +477,7 @@ class PandocEngine(ConversionEngine):
 
         流程：
         1. 扫描文件中的 ```mermaid ... ``` 代码块
-        2. 使用 Playwright + 内嵌 mermaid.js 渲染为 PNG
+        2. 使用 Edge headless + 内嵌 mermaid.js 渲染为 PNG
         3. 将原代码块替换为 ![](<图片路径>)
         4. 写回文件
 
@@ -524,9 +524,9 @@ class PandocEngine(ConversionEngine):
         any_rendered = False
         new_text = text
 
-        # 1) 优先尝试 Playwright 渲染器
+        # 1) 用 Edge headless 渲染 Mermaid 图表
         if mermaid_renderer_available():
-            log.info(f"使用 Playwright 渲染器处理 {len(diagram_tuples)} 个 Mermaid 图表")
+            log.info(f"使用 Edge 渲染器处理 {len(diagram_tuples)} 个 Mermaid 图表")
             results = await render_diagrams(diagram_tuples)
 
             # 倒序替换
@@ -550,7 +550,7 @@ class PandocEngine(ConversionEngine):
                     # 渲染失败的保留原文
                     log.warning(f"Mermaid 图表 #{idx} 渲染失败，保留原文")
         else:
-            log.warning("Playwright 渲染器不可用，跳过 Mermaid 图表渲染")
+            log.warning("Edge 渲染器不可用，跳过 Mermaid 图表渲染")
             return created_dirs
 
         # ── 写回文件 ──

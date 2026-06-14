@@ -15,7 +15,7 @@ class HealthResponse(BaseModel):
 
 # ========== Mermaid 渲染器状态 ==========
 class MermaidStatusResponse(BaseModel):
-    chromium_ready: bool = False
+    chromium_ready: bool = False  # Edge 就绪（兼容旧字段名）
     mermaid_js_loaded: bool = False
     mermaid_available: bool = False
     diagnostic: str = ""
