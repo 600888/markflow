@@ -327,6 +327,8 @@ class PandocEngine(ConversionEngine):
         if on_progress:
             await on_progress(0.05, "准备转换...")
 
+        # 预处理 Markdown：标准化列表结构（确保列表前有空行）
+        self._normalize_markdown_structure(input_path)
         # 预处理 Markdown：标准化数学公式定界符
         self._normalize_math_in_file(input_path)
         # 预处理 Markdown：渲染 Mermaid 图表
@@ -420,19 +422,66 @@ class PandocEngine(ConversionEngine):
         """校验格式是否支持"""
         return output_format in self.FORMAT_MAP
 
+    # ── Markdown 结构预处理 ──────────────────────────────
+
+    @staticmethod
+    def _normalize_markdown_structure(path: Path) -> None:
+        """
+        标准化 Markdown 结构：确保列表前有空行
+
+        Pandoc 的 markdown 解析要求列表前有空行，否则列表标记 `-`、`*` 等
+        会被当作普通文本中的连字符/星号处理，导致结构被拍平。
+
+        预处理扫描所有行，如果某行是列表项且前一行非空且非列表项，
+        则在其前插入空行，保证 Pandoc 能正确识别列表结构。
+        """
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return
+
+        # 统一换行符
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+        lines = text.split("\n")
+        list_pattern = re.compile(r"^\s*([-*+]|\d+\.)\s")
+
+        result: list[str] = []
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped:  # 非空行
+                is_list = bool(list_pattern.match(line))
+                if is_list and i > 0:
+                    prev_stripped = lines[i - 1].strip()
+                    prev_is_list = prev_stripped and bool(list_pattern.match(lines[i - 1]))
+                    if prev_stripped and not prev_is_list:
+                        result.append("")  # 插入空行
+            result.append(line)
+
+        new_text = "\n".join(result)
+
+        if new_text != text:
+            try:
+                path.write_text(new_text, encoding="utf-8")
+                log.info(f"已标准化列表结构: {path.name}")
+            except OSError:
+                pass
+
     # ── 数学公式预处理 ───────────────────────────────────
 
     @staticmethod
     def _normalize_math_in_file(path: Path) -> None:
         """
-        将 Markdown 中 `[ ... ]` 显示公式转为 Pandoc 标准语法 `$$ ... $$`
+        将 Markdown 中 `[ ... ]` 和 `\[...\]` 显示公式转为 Pandoc 标准语法 `$$ ... $$`
 
         Pandoc 只识别 $$...$$ 和 \\[...\\] 作为显示公式，
-        许多作者习惯用 [ ... ]，需要提前转换。
+        许多作者习惯用 [ ... ] 或 \\[...\\]，需要提前归一化。
 
-        支持两种格式：
-        1. 单行：[ I_1 = K_3 I_N ]
-        2. 多行：[ \\n content \\n ]
+        支持四种格式：
+        1. 单行：\\[ I_1 = K_3 I_N \\]
+        2. 多行：\\[ \\n content \\n \\]
+        3. 单行：[ I_1 = K_3 I_N ]
+        4. 多行：[ \\n content \\n ]
         """
         try:
             text = path.read_text(encoding="utf-8")
@@ -444,7 +493,25 @@ class PandocEngine(ConversionEngine):
 
         new_text = text
 
-        # ── 多行显示公式 ──
+        # ── 多行显示公式（反斜杠格式）──
+        # 匹配：独占一行的 \[ ，到独占一行的 \] ，中间为公式内容
+        new_text = re.sub(
+            r"^[ \t]*\\\[[ \t]*$\n(.*?)^[ \t]*\\\][ \t]*$",
+            lambda m: "$$\n" + m.group(1) + "$$",
+            new_text,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+
+        # ── 单行显示公式（反斜杠格式）──
+        # 匹配：独占一行的 \[ math content \]
+        new_text = re.sub(
+            r"^[ \t]*\\\[[ \t]*(.+?)[ \t]*\\\][ \t]*$",
+            r"$$ \1 $$",
+            new_text,
+            flags=re.MULTILINE,
+        )
+
+        # ── 多行显示公式（无反斜杠格式）──
         # 匹配：独占一行的 [ ，到独占一行的 ] ，中间为公式内容
         new_text = re.sub(
             r"^[ \t]*\[[ \t]*$\n(.*?)^[ \t]*\][ \t]*$",
@@ -453,7 +520,7 @@ class PandocEngine(ConversionEngine):
             flags=re.MULTILINE | re.DOTALL,
         )
 
-        # ── 单行显示公式 ──
+        # ── 单行显示公式（无反斜杠格式）──
         # 匹配：[ math content ] 整个在一行
         new_text = re.sub(
             r"^[ \t]*\[[ \t]*(.+?(?:[_\\{}]|[a-z]+\^|sum|int|lim|prod|frac|sqrt|sin|cos|log).+?)[ \t]*\][ \t]*$",  # noqa: E501
