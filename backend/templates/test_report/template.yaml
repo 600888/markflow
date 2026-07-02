@@ -1,0 +1,112 @@
+name: "测试报告"
+slug: "test_report"
+version: "1.0.0"
+description: "符合测试报告格式规范，黑体标题、宋体正文、1.5 倍行距、首行缩进、全框线表格"
+author: "MarkFlow"
+target_formats: ["docx", "pdf"]
+
+styles:
+  heading1:
+    font: "黑体"
+    size: "三号"
+    bold: true
+    alignment: "center"
+    space_before: "2.5 行"
+    space_after: "0.5 行"
+  heading2:
+    font: "黑体"
+    size: "四号"
+    bold: true
+    space_before: "0.5 行"
+    space_after: "0.5 行"
+  heading3:
+    font: "黑体"
+    size: "小四"
+    bold: true
+    space_before: "0 行"
+    space_after: "0 行"
+  heading4:
+    font: "宋体"
+    size: "小四"
+    bold: true
+    space_before: "0.25 行"
+    space_after: "0.25 行"
+  body:
+    font: "宋体"
+    size: "小四"
+    line_spacing: 1.5
+    first_line_indent: "2 字符"
+    space_before: "0 行"
+    space_after: "0 行"
+  code:
+    font: "Consolas"
+    size: "五号"
+    background: "#F5F5F5"
+  table:
+    # 基础样式
+    font: "宋体"
+    size: "小五"
+    line_spacing: 1.0
+    alignment: "center"
+    full_width: true
+
+    # 段落控制
+    first_line_indent: "0 字符"
+    space_before: "0.5 行"
+    space_after: "0.5 行"
+
+    # 表头样式（深蓝底白字，电科院风格）
+    header_font: "宋体"
+    header_size: "小五"
+    header_bold: true
+    header_alignment: "center"
+    header_background: "#2E75B6"
+
+    # 表体样式
+    body_font: "宋体"
+    body_size: "小五"
+    body_alignment: "center"
+
+    # 单元格内边距（单位：pt）
+    cell_padding:
+      top: 3
+      bottom: 3
+      left: 5
+      right: 5
+
+    # 全框线网格（标准测试报告格式，所有单元格四边均有实线）
+    border_style: "grid"
+    border_top:
+      weight: 0.75
+      color: "black"
+    border_left:
+      weight: 0.75
+      color: "black"
+    border_bottom:
+      weight: 0.75
+      color: "black"
+    border_right:
+      weight: 0.75
+      color: "black"
+    border_insideH:
+      weight: 0.5
+      color: "black"
+    border_insideV:
+      weight: 0.5
+      color: "black"
+
+    # 可选：斑马纹（测试数据多时建议开启）
+    stripe_rows: true
+    stripe_color: "#F2F7FB"
+
+    # 跨页设置（长表格）
+    page_break:
+      allow: true
+      repeat_header: true
+
+    # 标题配置
+    caption_position: "above"
+    caption_font: "黑体"
+    caption_size: "小五"
+    caption_bold: true
+    caption_separator: " "

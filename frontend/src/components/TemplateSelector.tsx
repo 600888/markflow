@@ -36,9 +36,19 @@ const FALLBACK: TemplateInfo[] = [
     has_reference_doc: true,
     has_lua_filters: false,
   },
+  {
+    slug: "test_report",
+    name: "🔬 测试报告",
+    version: "1.0",
+    description: "黑体标题·宋体正文\n1.5倍行距·全框线表格",
+    author: "",
+    target_formats: ["docx"],
+    has_reference_doc: true,
+    has_lua_filters: true,
+  },
 ];
 
-const TEMPLATE_ORDER = ["minimal", "academic", "report"];
+const TEMPLATE_ORDER = ["minimal", "academic", "report", "test_report"];
 
 export function TemplateSelector() {
   const template = useStore((s) => s.template);
@@ -65,7 +75,7 @@ export function TemplateSelector() {
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
         🎨 文档模版
       </p>
-      <div className="flex gap-2 flex-wrap mb-2.5">
+      <div className="grid grid-cols-3 gap-2 mb-2.5">
         {list.map((tpl) => {
           const sel = tpl.slug === template;
           return (

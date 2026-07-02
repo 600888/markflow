@@ -27,6 +27,13 @@ styles:
     color: "#404040"
     space_before: "1 倍行距"
     space_after: "0.5 倍行距"
+  heading4:
+    font: "微软雅黑"
+    size: "小四"
+    bold: true
+    color: "#595959"
+    space_before: "0.5 倍行距"
+    space_after: "0.25 倍行距"
   body:
     font: "微软雅黑"
     size: "五号"

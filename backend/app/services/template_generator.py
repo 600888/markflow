@@ -9,6 +9,7 @@ from shutil import rmtree
 import yaml
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
@@ -198,7 +199,18 @@ class TemplateGenerator:
             try:
                 style = doc.styles[word_style_name]
             except KeyError:
-                continue
+                # 样式不存在时创建（如 Heading 4/5/6 python-docx 默认不提供）
+                style = doc.styles.add_style(word_style_name, 1)  # 1 = WD_STYLE_TYPE.PARAGRAPH
+                # 设置标题大纲级别，使 Word 正确识别标题层级
+                if word_style_name.startswith("Heading "):
+                    try:
+                        level = int(word_style_name.split()[1]) - 1
+                        pPr = style.element.get_or_add_pPr()
+                        outline_lvl = OxmlElement("w:outlineLvl")
+                        outline_lvl.set(qn("w:val"), str(level))
+                        pPr.append(outline_lvl)
+                    except (ValueError, IndexError):
+                        pass
             self._apply_font(style, sc)
             # Normal 不设置首行缩进（由 Body Text 样式处理）
             sc_para = dict(sc)

@@ -267,6 +267,41 @@ def _apply_three_line_border(table: object, tc: dict) -> None:
                 _clear_cell_border(cell_obj, "right")
 
 
+def _apply_grid_border(table: object, tc: dict) -> None:
+    """对表格应用全框线网格边框
+
+    标准测试报告风格：所有单元格四边均为 0.5~0.75pt 黑色实线。
+    """
+    tbl = table._tbl  # type: ignore[attr-defined]
+    tblPr = tbl.find(qn("w:tblPr"))
+    if tblPr is None:
+        tblPr = OxmlElement("w:tblPr")
+        tbl.insert(0, tblPr)
+    for old in tblPr.findall(qn("w:tblBorders")):
+        tblPr.remove(old)
+
+    # 各边框线宽取配置，默认 0.75pt → 6 个八分之一磅
+    def _edge_weight(key: str, default: float = 0.75) -> int:
+        cfg = tc.get(key, {})
+        w = cfg.get("weight", default) if isinstance(cfg, dict) else default
+        return max(1, int(w * 8))
+
+    def _edge_color(key: str, default: str = "black") -> str:
+        cfg = tc.get(key, {})
+        c = cfg.get("color", default) if isinstance(cfg, dict) else default
+        return c
+
+    tblBorders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        b = OxmlElement(f"w:{edge}")
+        b.set(qn("w:val"), "single")
+        b.set(qn("w:sz"), str(_edge_weight(f"border_{edge}")))
+        b.set(qn("w:space"), "0")
+        b.set(qn("w:color"), _edge_color(f"border_{edge}"))
+        tblBorders.append(b)
+    tblPr.append(tblBorders)
+
+
 class PandocEngine(ConversionEngine):
     """基于 Pandoc 的转换引擎（适配器模式）"""
 
@@ -708,9 +743,12 @@ class PandocEngine(ConversionEngine):
             if not rows:
                 continue
 
-            # 三线表边框
-            if tc.get("border_style") == "three_line_table":
+            # 边框样式
+            border_style = tc.get("border_style")
+            if border_style == "three_line_table":
                 _apply_three_line_border(table, tc)
+            elif border_style == "grid":
+                _apply_grid_border(table, tc)
 
             # 表格撑满到页面左右边距
             if tc.get("full_width"):
