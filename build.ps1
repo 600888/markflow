@@ -1,331 +1,307 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-  MarkFlow build script for Windows PowerShell
-.DESCRIPTION
-  Usage: .\build.ps1 <command>
+  MarkFlow Windows development and packaging entry point.
+
+.EXAMPLE
+  .\build.ps1 package
+  .\build.ps1 package -SkipFrontend
+  .\build.ps1 backend-dev
 #>
 
-param([string]$command = "help")
+param(
+    [ValidateSet(
+        "package",
+        "backend-pack",
+        "backend-dev",
+        "frontend-dev",
+        "tauri-dev",
+        "lint",
+        "test",
+        "sync-version",
+        "clean",
+        "help"
+    )]
+    [string]$Command = "help",
+    [switch]$SkipFrontend,
+    [switch]$SkipBackend,
+    [ValidateSet("all", "msi", "nsis")]
+    [string]$Bundle = "all"
+)
 
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ErrorActionPreference = "Stop"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-function sync-version {
-    <#
-    .SYNOPSIS
-      从 backend/pyproject.toml 读取版本号，同步到所有需要的地方。
-      单一版本入口，避免手动维护多个版本号。
-    #>
-    $pyproject = Join-Path $root "backend\pyproject.toml"
-    if (-not (Test-Path $pyproject)) {
-        Write-Host "[ERROR] pyproject.toml not found: $pyproject" -ForegroundColor Red
-        return
-    }
+$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$BackendDir = Join-Path $ProjectRoot "backend"
+$FrontendDir = Join-Path $ProjectRoot "frontend"
+$TauriDir = Join-Path $ProjectRoot "src-tauri"
+$BinariesDir = Join-Path $TauriDir "binaries"
+$BuildDir = Join-Path $ProjectRoot "build"
+$PythonExe = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+$BackendPythonExe = Join-Path $BackendDir ".venv\Scripts\python.exe"
 
-    # 从 TOML 中提取 version = "x.y.z"
-    $content = Get-Content $pyproject -Raw
-    if ($content -match 'version\s*=\s*"([^"]+)"') {
-        $version = $matches[1]
-        Write-Host "[INFO] Version from pyproject.toml: $version" -ForegroundColor Cyan
-    } else {
-        Write-Host "[ERROR] Cannot parse version from pyproject.toml" -ForegroundColor Red
-        return
-    }
-
-    # 同步到 tauri.conf.json（用 regex 保持原格式，避免 ConvertTo-Json 改变缩进）
-    $tauriConf = Join-Path $root "src-tauri\tauri.conf.json"
-    if (Test-Path $tauriConf) {
-        $jsonContent = Get-Content $tauriConf -Raw -Encoding UTF8
-        $jsonContent = $jsonContent -replace '("version"\s*:\s*)"[^"]+"', "`$1`"$version`""
-        [System.IO.File]::WriteAllText($tauriConf, $jsonContent, (New-Object System.Text.UTF8Encoding $false))
-        Write-Host "  -> tauri.conf.json version = $version" -ForegroundColor Green
-    }
-
-    # 同步到 Cargo.toml
-    $cargoToml = Join-Path $root "src-tauri\Cargo.toml"
-    if (Test-Path $cargoToml) {
-        $cargoContent = Get-Content $cargoToml -Raw
-        $cargoContent = $cargoContent -replace '(?m)(?<=^version\s*=\s*")[^"]+', $version
-        [System.IO.File]::WriteAllText($cargoToml, $cargoContent, (New-Object System.Text.UTF8Encoding $false))
-        Write-Host "  -> Cargo.toml version = $version" -ForegroundColor Green
-    }
-
-    # 同步到 frontend/package.json
-    $pkgJson = Join-Path $root "frontend\package.json"
-    if (Test-Path $pkgJson) {
-        $pkgContent = Get-Content $pkgJson -Raw
-        $pkgContent = $pkgContent -replace '(?<="version"\s*:\s*")[^"]+', $version
-        [System.IO.File]::WriteAllText($pkgJson, $pkgContent, (New-Object System.Text.UTF8Encoding $false))
-        Write-Host "  -> frontend/package.json version = $version" -ForegroundColor Green
-    }
-
-    # 设置为环境变量，供前端 vite build 使用
-    $env:VITE_APP_VERSION = $version
-    Write-Host "[OK] Version synced: $version`n" -ForegroundColor Green
+function Write-Step([string]$Message) {
+    Write-Host "[STEP] $Message" -ForegroundColor Cyan
 }
 
-function backend-install {
-    Push-Location (Join-Path $root "backend")
-    pip install -e ".[dev]"
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] backend dependencies installed" -ForegroundColor Green
+function Write-Ok([string]$Message) {
+    Write-Host "[OK] $Message" -ForegroundColor Green
+}
+
+function Fail([string]$Message) {
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
+    exit 1
+}
+
+function Invoke-Checked([scriptblock]$Action, [string]$Message) {
+    & $Action
+    if ($LASTEXITCODE -ne 0) {
+        Fail $Message
     }
-    Pop-Location
 }
 
-function backend-dev {
-    Push-Location (Join-Path $root "backend")
-    uvicorn app.main:app --reload --port 62581
-    Pop-Location
-}
-
-function backend-lint {
-    Push-Location (Join-Path $root "backend")
-    ruff check .
-    $ok1 = $LASTEXITCODE -eq 0
-    ruff format --check .
-    $ok2 = $LASTEXITCODE -eq 0
-    if ($ok1 -and $ok2) { Write-Host "[OK] backend lint passed" -ForegroundColor Green }
-    Pop-Location
-}
-
-function backend-test {
-    Push-Location (Join-Path $root "backend")
-    pytest --cov=app --cov-report=term-missing
-    Pop-Location
-}
-
-function backend-pack {
-    Push-Location (Join-Path $root "backend")
-
-    # 清理旧的打包产物
-    $binDir = Join-Path $root "src-tauri\binaries"
-    if (Test-Path $binDir) { Remove-Item -Recurse -Force $binDir -ErrorAction SilentlyContinue }
-
-    # 清理 PyInstaller 构建缓存（避免 stale analysis）
-    $buildDir = Join-Path $PWD "build"
-    if (Test-Path $buildDir) { Remove-Item -Recurse -Force $buildDir -ErrorAction SilentlyContinue }
-    Write-Host "[OK] PyInstaller build cache cleaned" -ForegroundColor Green
-
-    # 检查 data/ 目录是否有 Pandoc 安装包（Tauri resources 会打包整个 data/）
-    $dataDir = Join-Path $root "data"
-    $hasMsi = [bool](Get-ChildItem $dataDir -Recurse -Filter *.msi -ErrorAction SilentlyContinue)
-    if (-not $hasMsi) {
-        Write-Host "[WARN] no Pandoc installer found in data/" -ForegroundColor Yellow
-        Write-Host "  Put pandoc*.msi into data/ dir and rebuild" -ForegroundColor Cyan
-    } else {
-        Write-Host "[INFO] Pandoc installer found" -ForegroundColor Green
+function Get-Python {
+    if (Test-Path -LiteralPath $PythonExe -PathType Leaf) {
+        return $PythonExe
     }
 
-    # 构建 PyInstaller 参数列表
-    $pyiArgs = @(
-        '--clean'
-        '--onefile'
-        '--name', 'markflow-service'
-        '--distpath', (Join-Path $root 'src-tauri\binaries')
-        '--workpath', 'build/pyinstaller'
-        '--add-data', 'app;app'
-        '--add-data', 'config;config'
-        '--add-data', 'templates;templates'
-        '--add-data', 'filters;filters'
-        '--add-data', 'static;static'
-        '--hidden-import', 'uvicorn'
-        '--hidden-import', 'uvicorn.logging'
-        '--hidden-import', 'uvicorn.loops.auto'
-        '--hidden-import', 'uvicorn.protocols.http.auto'
-        '--hidden-import', 'uvicorn.protocols.websockets.auto'
-        '--hidden-import', 'sse_starlette'
-        '--collect-all', 'app'
-        '--exclude-module', 'PySide6'
-        '--exclude-module', 'PySide6.QtWidgets'
-        '--exclude-module', 'PySide6.QtCore'
-        '--exclude-module', 'PySide6.QtGui'
-        '--exclude-module', 'PySide6.QtNetwork'
-        '--exclude-module', 'PySide6.QtOpenGL'
-        '--exclude-module', 'PySide6.QtWebEngine'
-        '--exclude-module', 'PySide6.QtWebChannel'
-        '--exclude-module', 'scipy'
-        '--exclude-module', 'pandas'
-        '--exclude-module', 'numpy'
-        '--exclude-module', 'matplotlib'
-        '--exclude-module', 'PIL'
-        '--exclude-module', 'OpenGL'
-        '--exclude-module', 'sqlalchemy'
-        '--exclude-module', 'pythonwin'
-        '--exclude-module', 'win32ui'
-        '--exclude-module', 'win32api'
-        '--exclude-module', 'tkinter'
-        '--exclude-module', '_tkinter'
-        '--exclude-module', 'unittest'
-        '--exclude-module', 'xmlrpc'
-        '--exclude-module', 'pydoc'
-        '--exclude-module', 'doctest'
-        '--exclude-module', 'curses'
-    )
-    $pyiArgs += 'app/main.py'
+    $python = Get-Command python -ErrorAction SilentlyContinue
+    if ($python) {
+        return $python.Source
+    }
 
-    pyinstaller @pyiArgs
+    Fail "Python was not found. Create .venv or install Python 3.11+."
+}
 
-    if ($LASTEXITCODE -eq 0) {
-        # Tauri externalBin 要求文件名带目标平台后缀
-        $targetTriple = "x86_64-pc-windows-msvc"
-        $src = Join-Path $binDir "markflow-service.exe"
-        $dst = Join-Path $binDir "markflow-service-$targetTriple.exe"
-        if (Test-Path $src) {
-            Rename-Item -Path $src -NewName "markflow-service-$targetTriple.exe" -Force
-            Write-Host "[OK] backend packed -> $dst" -ForegroundColor Green
+function Get-BuildPython {
+    $candidates = @()
+    if (Test-Path -LiteralPath $PythonExe -PathType Leaf) {
+        $candidates += $PythonExe
+    }
+    if (Test-Path -LiteralPath $BackendPythonExe -PathType Leaf) {
+        $candidates += $BackendPythonExe
+    }
+    $systemPython = Get-Command python -ErrorAction SilentlyContinue
+    if ($systemPython) {
+        $candidates += $systemPython.Source
+    }
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        $previousPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        & $candidate -c "import PyInstaller, fastapi, uvicorn, pydantic_settings, pypandoc, sse_starlette" 2>$null | Out-Null
+        $candidateExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $previousPreference
+        if ($candidateExitCode -eq 0) {
+            return $candidate
         }
     }
-    Pop-Location
+
+    Fail "No Python environment has the build dependencies. Run: pip install -e `".\backend[build]`""
 }
 
-function frontend-install {
-    Push-Location (Join-Path $root "frontend")
-    npm install
-    if ($LASTEXITCODE -eq 0) { Write-Host "[OK] frontend dependencies installed" -ForegroundColor Green }
-    Pop-Location
+function Get-RustTargetTriple {
+    $result = rustc -vV | Select-String "^host: (.+)$"
+    if (-not $result) {
+        Fail "Cannot determine the Rust target triple."
+    }
+    return $result.Matches[0].Groups[1].Value
 }
 
-function frontend-dev {
-    Push-Location (Join-Path $root "frontend")
-    npm run dev
-    Pop-Location
+function Sync-Version {
+    $python = Get-Python
+    Invoke-Checked { & $python (Join-Path $ProjectRoot "scripts\sync_version.py") } "Version sync failed."
 }
 
-function frontend-lint {
-    Push-Location (Join-Path $root "frontend")
-    npm run lint
-    Pop-Location
-}
-
-function frontend-build {
-    # 同步版本号到前端环境变量
-    sync-version
-    Push-Location (Join-Path $root "frontend")
-    npm run build
-    Pop-Location
-}
-
-function tauri-dev {
-    Push-Location (Join-Path $root "src-tauri")
-    cargo tauri dev
-    Pop-Location
-}
-
-function tauri-build {
-    # 同步版本号到 Tauri/Cargo/前端配置
-    sync-version
-
-    $binary = Join-Path $root "src-tauri\binaries\markflow-service-x86_64-pc-windows-msvc.exe"
-    if (-not (Test-Path $binary)) {
-        Write-Host "[ERROR] sidecar binary not found: $binary" -ForegroundColor Red
-        Write-Host "  Run '.\build.ps1 backend-pack' first" -ForegroundColor Yellow
+function Build-Frontend {
+    if ($SkipFrontend) {
+        Write-Host "[SKIP] Frontend build" -ForegroundColor DarkGray
+        if (-not (Test-Path (Join-Path $FrontendDir "dist"))) {
+            Fail "frontend\dist does not exist; remove -SkipFrontend and rebuild."
+        }
         return
     }
-    Push-Location (Join-Path $root "src-tauri")
-    cargo tauri build
-    Pop-Location
+
+    Write-Step "Building frontend"
+    Push-Location $FrontendDir
+    try {
+        if (-not (Test-Path "node_modules")) {
+            Invoke-Checked { npm install } "npm install failed."
+        }
+        Invoke-Checked { npm run build } "Frontend build failed."
+    } finally {
+        Pop-Location
+    }
+    Write-Ok "Frontend ready"
 }
 
-function all {
-    Write-Host ">>> Installing backend dependencies..." -ForegroundColor Cyan
-    backend-install
-    Write-Host ">>> Installing frontend dependencies..." -ForegroundColor Cyan
-    frontend-install
-    Write-Host "[OK] all dependencies installed" -ForegroundColor Green
-}
+function Build-Backend {
+    $targetTriple = Get-RustTargetTriple
+    $sidecarExe = Join-Path $BinariesDir "markflow-service-$targetTriple.exe"
+    $runtimeDir = Join-Path $BinariesDir "markflow-service-runtime"
 
-function lint {
-    backend-lint
-    frontend-lint
-}
+    if ($SkipBackend) {
+        Write-Host "[SKIP] Backend sidecar build" -ForegroundColor DarkGray
+        if (-not (Test-Path -LiteralPath $sidecarExe -PathType Leaf)) {
+            Fail "Sidecar not found: $sidecarExe"
+        }
+        if (-not (Test-Path -LiteralPath $runtimeDir -PathType Container)) {
+            Fail "Sidecar runtime not found: $runtimeDir"
+        }
+        return
+    }
 
-function test {
-    backend-test
-}
+    $python = Get-BuildPython
 
-function clean {
-    $paths = @(
-        "backend\temp",
-        "backend\output",
-        "backend\.coverage",
-        "backend\htmlcov",
-        "backend\build",
-        "frontend\dist",
-        "src-tauri\target",
-        "src-tauri\binaries"
+    Write-Step "Building backend sidecar (PyInstaller onedir)"
+    New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $BinariesDir | Out-Null
+
+    $pyDist = Join-Path $BuildDir "pyinstaller-dist"
+    $pyWork = Join-Path $BuildDir "pyinstaller-work"
+    $env:MARKFLOW_PYINSTALLER_MODE = "onedir"
+    $env:MARKFLOW_PYINSTALLER_NAME = "markflow-service"
+    $env:MARKFLOW_PYINSTALLER_CONTENTS_DIR = "markflow-service-runtime"
+    $env:MARKFLOW_PYINSTALLER_CONSOLE = "0"
+
+    Invoke-Checked {
+        & $python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --distpath $pyDist `
+            --workpath $pyWork `
+            (Join-Path $ProjectRoot "markflow_backend.spec")
+    } "Backend packaging failed."
+
+    $pyOutput = Join-Path $pyDist "markflow-service"
+    $pyExe = Join-Path $pyOutput "markflow-service.exe"
+    $pyRuntime = Join-Path $pyOutput "markflow-service-runtime"
+    if (-not (Test-Path -LiteralPath $pyExe -PathType Leaf)) {
+        Fail "PyInstaller output not found: $pyExe"
+    }
+    if (-not (Test-Path -LiteralPath $pyRuntime -PathType Container)) {
+        Fail "PyInstaller runtime not found: $pyRuntime"
+    }
+
+    Remove-Item -LiteralPath $sidecarExe -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $runtimeDir -Recurse -Force -ErrorAction SilentlyContinue
+    Copy-Item -LiteralPath $pyExe -Destination $sidecarExe
+    Copy-Item -LiteralPath $pyRuntime -Destination $runtimeDir -Recurse
+
+    $required = @(
+        (Join-Path $runtimeDir "templates"),
+        (Join-Path $runtimeDir "filters"),
+        (Join-Path $runtimeDir "static\mermaid.min.js")
     )
-    $count = 0
-    foreach ($p in $paths) {
-        $full = Join-Path $root $p
-        if (Test-Path $full) {
-            Remove-Item -Recurse -Force $full -ErrorAction SilentlyContinue
-            $count++
-            Write-Host "  removed: $full" -ForegroundColor DarkGray
+    foreach ($path in $required) {
+        if (-not (Test-Path -LiteralPath $path)) {
+            Fail "Packaged backend is missing required resource: $path"
         }
     }
-    Get-ChildItem -Path $root -Directory -Recurse -Filter __pycache__ -ErrorAction SilentlyContinue |
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host "[OK] cleanup done ($count items removed)" -ForegroundColor Green
+    Write-Ok "Backend sidecar ready: $sidecarExe"
 }
 
-function help {
-    Write-Host @"
+function Build-Package {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Magenta
+    Write-Host "  MarkFlow Windows Packaging" -ForegroundColor Magenta
+    Write-Host "========================================" -ForegroundColor Magenta
 
- MarkFlow Build Script for Windows PowerShell
- ===============================================
- Usage: .\build.ps1 <command>
+    foreach ($tool in @("rustc", "cargo", "node", "npm")) {
+        if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+            Fail "Required command not found: $tool"
+        }
+    }
 
- --- Backend ---
-  backend-install           Install backend deps (pip)
-  backend-dev               Start backend dev server (uvicorn :62581)
-  backend-lint              Run ruff check
-  backend-test              Run pytest
-  backend-pack              PyInstaller -> standalone exe
+    Sync-Version
+    Build-Frontend
+    Build-Backend
 
- --- Frontend ---
-  frontend-install Install frontend dependencies (npm)
-  frontend-dev     Start frontend dev server (vite :1420)
-  frontend-lint    Run eslint
-  frontend-build   Build frontend dist
+    Write-Step "Building Tauri Windows installer"
+    Push-Location $TauriDir
+    try {
+        if ($Bundle -eq "all") {
+            Invoke-Checked { cargo tauri build } "Tauri build failed."
+        } else {
+            Invoke-Checked { cargo tauri build --bundles $Bundle } "Tauri build failed."
+        }
+    } finally {
+        Pop-Location
+    }
 
- --- Tauri ---
-  tauri-dev        cargo tauri dev
-  tauri-build      cargo tauri build
+    $bundleDir = Join-Path $TauriDir "target\release\bundle"
+    Write-Ok "Windows package complete"
+    Write-Host "Artifacts: $bundleDir" -ForegroundColor Yellow
+}
 
- --- General ---
-  all              Install all dependencies
-  sync-version     Sync version from pyproject.toml to all configs
-  lint             Run all linters
-  test             Run all tests
-  clean            Clean build artifacts
-  help             Show this help
+function Clean-Build {
+    $targets = @(
+        (Join-Path $ProjectRoot "build"),
+        (Join-Path $FrontendDir "dist"),
+        (Join-Path $TauriDir "binaries")
+    )
+    foreach ($target in $targets) {
+        if (Test-Path -LiteralPath $target) {
+            Remove-Item -LiteralPath $target -Recurse -Force
+            Write-Host "Removed: $target" -ForegroundColor DarkGray
+        }
+    }
+    Write-Ok "Build artifacts cleaned"
+}
 
- Examples:
-   .\build.ps1 all
-   .\build.ps1 tauri-dev
-   .\build.ps1 backend-pack
-   .\build.ps1 clean
+switch ($Command) {
+    "package" {
+        Build-Package
+    }
+    "backend-pack" {
+        Build-Backend
+    }
+    "backend-dev" {
+        $python = Get-Python
+        & $python (Join-Path $ProjectRoot "start_back_end.py")
+    }
+    "frontend-dev" {
+        Push-Location $FrontendDir
+        try { npm run dev } finally { Pop-Location }
+    }
+    "tauri-dev" {
+        Push-Location $TauriDir
+        try { cargo tauri dev } finally { Pop-Location }
+    }
+    "lint" {
+        $python = Get-Python
+        Push-Location $BackendDir
+        try { & $python -m ruff check . } finally { Pop-Location }
+        Push-Location $FrontendDir
+        try { npm run lint } finally { Pop-Location }
+    }
+    "test" {
+        $python = Get-Python
+        Push-Location $BackendDir
+        try { & $python -m pytest } finally { Pop-Location }
+    }
+    "sync-version" {
+        Sync-Version
+    }
+    "clean" {
+        Clean-Build
+    }
+    default {
+        Write-Host @"
+
+MarkFlow Windows build
+
+  .\build.ps1 package [-SkipFrontend] [-SkipBackend] [-Bundle all|msi|nsis]
+  .\build.ps1 backend-pack
+  .\build.ps1 backend-dev
+  .\build.ps1 frontend-dev
+  .\build.ps1 tauri-dev
+  .\build.ps1 lint
+  .\build.ps1 test
+  .\build.ps1 sync-version
+  .\build.ps1 clean
 
 "@
-}
-
-switch ($command) {
-    "backend-install"            { backend-install }
-    "backend-dev"                { backend-dev }
-    "backend-lint"               { backend-lint }
-    "backend-test"               { backend-test }
-    "backend-pack"               { backend-pack }
-    "frontend-install"{ frontend-install }
-    "frontend-dev"    { frontend-dev }
-    "frontend-lint"   { frontend-lint }
-    "frontend-build"  { frontend-build }
-    "tauri-dev"       { tauri-dev }
-    "tauri-build"     { tauri-build }
-    "all"             { all }
-    "sync-version"    { sync-version }
-    "lint"            { lint }
-    "test"            { test }
-    "clean"           { clean }
-    default           { help }
+    }
 }

@@ -1,75 +1,72 @@
 # MarkFlow
 
-Markdown 转 Word / PDF / HTML 的桌面工具。基于 **React + FastAPI(Pandoc) + Tauri** 架构。
+MarkFlow 是一个基于 React、FastAPI、Pandoc 和 Tauri 的 Markdown 转 Word / PDF / HTML 桌面工具。
 
-## 快速开始
+## 环境要求
 
-### 前置依赖
+- Windows 10/11
+- Python 3.11+
+- Node.js 20+
+- Rust stable
+- Pandoc（开发环境使用；安装包可携带 MSI 安装程序）
 
-- Python ≥ 3.11
-- Node.js ≥ 20
-- Pandoc（系统安装）
-- Rust（用于 Tauri 开发）
+## 开发
 
-### 安装与启动
+```powershell
+# 后端依赖
+pip install -e ".\backend[dev]"
 
-```bash
-# 1. 安装后端依赖
-cd backend
-pip install -e ".[dev]"
+# 前端依赖
+npm --prefix frontend install
 
-# 2. 安装前端依赖
-cd ../frontend
-npm install
+# 根目录启动后端，默认端口为 62581
+python .\start_back_end.py
 
-# 3. 安装 git hooks（提交前自动检查 lint 和类型）
-pre-commit install
+# 指定端口或数据目录
+python .\start_back_end.py --port 62581 --data-dir .\data
 
-# 4. 开发模式启动（前后端分离）
-# 终端 1：后端
-cd backend
-uvicorn app.main:app --reload --port 62581
+# 前端
+npm --prefix frontend run dev
 
-# 终端 2：前端
-cd frontend
-npm run dev
-
-# 5. 或启动 Tauri 桌面端（自动管理前后端）
-cargo tauri dev
+# Tauri 桌面端
+.\build.ps1 tauri-dev
 ```
+
+## Windows 打包
+
+先安装后端构建依赖：
+
+```powershell
+pip install -e ".\backend[build]"
+```
+
+一条命令构建前端、Python sidecar 和 Windows 安装包：
+
+```powershell
+.\build.ps1 package
+```
+
+常用选项：
+
+```powershell
+.\build.ps1 package -Bundle msi
+.\build.ps1 package -Bundle nsis
+.\build.ps1 package -SkipFrontend
+.\build.ps1 package -SkipBackend
+.\build.ps1 backend-pack
+```
+
+安装包输出到 `src-tauri/target/release/bundle/`。后端使用 PyInstaller onedir sidecar，避免 onefile 每次启动时重复解压 Python 运行时。
 
 ## 项目结构
 
-```
+```text
 markflow/
-├── backend/        # Python FastAPI 后端
-│   ├── app/
-│   │   ├── api/        # HTTP 路由与 Schema
-│   │   ├── services/   # 业务逻辑
-│   │   ├── models/     # 数据模型
-│   │   ├── core/       # Pandoc 引擎、文件管理
-│   │   ├── utils/      # 配置、日志、异常
-│   │   └── main.py
-│   └── tests/
-├── frontend/       # React + TypeScript 前端
-│   └── src/
-├── src-tauri/      # Tauri Rust 桌面壳
-└── docs/           # 文档
-```
-
-## 技术栈
-
-| 层 | 技术 |
-|----|------|
-| 桌面壳 | Tauri 2.0 (Rust) |
-| 后端 | FastAPI + Pandoc (Python) |
-| 前端 | React + TypeScript + Vite |
-| 通信 | HTTP + SSE |
-| 打包 | PyInstaller (后端) |
-
-## 构建
-
-```bash
-# 构建 Tauri 桌面安装包
-cargo tauri build
+├── backend/                  # FastAPI 后端
+├── frontend/                 # React + TypeScript 前端
+├── src-tauri/                # Tauri / Rust 桌面壳
+├── scripts/                  # 辅助脚本
+├── start_back_end.py         # 根目录后端入口
+├── markflow_backend.spec     # PyInstaller 统一配置
+└── build.ps1                 # Windows 开发与打包入口
 ```

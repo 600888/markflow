@@ -148,7 +148,15 @@ fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
 
 /// 开发模式下直接 spawn Python 进程
 fn try_spawn_python_direct(port: u16) -> Option<Child> {
-    let backend_dir = std::env::current_dir().ok()?.parent()?.join("backend");
+    let current_dir = std::env::current_dir().ok()?;
+    let project_root = if current_dir.join("start_back_end.py").is_file() {
+        current_dir
+    } else {
+        current_dir.parent()?.to_path_buf()
+    };
+    let launcher = project_root.join("start_back_end.py");
+    let launcher_arg = launcher.to_string_lossy().to_string();
+    let port_arg = port.to_string();
 
     let python_cmds = if cfg!(target_os = "windows") {
         vec!["python", "python3", "py"]
@@ -159,17 +167,11 @@ fn try_spawn_python_direct(port: u16) -> Option<Child> {
     for py in &python_cmds {
         if let Ok(child) = Command::new(py)
             .args([
-                "-m",
-                "uvicorn",
-                "app.main:app",
-                "--host",
-                "127.0.0.1",
+                launcher_arg.as_str(),
                 "--port",
-                &port.to_string(),
-                "--log-level",
-                "info",
+                port_arg.as_str(),
             ])
-            .current_dir(&backend_dir)
+            .current_dir(&project_root)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()

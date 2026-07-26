@@ -16,6 +16,9 @@ jobs:
   build:
     runs-on: windows-2022
     timeout-minutes: 120
+    env:
+      PANDOC_VERSION: "3.9.0.2"
+      PANDOC_SHA256: "A7BEB0CC40CE4D17EBCD2CD9F28CE000DD1F0AA4D95E3446E9C73CA43AFF8F60"
 
     outputs:
       release_tag: ${{ steps.version.outputs.release_tag }}
@@ -105,6 +108,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          cache-dependency-glob: backend/pyproject.toml
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -126,49 +131,39 @@ jobs:
           uv sync --extra dev
           uv pip install pyinstaller
 
-      - name: Pack backend sidecar (PyInstaller)
-        working-directory: backend
+      - name: Download bundled Pandoc installer
         shell: pwsh
         run: |
-          uv run pyinstaller --clean --onefile --name markflow-service `
-            --distpath ..\src-tauri\binaries `
-            --workpath build\pyinstaller `
-            --add-data "app;app" `
-            --add-data "config;config" `
-            --add-data "templates;templates" `
-            --add-data "filters;filters" `
-            --add-data "static;static" `
-            --hidden-import uvicorn `
-            --hidden-import uvicorn.logging `
-            --hidden-import uvicorn.loops.auto `
-            --hidden-import uvicorn.protocols.http.auto `
-            --hidden-import uvicorn.protocols.websockets.auto `
-            --hidden-import sse_starlette `
-            --collect-all app `
-            --exclude-module PySide6 `
-            --exclude-module scipy `
-            --exclude-module pandas `
-            --exclude-module numpy `
-            --exclude-module matplotlib `
-            --exclude-module PIL `
-            --exclude-module sqlalchemy `
-            --exclude-module tkinter `
-            --exclude-module unittest `
-            --exclude-module xmlrpc `
-            app\main.py
+          $fileName = "pandoc-$env:PANDOC_VERSION-windows-x86_64.msi"
+          $destination = Join-Path "data" $fileName
+          $downloadUrl = "https://github.com/jgm/pandoc/releases/download/$env:PANDOC_VERSION/$fileName"
 
-          # Rename with target triple for Tauri sidecar
-          $binDir = "..\src-tauri\binaries"
-          $targetTriple = "x86_64-pc-windows-msvc"
-          $src = Join-Path $binDir "markflow-service.exe"
-          $dst = Join-Path $binDir "markflow-service-$targetTriple.exe"
-          if (Test-Path $src) {
-            Rename-Item -Path $src -NewName "markflow-service-$targetTriple.exe" -Force
-            Write-Host "[OK] Sidecar packed -> $dst"
-          } else {
-            Write-Error "Sidecar binary not found at $src"
+          New-Item -ItemType Directory -Path "data" -Force | Out-Null
+
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              Write-Host "Downloading Pandoc (attempt $attempt/3): $downloadUrl"
+              Invoke-WebRequest -Uri $downloadUrl -OutFile $destination
+              break
+            } catch {
+              if ($attempt -eq 3) {
+                throw
+              }
+              Start-Sleep -Seconds (5 * $attempt)
+            }
+          }
+
+          $actualHash = (Get-FileHash -Path $destination -Algorithm SHA256).Hash
+          if ($actualHash -ne $env:PANDOC_SHA256) {
+            Write-Error "Pandoc checksum mismatch. Expected $env:PANDOC_SHA256, got $actualHash."
             exit 1
           }
+
+          Write-Host "[OK] Pandoc installer ready: $destination"
+
+      - name: Pack backend sidecar (PyInstaller)
+        shell: pwsh
+        run: .\build.ps1 backend-pack
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2"

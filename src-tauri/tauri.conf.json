@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicarq/tauri-apps/main/tooling/cli/schema.json",
   "productName": "MarkFlow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "identifier": "com.markflow.desktop",
   "build": {
     "frontendDist": "../frontend/dist",
@@ -28,15 +28,23 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "msi",
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/markflow-service"],
-    "resources": ["../data/**/*"],
+    "externalBin": [
+      "binaries/markflow-service"
+    ],
+    "resources": {
+      "../data/": "data/",
+      "binaries/markflow-service-runtime/": "markflow-service-runtime/"
+    },
     "windows": {
       "nsis": {
         "installerHooks": "./windows/hooks.nsh"
