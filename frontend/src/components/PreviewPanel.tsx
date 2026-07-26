@@ -99,7 +99,7 @@ export function PreviewPanel() {
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <div
             onClick={() => setTab("editor")}
-            className="relative cursor-pointer py-0.5 px-1"
+            className="relative h-11 flex items-center cursor-pointer px-1"
           >
             <span
               className={cn(
@@ -112,12 +112,12 @@ export function PreviewPanel() {
               📝 编辑器
             </span>
             {tab === "editor" && (
-              <div className="absolute bottom-[-13px] left-0 right-0 h-0.5 bg-primary rounded-[1px]" />
+              <div className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary rounded-[1px]" />
             )}
           </div>
           <div
             onClick={() => setTab("preview")}
-            className="relative cursor-pointer py-0.5 px-1"
+            className="relative h-11 flex items-center cursor-pointer px-1"
           >
             <span
               className={cn(
@@ -130,7 +130,7 @@ export function PreviewPanel() {
               📖 预览
             </span>
             {tab === "preview" && (
-              <div className="absolute bottom-[-13px] left-0 right-0 h-0.5 bg-primary rounded-[1px]" />
+              <div className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary rounded-[1px]" />
             )}
           </div>
         </div>

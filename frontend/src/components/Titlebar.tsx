@@ -40,7 +40,9 @@ export function Titlebar() {
         <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center text-primary-foreground text-[10px] font-bold">
           M
         </div>
-        <span className="text-xs text-muted-foreground">MarkFlow v0.1</span>
+        <span className="text-xs text-muted-foreground">
+          MarkFlow v{__APP_VERSION__}
+        </span>
       </div>
 
       {/* 右侧按钮 */}
