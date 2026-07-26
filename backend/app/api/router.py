@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import tempfile
+from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.log import log
@@ -17,6 +19,7 @@ from app.api.schemas import (
     HealthResponse,
     LogEntryResponse,
     LogListResponse,
+    MermaidRenderRequest,
     MermaidStatusResponse,
     PandocStatusResponse,
     TaskStatusResponse,
@@ -101,6 +104,22 @@ async def mermaid_status() -> MermaidStatusResponse:
     )
 
 
+@router.post("/mermaid/render-png")
+async def render_mermaid_png(req: MermaidRenderRequest) -> Response:
+    from app.core.mermaid_renderer import render_diagram
+
+    with tempfile.TemporaryDirectory(prefix="markflow-mermaid-export-") as temp_dir:
+        output_path = Path(temp_dir) / "diagram.png"
+        success = await render_diagram(req.source, output_path, theme=req.theme)
+        if not success or not output_path.exists():
+            raise HTTPException(status_code=503, detail="Mermaid PNG 渲染失败")
+        return Response(
+            content=output_path.read_bytes(),
+            media_type="image/png",
+            headers={"Content-Disposition": 'attachment; filename="mermaid-diagram.png"'},
+        )
+
+
 # ========== 模版列表 ==========
 @router.get("/templates", response_model=TemplateListResponse)
 async def list_templates(mgr: Annotated[TemplateManager, Depends(get_mgr)]) -> TemplateListResponse:
@@ -173,6 +192,8 @@ async def convert(
     toc_depth: Annotated[int, Form()] = 3,
     formula_position: Annotated[str, Form()] = "inline",
     keep_separator: Annotated[str, Form()] = "true",
+    convert_images: Annotated[str, Form()] = "true",
+    convert_mermaid: Annotated[str, Form()] = "true",
     metadata: Annotated[str | None, Form()] = None,
     svc: Annotated[ConversionService | None, Depends(get_svc)] = None,
     mgr: Annotated[TemplateManager | None, Depends(get_mgr)] = None,
@@ -197,17 +218,29 @@ async def convert(
         toc_depth=toc_depth,
         formula_position=formula_position,
         keep_separator=(keep_separator.lower() == "true"),
+        convert_images=(convert_images.lower() == "true"),
+        convert_mermaid=(convert_mermaid.lower() == "true"),
         metadata=_parse_metadata(metadata),
     )
     extra_args = mgr.build_extra_args(options)
     log.info(
         f"模版={template_slug}, toc={toc}, formula={formula_position}, "
-        f"keep_sep={keep_separator}, metadata={options.metadata}, args={extra_args}"
+        f"keep_sep={keep_separator}, convert_images={convert_images}, "
+        f"convert_mermaid={convert_mermaid}, "
+        f"metadata={options.metadata}, args={extra_args}"
     )
 
     # 提交任务
     filename = file.filename or "input.md"
-    task = await svc.submit(content, filename, fmt, extra_args, template_slug)
+    task = await svc.submit(
+        content,
+        filename,
+        fmt,
+        extra_args,
+        template_slug,
+        convert_images=options.convert_images,
+        convert_mermaid=options.convert_mermaid,
+    )
 
     # 后台执行
     asyncio.create_task(_run_convert(svc, task.task_id))

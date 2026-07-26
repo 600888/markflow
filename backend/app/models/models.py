@@ -40,6 +40,8 @@ class ConversionTask(BaseModel):
     input_path: Path
     output_format: OutputFormat
     template_slug: str | None = None
+    convert_images: bool = True
+    convert_mermaid: bool = True
     status: ConversionStatus = ConversionStatus.PENDING
     progress: float = 0.0
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

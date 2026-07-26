@@ -14,6 +14,8 @@ class ConversionOptions(BaseModel):
     metadata: dict[str, str] = Field(default_factory=dict)
     formula_position: str = "inline"  # inline | display | smart
     keep_separator: bool = True
+    convert_images: bool = True
+    convert_mermaid: bool = True
 
 
 class TemplateInfo(BaseModel):

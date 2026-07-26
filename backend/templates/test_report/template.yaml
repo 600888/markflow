@@ -1,6 +1,6 @@
 name: "测试报告"
 slug: "test_report"
-version: "1.0.0"
+version: "1.0.1"
 description: "符合测试报告格式规范，黑体标题、宋体正文、1.5 倍行距、首行缩进、全框线表格"
 author: "MarkFlow"
 target_formats: ["docx", "pdf"]
@@ -55,12 +55,12 @@ styles:
     space_before: "0.5 行"
     space_after: "0.5 行"
 
-    # 表头样式（深蓝底白字，电科院风格）
+    # 表头样式（柔和中浅蓝，保持测试报告的蓝色识别度）
     header_font: "宋体"
     header_size: "小五"
     header_bold: true
     header_alignment: "center"
-    header_background: "#2E75B6"
+    header_background: "#5B9BD5"
 
     # 表体样式
     body_font: "宋体"

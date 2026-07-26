@@ -195,7 +195,12 @@ class TemplateGenerator:
         for yaml_key, word_style_name in STYLE_MAP.items():
             sc = styles_cfg.get(yaml_key)
             if not sc:
-                continue
+                # Word 内置 Heading 4 可能默认继承斜体；即使模板未配置，
+                # 也要显式生成正常体的标题四。
+                if yaml_key == "heading4":
+                    sc = {}
+                else:
+                    continue
             try:
                 style = doc.styles[word_style_name]
             except KeyError:
@@ -205,10 +210,10 @@ class TemplateGenerator:
                 if word_style_name.startswith("Heading "):
                     try:
                         level = int(word_style_name.split()[1]) - 1
-                        pPr = style.element.get_or_add_pPr()
+                        heading_ppr = style.element.get_or_add_pPr()
                         outline_lvl = OxmlElement("w:outlineLvl")
                         outline_lvl.set(qn("w:val"), str(level))
-                        pPr.append(outline_lvl)
+                        heading_ppr.append(outline_lvl)
                     except (ValueError, IndexError):
                         pass
             self._apply_font(style, sc)
@@ -334,6 +339,9 @@ class TemplateGenerator:
                 b = rpr.find(qn("w:b"))
                 if b is not None:
                     rpr.remove(b)
+
+        # 不依赖 Word 内置样式的斜体默认值；未配置时一律使用正常体。
+        font.italic = bool(config.get("italic", False))
 
         color = TemplateGenerator._parse_color(config.get("color"))
         if color:

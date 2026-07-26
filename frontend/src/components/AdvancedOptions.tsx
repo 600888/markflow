@@ -52,11 +52,7 @@ export function AdvancedOptions() {
               checked={toc}
               onCheckedChange={(v) => setToc(v === true)}
             />
-            <label
-              htmlFor="toc"
-              className="text-xs cursor-pointer select-none"
-              onClick={() => setToc(!toc)}
-            >
+            <label htmlFor="toc" className="text-xs cursor-pointer select-none">
               生成目录 (TOC)
             </label>
           </div>
@@ -66,10 +62,11 @@ export function AdvancedOptions() {
             <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
               目录深度
             </span>
-            <div className="flex-1">
+            <div className={cn("flex-1", !toc && "opacity-50")}>
               <Select
                 value={String(tocDepth)}
                 onValueChange={(v) => setTocDepth(Number(v))}
+                disabled={!toc}
               >
                 <SelectTrigger>
                   <SelectValue />

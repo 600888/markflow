@@ -28,13 +28,16 @@ class ConversionService:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._tasks: dict[UUID, ConversionTask] = {}
 
-    async def submit(
+    async def submit(  # noqa: PLR0913
         self,
         content: bytes,
         filename: str,
         output_format: OutputFormat,
         extra_args: list[str] | None = None,
         template_slug: str | None = None,
+        *,
+        convert_images: bool = True,
+        convert_mermaid: bool = True,
     ) -> ConversionTask:
         """提交转换任务，返回任务对象"""
         if len(content) > self._max_file_size:
@@ -48,6 +51,8 @@ class ConversionService:
             input_path=input_path,
             output_format=output_format,
             template_slug=template_slug,
+            convert_images=convert_images,
+            convert_mermaid=convert_mermaid,
             extra_args=extra_args or [],
         )
         self._tasks[task.task_id] = task
@@ -74,6 +79,8 @@ class ConversionService:
                     output_format=task.output_format,
                     extra_args=task.extra_args,
                     template_slug=task.template_slug,
+                    convert_images=task.convert_images,
+                    convert_mermaid=task.convert_mermaid,
                     on_progress=_on_progress,
                 )
 

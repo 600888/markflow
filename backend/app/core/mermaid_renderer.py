@@ -74,7 +74,7 @@ def _load_mermaid_js() -> str:
     return ""
 
 
-def _build_html(diagram_code: str) -> str:
+def _build_html(diagram_code: str, theme: str = "default") -> str:
     """生成自包含的 HTML 页面（含自动尺寸检测 JS）"""
     mermaid_js = _load_mermaid_js()
     if not mermaid_js:
@@ -82,12 +82,26 @@ def _build_html(diagram_code: str) -> str:
 
     escaped_code = diagram_code.replace("</script>", "<\\/script>")
 
+    background = "#0b0b0b" if theme == "dark" else "#ffffff"
+
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ background:#fff; display:inline-block; min-width:100px; min-height:100px; }}
-  .mermaid {{ display:inline-block; }}
+  html, body {{ width:100%; height:100%; }}
+  body {{
+    background:{background};
+    min-width:100px;
+    min-height:100px;
+    overflow:hidden;
+  }}
+  .mermaid {{
+    position:absolute;
+    left:16px;
+    top:16px;
+    display:block;
+  }}
+  .mermaid svg {{ display:block; }}
 </style></head><body>
 <div class="mermaid">
 {escaped_code}
@@ -95,12 +109,27 @@ def _build_html(diagram_code: str) -> str:
 <script>{mermaid_js}</script>
 <script>
 (async function() {{
+  mermaid.initialize({{
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: '{theme}'
+  }});
   await mermaid.run({{ querySelector: '.mermaid' }});
   var svg = document.querySelector('.mermaid svg');
   if (svg) {{
     var rect = svg.getBoundingClientRect();
-    var pad = 16;
-    document.title = Math.ceil(rect.width + pad) + 'x' + Math.ceil(rect.height + pad);
+    var width = Math.ceil(rect.width);
+    var height = Math.ceil(rect.height);
+    var container = document.querySelector('.mermaid');
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.style.width = width + 'px';
+    svg.style.height = height + 'px';
+    svg.style.maxWidth = 'none';
+    container.style.width = width + 'px';
+    container.style.height = height + 'px';
+    var pad = 32;
+    document.title = (width + pad) + 'x' + (height + pad);
   }} else {{
     document.title = 'FAILED';
   }}
@@ -113,6 +142,37 @@ def is_available() -> bool:
     if not _load_mermaid_js():
         return False
     return _find_edge() is not None
+
+
+def _center_png(output_path: Path, padding: int = 48) -> bool:
+    """按实际非背景像素裁边，再放回四周等距留白的画布。"""
+    from PIL import Image, ImageChops
+
+    with Image.open(output_path) as source:
+        image = source.convert("RGB")
+
+    background_color = image.getpixel((0, 0))
+    background = Image.new("RGB", image.size, background_color)
+    content_box = ImageChops.difference(image, background).getbbox()
+    if content_box is None:
+        return False
+    left, top, right, bottom = content_box
+    if left <= 0 or top <= 0 or right >= image.width or bottom >= image.height:
+        log.warning(
+            "Mermaid 图形触及截图边界，拒绝导出可能被裁切的 PNG: "
+            f"image={image.size}, content_box={content_box}"
+        )
+        return False
+
+    content = image.crop(content_box)
+    centered = Image.new(
+        "RGB",
+        (content.width + padding * 2, content.height + padding * 2),
+        background_color,
+    )
+    centered.paste(content, (padding, padding))
+    centered.save(output_path, format="PNG")
+    return True
 
 
 async def _render_one(html_path: Path, output_path: Path) -> bool:
@@ -178,6 +238,10 @@ async def _render_one(html_path: Path, output_path: Path) -> bool:
             log.warning(f"Edge 截图失败 (exit={proc2.returncode}): {err}")
             return False
 
+        if not _center_png(output_path):
+            log.warning("Mermaid 截图未检测到有效图形内容")
+            return False
+
         if output_path.stat().st_size < 100:
             log.warning(f"Mermaid 截图过小 ({output_path.stat().st_size} bytes)")
             return False
@@ -197,6 +261,7 @@ async def _render_one(html_path: Path, output_path: Path) -> bool:
 
 async def render_diagrams(
     diagrams: list[tuple[str, Path]],
+    theme: str = "default",
 ) -> list[bool]:
     """批量渲染 Mermaid 图表（逐个处理，Edge 启动开销很小）"""
     if not diagrams:
@@ -215,7 +280,7 @@ async def render_diagrams(
 
     # 准备 HTML 文件
     for code, _ in diagrams:
-        html_content = _build_html(code)
+        html_content = _build_html(code, theme=theme)
         if not html_content:
             html_files.append(Path())
             continue
@@ -248,9 +313,13 @@ async def render_diagrams(
     return results
 
 
-async def render_diagram(diagram_code: str, output_path: Path) -> bool:
+async def render_diagram(
+    diagram_code: str,
+    output_path: Path,
+    theme: str = "default",
+) -> bool:
     """渲染单个 Mermaid 图表"""
-    results = await render_diagrams([(diagram_code, output_path)])
+    results = await render_diagrams([(diagram_code, output_path)], theme=theme)
     return results[0] if results else False
 
 

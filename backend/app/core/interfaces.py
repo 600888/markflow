@@ -16,12 +16,15 @@ class ConversionEngine(ABC):
     """转换引擎接口"""
 
     @abstractmethod
-    async def convert(
+    async def convert(  # noqa: D417, PLR0913
         self,
         input_path: Path,
         output_format: OutputFormat,
         extra_args: list[str] | None = None,
         template_slug: str | None = None,
+        *,
+        convert_images: bool = True,
+        convert_mermaid: bool = True,
         on_progress: ProgressCallback | None = None,
     ) -> ConversionResult:
         """

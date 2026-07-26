@@ -120,6 +120,7 @@ class TestTemplateManager:
         assert "--toc" in args
         assert "--toc-depth" in args
         assert "2" in args
+        assert "toc-title=目录" in args
 
     def test_build_extra_args_with_metadata(self, tmp_templates: Path) -> None:
         mgr = TemplateManager(tmp_templates)

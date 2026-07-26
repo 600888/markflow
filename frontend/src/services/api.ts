@@ -40,6 +40,19 @@ export async function fetchMermaidStatus(): Promise<MermaidStatus> {
   return api().get("mermaid-status").json();
 }
 
+export async function renderMermaidPng(
+  source: string,
+  theme: "default" | "dark",
+): Promise<Uint8Array> {
+  const data = await api()
+    .post("mermaid/render-png", {
+      json: { source, theme },
+      timeout: 60_000,
+    })
+    .arrayBuffer();
+  return new Uint8Array(data);
+}
+
 export async function fetchPandocStatus(): Promise<PandocStatus> {
   return api().get("pandoc-status").json();
 }
@@ -57,6 +70,8 @@ export async function submitConvert(
   metadata: Record<string, string>,
   formulaPosition: string = "inline",
   keepSeparator: boolean = true,
+  convertImages: boolean = true,
+  convertMermaid: boolean = true,
 ): Promise<{ task_id: string; status: string; message: string }> {
   const form = new FormData();
   form.append("file", file);
@@ -68,6 +83,8 @@ export async function submitConvert(
   }
   form.append("formula_position", formulaPosition);
   form.append("keep_separator", keepSeparator ? "true" : "false");
+  form.append("convert_images", convertImages ? "true" : "false");
+  form.append("convert_mermaid", convertMermaid ? "true" : "false");
   if (Object.keys(metadata).length > 0) {
     form.append("metadata", JSON.stringify(metadata));
   }
@@ -85,6 +102,8 @@ export async function submitConvertFromContent(
   metadata: Record<string, string>,
   formulaPosition: string = "inline",
   keepSeparator: boolean = true,
+  convertImages: boolean = true,
+  convertMermaid: boolean = true,
 ): Promise<{ task_id: string; status: string; message: string }> {
   const blob = new Blob([content], { type: "text/markdown" });
   const file = new File([blob], fileName || "document.md", {
@@ -99,6 +118,8 @@ export async function submitConvertFromContent(
     metadata,
     formulaPosition,
     keepSeparator,
+    convertImages,
+    convertMermaid,
   );
 }
 

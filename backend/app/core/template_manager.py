@@ -87,7 +87,10 @@ class TemplateManager:
             args.extend(["--toc-depth", str(options.toc_depth)])
 
         # metadata
-        for key, value in options.metadata.items():
+        metadata = dict(options.metadata)
+        if options.toc:
+            metadata.setdefault("toc-title", "目录")
+        for key, value in metadata.items():
             args.extend(["--metadata", f"{key}={value}"])
 
         # 公式位置过滤器

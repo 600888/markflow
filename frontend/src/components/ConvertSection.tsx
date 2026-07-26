@@ -22,6 +22,8 @@ export function ConvertSection() {
   const metaAuthor = useStore((s) => s.metaAuthor);
   const formulaPosition = useStore((s) => s.formulaPosition);
   const keepSeparator = useStore((s) => s.keepSeparator);
+  const convertImages = useStore((s) => s.convertImages);
+  const convertMermaid = useStore((s) => s.convertMermaid);
   const status = useStore((s) => s.status);
   const progress = useStore((s) => s.progress);
   const setProgress = useStore((s) => s.setProgress);
@@ -58,6 +60,8 @@ export function ConvertSection() {
         metadata,
         formulaPosition,
         keepSeparator,
+        convertImages,
+        convertMermaid,
       );
       setTaskId(task_id);
       setProgress("running", 0.05);

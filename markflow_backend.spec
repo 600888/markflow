@@ -54,7 +54,6 @@ a = Analysis(
         "pandas",
         "numpy",
         "matplotlib",
-        "PIL",
         "sqlalchemy",
         "tkinter",
         "_tkinter",

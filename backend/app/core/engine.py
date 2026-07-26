@@ -7,8 +7,10 @@ import hashlib
 import re
 import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlparse
 from uuid import UUID
 
 import pypandoc
@@ -16,6 +18,8 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.shared import Inches
+from PIL import Image, ImageOps
 
 from app.core.interfaces import ConversionEngine, ProgressCallback
 from app.core.log import log
@@ -56,6 +60,8 @@ ALIGN_MAP: dict[str, WD_ALIGN_PARAGRAPH] = {
     "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
 }
 
+MERMAID_IMAGE_MARKER = "markflow-mermaid-diagram"
+
 
 def _parse_size(raw: str | float) -> float | None:
     if isinstance(raw, (int, float)):
@@ -93,7 +99,7 @@ def _set_cell_border(cell_or_tc: object, edge: str, weight: float, color: str) -
     el.set(qn("w:val"), "single")
     el.set(qn("w:sz"), str(int(weight * 8)))  # 1pt = 8 eighths
     el.set(qn("w:space"), "0")
-    el.set(qn("w:color"), color)
+    el.set(qn("w:color"), color.lstrip("#"))
     tcBorders.append(el)
 
 
@@ -289,7 +295,7 @@ def _apply_grid_border(table: object, tc: dict) -> None:
     def _edge_color(key: str, default: str = "black") -> str:
         cfg = tc.get(key, {})
         c = cfg.get("color", default) if isinstance(cfg, dict) else default
-        return c
+        return str(c).lstrip("#")
 
     tblBorders = OxmlElement("w:tblBorders")
     for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
@@ -337,12 +343,15 @@ class PandocEngine(ConversionEngine):
         except Exception:
             return False
 
-    async def convert(
+    async def convert(  # noqa: PLR0913
         self,
         input_path: Path,
         output_format: OutputFormat,
         extra_args: list[str] | None = None,
         template_slug: str | None = None,
+        *,
+        convert_images: bool = True,
+        convert_mermaid: bool = True,
         on_progress: ProgressCallback | None = None,
     ) -> ConversionResult:
         """执行 Pandoc 转换"""
@@ -367,7 +376,15 @@ class PandocEngine(ConversionEngine):
         # 预处理 Markdown：标准化数学公式定界符
         self._normalize_math_in_file(input_path)
         # 预处理 Markdown：渲染 Mermaid 图表
-        mermaid_dirs = await self._preprocess_mermaid(input_path)
+        created_dirs = (
+            await self._preprocess_mermaid(
+                input_path,
+                mark_for_docx=output_format == OutputFormat.DOCX,
+            )
+            if convert_mermaid
+            else []
+        )
+        created_dirs.extend(self._preprocess_images(input_path, convert_images))
 
         output_path = input_path.with_suffix(f".{output_format.value}")
         args = extra_args or []
@@ -407,11 +424,33 @@ class PandocEngine(ConversionEngine):
                 await loop.run_in_executor(None, _convert)
 
             # 后处理：应用表格样式（仅 docx）
+            # Pandoc 在 DOCX 中只写入空的 TOC 域。填充可见缓存，并让 Word
+            # 打开文档时自动更新目录和页码。
+            if output_format == OutputFormat.DOCX and "--toc" in args:
+                toc_depth = self._get_toc_depth(args)
+                if on_progress:
+                    await on_progress(0.88, "生成目录...")
+                await loop.run_in_executor(
+                    None,
+                    self._populate_docx_toc_cache,
+                    output_path,
+                    toc_depth,
+                )
+
             if output_format == OutputFormat.DOCX and template_slug:
                 if on_progress:
                     await on_progress(0.9, "应用表格样式...")
                 await loop.run_in_executor(
                     None, self._apply_table_styles, output_path, template_slug
+                )
+
+            if output_format == OutputFormat.DOCX:
+                if on_progress:
+                    await on_progress(0.95, "调整 Mermaid 图表版式...")
+                await loop.run_in_executor(
+                    None,
+                    self._format_docx_mermaid_images,
+                    output_path,
                 )
 
             if on_progress:
@@ -449,15 +488,211 @@ class PandocEngine(ConversionEngine):
                 },
             ) from e
         finally:
-            # 清理 Mermaid 临时目录
-            for d in mermaid_dirs:
+            # 清理 Mermaid 和图片预处理产生的临时目录
+            for d in created_dirs:
                 self.__class__._cleanup_mermaid_dir(d)
 
     async def validate_format(self, output_format: OutputFormat) -> bool:
         """校验格式是否支持"""
         return output_format in self.FORMAT_MAP
 
+    @staticmethod
+    def _get_toc_depth(args: list[str]) -> int:
+        for index, arg in enumerate(args):
+            if arg == "--toc-depth" and index + 1 < len(args):
+                try:
+                    return max(1, min(6, int(args[index + 1])))
+                except ValueError:
+                    return 3
+            if arg.startswith("--toc-depth="):
+                try:
+                    return max(1, min(6, int(arg.partition("=")[2])))
+                except ValueError:
+                    return 3
+        return 3
+
+    @staticmethod
+    def _populate_docx_toc_cache(docx_path: Path, toc_depth: int) -> None:
+        """为 Pandoc 生成的空 TOC 域写入可见标题缓存。"""
+        doc = Document(docx_path)
+        body = doc.element.body
+
+        toc_content = None
+        for sdt in body.findall(qn("w:sdt")):
+            gallery = sdt.find(".//" + qn("w:docPartGallery"))
+            if gallery is not None and gallery.get(qn("w:val")) == "Table of Contents":
+                toc_content = sdt.find(qn("w:sdtContent"))
+                break
+
+        if toc_content is None:
+            log.warning(f"DOCX 中未找到目录域: {docx_path.name}")
+            return
+
+        headings: list[tuple[int, str, str | None]] = []
+        pending_bookmark: str | None = None
+        for child in body:
+            if child.tag == qn("w:bookmarkStart"):
+                pending_bookmark = child.get(qn("w:name"))
+                continue
+            if child.tag != qn("w:p"):
+                continue
+
+            p_style = child.find("./" + qn("w:pPr") + "/" + qn("w:pStyle"))
+            style_value = p_style.get(qn("w:val"), "") if p_style is not None else ""
+            match = re.fullmatch(r"Heading([1-6])", style_value)
+            if match:
+                level = int(match.group(1))
+                title = "".join(node.text or "" for node in child.iter(qn("w:t"))).strip()
+                if title and level <= toc_depth:
+                    headings.append((level, title, pending_bookmark))
+            pending_bookmark = None
+
+        field_paragraph = None
+        for paragraph in toc_content.findall(qn("w:p")):
+            instruction = "".join(
+                node.text or "" for node in paragraph.iter(qn("w:instrText"))
+            )
+            if "TOC " in instruction:
+                field_paragraph = paragraph
+                break
+
+        if field_paragraph is None:
+            log.warning(f"DOCX 中未找到 TOC 指令: {docx_path.name}")
+            return
+
+        # 清除可能存在的旧缓存，并把域结束标记移动到缓存条目之后。
+        field_index = toc_content.index(field_paragraph)
+        for child in list(toc_content)[field_index + 1 :]:
+            toc_content.remove(child)
+        for field_char in list(field_paragraph.iter(qn("w:fldChar"))):
+            if field_char.get(qn("w:fldCharType")) == "end":
+                field_char.getparent().remove(field_char)
+
+        insert_at = field_index + 1
+        for level, title, bookmark in headings:
+            paragraph = OxmlElement("w:p")
+            paragraph_properties = OxmlElement("w:pPr")
+            indent = OxmlElement("w:ind")
+            indent.set(qn("w:left"), str((level - 1) * 420))
+            paragraph_properties.append(indent)
+            spacing = OxmlElement("w:spacing")
+            spacing.set(qn("w:before"), "0")
+            spacing.set(qn("w:after"), "0")
+            paragraph_properties.append(spacing)
+            paragraph.append(paragraph_properties)
+
+            run = OxmlElement("w:r")
+            text = OxmlElement("w:t")
+            text.set(qn("xml:space"), "preserve")
+            text.text = title
+            run.append(text)
+
+            if bookmark:
+                hyperlink = OxmlElement("w:hyperlink")
+                hyperlink.set(qn("w:anchor"), bookmark)
+                hyperlink.set(qn("w:history"), "1")
+                hyperlink.append(run)
+                paragraph.append(hyperlink)
+            else:
+                paragraph.append(run)
+
+            toc_content.insert(insert_at, paragraph)
+            insert_at += 1
+
+        end_paragraph = OxmlElement("w:p")
+        end_run = OxmlElement("w:r")
+        end_field = OxmlElement("w:fldChar")
+        end_field.set(qn("w:fldCharType"), "end")
+        end_run.append(end_field)
+        end_paragraph.append(end_run)
+        toc_content.insert(insert_at, end_paragraph)
+
+        settings = doc.settings.element
+        update_fields = settings.find(qn("w:updateFields"))
+        if update_fields is None:
+            update_fields = OxmlElement("w:updateFields")
+            settings.append(update_fields)
+        update_fields.set(qn("w:val"), "true")
+
+        doc.save(docx_path)
+        log.info(f"已生成可见目录缓存: {len(headings)} 项, 深度 {toc_depth}")
+
     # ── Markdown 结构预处理 ──────────────────────────────
+
+    @staticmethod
+    def _format_docx_mermaid_images(docx_path: Path) -> None:
+        """Center Mermaid figures and constrain them to the current Word section."""
+        try:
+            doc = Document(docx_path)
+        except Exception as exc:
+            log.warning(f"无法打开 DOCX 调整 Mermaid 图表版式: {exc}")
+            return
+        sections = list(doc.sections)
+        if not sections:
+            return
+
+        body = doc.element.body
+        paragraph_sections: dict[object, int] = {}
+        section_index = 0
+        for child in body.iterchildren():
+            if child.tag != qn("w:p"):
+                continue
+            paragraph_sections[child] = min(section_index, len(sections) - 1)
+            if child.find("./" + qn("w:pPr") + "/" + qn("w:sectPr")) is not None:
+                section_index += 1
+
+        formatted = 0
+        for shape in doc.inline_shapes:
+            inline = shape._inline
+            doc_properties = inline.find(qn("wp:docPr"))
+            if doc_properties is None:
+                continue
+            metadata = " ".join(
+                doc_properties.get(key, "")
+                for key in ("name", "title", "descr")
+            ).lower()
+            if MERMAID_IMAGE_MARKER not in metadata:
+                continue
+
+            paragraph_element = inline
+            while (
+                paragraph_element is not None
+                and paragraph_element.tag != qn("w:p")
+            ):
+                paragraph_element = paragraph_element.getparent()
+            if paragraph_element is None:
+                continue
+
+            target_section = sections[
+                paragraph_sections.get(paragraph_element, len(sections) - 1)
+            ]
+            page_width = int(target_section.page_width or Inches(8.5))
+            left_margin = int(target_section.left_margin or Inches(1))
+            right_margin = int(target_section.right_margin or Inches(1))
+            available_width = page_width - left_margin - right_margin
+            if available_width <= 0:
+                continue
+
+            current_width = int(shape.width)
+            current_height = int(shape.height)
+            if current_width > available_width:
+                ratio = available_width / current_width
+                shape.width = available_width
+                shape.height = round(current_height * ratio)
+
+            paragraph_properties = paragraph_element.get_or_add_pPr()
+            for old_indent in paragraph_properties.findall(qn("w:ind")):
+                paragraph_properties.remove(old_indent)
+            justification = paragraph_properties.find(qn("w:jc"))
+            if justification is None:
+                justification = OxmlElement("w:jc")
+                paragraph_properties.append(justification)
+            justification.set(qn("w:val"), "center")
+            formatted += 1
+
+        if formatted:
+            doc.save(docx_path)
+            log.info(f"已居中并适配 {formatted} 张 Mermaid Word 图表")
 
     @staticmethod
     def _normalize_markdown_structure(path: Path) -> None:
@@ -571,9 +806,148 @@ class PandocEngine(ConversionEngine):
             except OSError:
                 pass
 
+    # ── 图片预处理 ────────────────────────────────────────
+
+    _FENCED_CODE_RE = re.compile(
+        r"(^[ \t]*```.*?^[ \t]*```[ \t]*$|^[ \t]*~~~.*?^[ \t]*~~~[ \t]*$)",
+        re.MULTILINE | re.DOTALL,
+    )
+    _MARKDOWN_IMAGE_RE = re.compile(
+        r"!\[(?P<alt>[^\]]*)\]\(\s*(?P<target><[^>]+>|[^\s)]+)"
+        r"(?P<title>\s+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?\s*\)",
+    )
+    _REFERENCE_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\[[^\]]*\]")
+    _HTML_IMAGE_RE = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
+    _ALT_ATTR_RE = re.compile(
+        r"\balt\s*=\s*([\"'])(.*?)\1",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    @classmethod
+    def _map_outside_fenced_code(
+        cls,
+        text: str,
+        transform: Callable[[str], str],
+    ) -> str:
+        parts = cls._FENCED_CODE_RE.split(text)
+        return "".join(
+            part if index % 2 else transform(part)
+            for index, part in enumerate(parts)
+        )
+
+    @classmethod
+    def _strip_images_from_segment(cls, segment: str) -> str:
+        segment = cls._MARKDOWN_IMAGE_RE.sub(
+            lambda match: match.group("alt"),
+            segment,
+        )
+        segment = cls._REFERENCE_IMAGE_RE.sub(lambda match: match.group(1), segment)
+
+        def replace_html(match: re.Match[str]) -> str:
+            alt = cls._ALT_ATTR_RE.search(match.group(0))
+            return alt.group(2) if alt else ""
+
+        return cls._HTML_IMAGE_RE.sub(replace_html, segment)
+
+    @staticmethod
+    def _resolve_local_image(target: str, input_path: Path) -> Path | None:
+        raw_target = target[1:-1] if target.startswith("<") else target
+        parsed = urlparse(raw_target)
+        if parsed.scheme.lower() in {"http", "https", "data"}:
+            return None
+        if parsed.scheme and parsed.scheme.lower() != "file":
+            is_windows_path = (
+                len(parsed.scheme) == 1 and raw_target[1:3] in {":\\", ":/"}
+            )
+            if not is_windows_path:
+                return None
+
+        if parsed.scheme.lower() == "file":
+            value = unquote(parsed.path)
+            if re.match(r"^/[A-Za-z]:/", value):
+                value = value[1:]
+        else:
+            value = unquote(raw_target)
+
+        path = Path(value)
+        if not path.is_absolute():
+            path = input_path.parent / path
+        return path.resolve()
+
+    @classmethod
+    def _preprocess_images(
+        cls,
+        input_path: Path,
+        convert_images: bool,
+    ) -> list[Path]:
+        try:
+            text = input_path.read_text(encoding="utf-8")
+        except OSError:
+            return []
+
+        if not convert_images:
+            new_text = cls._map_outside_fenced_code(
+                text,
+                cls._strip_images_from_segment,
+            )
+            if new_text != text:
+                input_path.write_text(new_text, encoding="utf-8")
+                log.info(f"已从转换内容中移除图片: {input_path.name}")
+            return []
+
+        convertible = {".bmp", ".gif", ".tif", ".tiff", ".webp"}
+        stem_hash = hashlib.sha256(str(input_path).encode("utf-8")).hexdigest()[:8]
+        tmp_dir = input_path.parent / f"_images_{stem_hash}"
+        converted: dict[Path, Path] = {}
+
+        def replace_image(match: re.Match[str]) -> str:
+            source = cls._resolve_local_image(match.group("target"), input_path)
+            if source is None or source.suffix.lower() not in convertible:
+                return match.group(0)
+            if not source.is_file():
+                log.warning(f"图片文件不存在，跳过转换: {source}")
+                return match.group(0)
+
+            output = converted.get(source)
+            if output is None:
+                tmp_dir.mkdir(parents=True, exist_ok=True)
+                digest = hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:8]
+                output = tmp_dir / f"{source.stem}_{digest}.png"
+                try:
+                    with Image.open(source) as image:
+                        image.seek(0)
+                        normalized = ImageOps.exif_transpose(image)
+                        has_alpha = (
+                            normalized.mode in {"RGBA", "LA"}
+                            or "transparency" in normalized.info
+                        )
+                        normalized = normalized.convert("RGBA" if has_alpha else "RGB")
+                        normalized.save(output, "PNG", optimize=True)
+                except OSError as exc:
+                    log.warning(f"图片转换失败，保留原图: {source} - {exc}")
+                    return match.group(0)
+                converted[source] = output
+
+            title = match.group("title") or ""
+            return f"![{match.group('alt')}](<{output.resolve().as_posix()}>{title})"
+
+        new_text = cls._map_outside_fenced_code(
+            text,
+            lambda segment: cls._MARKDOWN_IMAGE_RE.sub(replace_image, segment),
+        )
+        if new_text != text:
+            input_path.write_text(new_text, encoding="utf-8")
+            log.info(f"已将 {len(converted)} 张图片转换为 PNG: {input_path.name}")
+        return [tmp_dir] if converted else []
+
     # ── Mermaid 图表预处理 ────────────────────────────────
 
-    async def _preprocess_mermaid(self, input_path: Path) -> list[Path]:
+    async def _preprocess_mermaid(
+        self,
+        input_path: Path,
+        *,
+        mark_for_docx: bool = False,
+    ) -> list[Path]:
         """
         将 Markdown 中的 ```mermaid 代码块渲染为图片
 
@@ -644,7 +1018,8 @@ class PandocEngine(ConversionEngine):
                 if results[idx]:
                     png_file = tmp_dir / f"diagram_{idx}.png"
                     abs_path_str = png_file.resolve().as_posix()
-                    img_md = f"![]({abs_path_str})\n"
+                    title = f' "{MERMAID_IMAGE_MARKER}"' if mark_for_docx else ""
+                    img_md = f"![](<{abs_path_str}>{title})\n"
                     start, end = m.start(), m.end()
                     new_text = new_text[:start] + img_md + new_text[end:]
                     any_rendered = True
@@ -661,7 +1036,7 @@ class PandocEngine(ConversionEngine):
                 input_path.write_text(new_text, encoding="utf-8")
                 log.info(f"Mermaid 预处理完成：{len(matches)} 个图表")
                 # 后验证
-                mermaid_refs = re.findall(r"!\[\]\((.+?)\)", new_text)
+                mermaid_refs = re.findall(r"!\[\]\(<([^>]+)>", new_text)
                 for ref in mermaid_refs:
                     ref_path = Path(ref)
                     if ref_path.exists():

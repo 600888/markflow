@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from config.version import APP_VERSION
@@ -19,6 +21,11 @@ class MermaidStatusResponse(BaseModel):
     mermaid_js_loaded: bool = False
     mermaid_available: bool = False
     diagnostic: str = ""
+
+
+class MermaidRenderRequest(BaseModel):
+    source: str = Field(..., min_length=1, max_length=500_000)
+    theme: Literal["default", "dark"] = "default"
 
 
 # ========== 转换 ==========
@@ -64,6 +71,7 @@ class StyleConfig(BaseModel):
     font: str | None = None
     size: str | None = None
     bold: bool | None = None
+    italic: bool | None = None
     color: str | None = None
     alignment: str | None = None
     space_before: str | None = None

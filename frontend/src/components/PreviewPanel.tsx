@@ -1,14 +1,18 @@
-import { useRef, useCallback, useState } from "react";
+import { lazy, Suspense, useRef, useCallback, useState } from "react";
 import TurndownService from "turndown";
 import { useStore } from "../stores/useStore";
 import { Switch } from "./ui/switch";
+import { Checkbox } from "./ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "./ui/dropdown-menu";
+import { shouldPreservePlainText } from "../lib/clipboard";
 import { cn } from "../lib/utils";
+
+const MarkdownPreview = lazy(() => import("./MarkdownPreview"));
 
 const turndown = new TurndownService({
   headingStyle: "atx",
@@ -31,6 +35,10 @@ export function PreviewPanel() {
   const setFormulaPosition = useStore((s) => s.setFormulaPosition);
   const keepSeparator = useStore((s) => s.keepSeparator);
   const setKeepSeparator = useStore((s) => s.setKeepSeparator);
+  const convertImages = useStore((s) => s.convertImages);
+  const setConvertImages = useStore((s) => s.setConvertImages);
+  const convertMermaid = useStore((s) => s.convertMermaid);
+  const setConvertMermaid = useStore((s) => s.setConvertMermaid);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [tab, setTab] = useState<"editor" | "preview">("editor");
@@ -45,13 +53,24 @@ export function PreviewPanel() {
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const html = e.clipboardData.getData("text/html");
+      const plainText = e.clipboardData.getData("text/plain");
       if (html) {
         e.preventDefault();
         let md: string;
-        try {
-          md = turndown.turndown(html);
-        } catch {
-          md = e.clipboardData.getData("text/plain");
+        if (
+          shouldPreservePlainText({
+            html,
+            plainText,
+            types: Array.from(e.clipboardData.types),
+          })
+        ) {
+          md = plainText;
+        } else {
+          try {
+            md = turndown.turndown(html);
+          } catch {
+            md = plainText;
+          }
         }
         const ta = textareaRef.current;
         if (!ta) return;
@@ -169,6 +188,44 @@ export function PreviewPanel() {
               onCheckedChange={setKeepSeparator}
             />
           </div>
+
+          {/* 转换图片 */}
+          <div className="w-px h-[18px] bg-border mx-0.25" />
+          <div
+            className="flex items-center gap-1.5"
+            title="取消勾选后，转换结果将不包含图片，并保留图片替代文字"
+          >
+            <Checkbox
+              id="convert-images"
+              checked={convertImages}
+              onCheckedChange={(checked) => setConvertImages(checked === true)}
+            />
+            <label
+              htmlFor="convert-images"
+              className="text-[11px] font-medium text-muted-foreground whitespace-nowrap cursor-pointer"
+            >
+              转换图片
+            </label>
+          </div>
+
+          {/* 转换 Mermaid 图 */}
+          <div className="w-px h-[18px] bg-border mx-0.25" />
+          <div
+            className="flex items-center gap-1.5"
+            title="取消勾选后，Mermaid 代码块将不再转换为图片"
+          >
+            <Checkbox
+              id="convert-mermaid"
+              checked={convertMermaid}
+              onCheckedChange={(checked) => setConvertMermaid(checked === true)}
+            />
+            <label
+              htmlFor="convert-mermaid"
+              className="text-[11px] font-medium text-muted-foreground whitespace-nowrap cursor-pointer"
+            >
+              转换 Mermaid 图
+            </label>
+          </div>
         </div>
       </div>
 
@@ -216,11 +273,15 @@ export function PreviewPanel() {
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-auto p-3 text-sm leading-relaxed">
+        <div className="flex-1 overflow-auto px-6 py-4 text-sm">
           {markdownContent ? (
-            <pre className="font-sans text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-              {markdownContent}
-            </pre>
+            <Suspense
+              fallback={
+                <p className="text-sm text-muted-foreground">正在生成预览…</p>
+              }
+            >
+              <MarkdownPreview content={markdownContent} />
+            </Suspense>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-1.5">
               <span className="text-5xl text-[#98a2b3]">📖</span>

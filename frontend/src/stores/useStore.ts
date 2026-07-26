@@ -54,6 +54,10 @@ interface AppState {
   setFormulaPosition: (v: "inline" | "display" | "smart") => void;
   keepSeparator: boolean;
   setKeepSeparator: (v: boolean) => void;
+  convertImages: boolean;
+  setConvertImages: (v: boolean) => void;
+  convertMermaid: boolean;
+  setConvertMermaid: (v: boolean) => void;
 
   // 转换状态
   status: ConversionStatus | "";
@@ -146,6 +150,10 @@ export const useStore = create<AppState>((set) => ({
   setFormulaPosition: (formulaPosition) => set({ formulaPosition }),
   keepSeparator: false,
   setKeepSeparator: (keepSeparator) => set({ keepSeparator }),
+  convertImages: true,
+  setConvertImages: (convertImages) => set({ convertImages }),
+  convertMermaid: true,
+  setConvertMermaid: (convertMermaid) => set({ convertMermaid }),
 
   status: "",
   progress: 0,

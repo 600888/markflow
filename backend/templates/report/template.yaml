@@ -1,7 +1,7 @@
 name: "报告模版"
 slug: "report"
-version: "1.0.0"
-description: "适合工作报告和技术文档，微软雅黑字体，1.25 倍行距，蓝色主题"
+version: "1.0.2"
+description: "适合工作报告和技术文档，微软雅黑字体，1.25 倍行距，清爽的浅蓝色主题"
 author: "MarkFlow"
 target_formats: ["docx", "pdf"]
 
@@ -56,12 +56,12 @@ styles:
     space_before: "0.5 行"
     space_after: "0.5 行"
 
-    # 表头样式（蓝色主题，与 heading1 一致）
+    # 表头样式（清爽浅蓝色，保留足够的蓝色倾向）
     header_font: "微软雅黑"
     header_size: "五号"
     header_bold: true
     header_alignment: "center"
-    header_background: "#2E75B6"
+    header_background: "#D9EAF7"
 
     # 表体样式
     body_font: "微软雅黑"
@@ -80,19 +80,19 @@ styles:
     border_style: "three_line_table"
     border_top:
       weight: 1.5
-      color: "#2E75B6"
+      color: "#4A7FA8"
     border_header_bottom:
       weight: 1.0
-      color: "#2E75B6"
+      color: "#4A7FA8"
     border_bottom:
       weight: 1.5
-      color: "#2E75B6"
+      color: "#4A7FA8"
     border_vertical: false
     border_horizontal_internal: false
 
     # 可选：斑马纹（报告场景推荐开启）
     stripe_rows: true
-    stripe_color: "#F0F7FD"
+    stripe_color: "#EFF7FC"
 
     # 跨页设置
     page_break:

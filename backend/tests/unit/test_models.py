@@ -49,6 +49,8 @@ class TestConversionTask:
         assert task.completed_at is None
         assert task.error is None
         assert task.extra_args == []
+        assert task.convert_images is True
+        assert task.convert_mermaid is True
         assert task.output_path is None
 
     def test_serialization(self) -> None:
