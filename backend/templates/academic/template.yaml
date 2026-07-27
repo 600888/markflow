@@ -6,6 +6,13 @@ author: "MarkFlow"
 target_formats: ["docx", "pdf"]
 
 styles:
+  header:
+    font: "宋体"
+    size: "五号"
+    alignment: "center"
+    border_bottom:
+      weight: 0.75
+      color: "black"
   heading1:
     font: "黑体"
     size: "三号"

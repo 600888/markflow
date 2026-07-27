@@ -22,6 +22,7 @@ interface TemplateForm {
     heading4?: Partial<StyleConfig>;
     body?: Partial<StyleConfig>;
     code?: Partial<StyleConfig>;
+    header?: Partial<StyleConfig>;
     table?: Partial<TableStyleConfig>;
   };
 }
@@ -43,6 +44,7 @@ const INITIAL_FORM: TemplateForm = {
       first_line_indent: "2 字符",
     },
     code: { font: "Consolas", size: "五号" },
+    header: { font: "宋体", size: "五号", alignment: "center" },
     table: {
       font: "宋体",
       size: "五号",
@@ -526,6 +528,29 @@ export function TemplateEditor() {
                 ]}
                 values={form.styles.code ?? {}}
                 onChange={(k, v) => updateStyle("code", k, v)}
+              />
+              <StyleFields
+                label="页眉 Header"
+                fields={[
+                  { key: "font", label: "字体", type: "text" },
+                  {
+                    key: "size",
+                    label: "字号",
+                    type: "select",
+                    options: SIZE_OPTIONS.map((s) => ({
+                      value: s,
+                      label: s || "默认",
+                    })),
+                  },
+                  {
+                    key: "alignment",
+                    label: "对齐",
+                    type: "select",
+                    options: ALIGN_OPTIONS,
+                  },
+                ]}
+                values={form.styles.header ?? {}}
+                onChange={(k, v) => updateStyle("header", k, v)}
               />
               <StyleFields
                 label="表格 Table"

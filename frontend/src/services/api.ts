@@ -68,6 +68,8 @@ export async function submitConvert(
   toc: boolean,
   tocDepth: number,
   metadata: Record<string, string>,
+  titlePage: boolean = false,
+  pageHeader: string = "",
   formulaPosition: string = "inline",
   keepSeparator: boolean = true,
   convertImages: boolean = true,
@@ -81,6 +83,8 @@ export async function submitConvert(
     form.append("toc", "true");
     form.append("toc_depth", String(tocDepth));
   }
+  form.append("title_page", titlePage ? "true" : "false");
+  if (pageHeader.trim()) form.append("page_header", pageHeader.trim());
   form.append("formula_position", formulaPosition);
   form.append("keep_separator", keepSeparator ? "true" : "false");
   form.append("convert_images", convertImages ? "true" : "false");
@@ -100,6 +104,8 @@ export async function submitConvertFromContent(
   toc: boolean,
   tocDepth: number,
   metadata: Record<string, string>,
+  titlePage: boolean = false,
+  pageHeader: string = "",
   formulaPosition: string = "inline",
   keepSeparator: boolean = true,
   convertImages: boolean = true,
@@ -116,6 +122,8 @@ export async function submitConvertFromContent(
     toc,
     tocDepth,
     metadata,
+    titlePage,
+    pageHeader,
     formulaPosition,
     keepSeparator,
     convertImages,

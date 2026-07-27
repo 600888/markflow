@@ -18,6 +18,8 @@ export function ConvertSection() {
   const template = useStore((s) => s.template);
   const toc = useStore((s) => s.toc);
   const tocDepth = useStore((s) => s.tocDepth);
+  const titlePage = useStore((s) => s.titlePage);
+  const pageHeader = useStore((s) => s.pageHeader);
   const metaTitle = useStore((s) => s.metaTitle);
   const metaAuthor = useStore((s) => s.metaAuthor);
   const formulaPosition = useStore((s) => s.formulaPosition);
@@ -58,6 +60,8 @@ export function ConvertSection() {
         toc,
         tocDepth,
         metadata,
+        titlePage,
+        pageHeader,
         formulaPosition,
         keepSeparator,
         convertImages,

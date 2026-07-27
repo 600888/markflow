@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import tempfile
 from pathlib import Path
 from typing import Annotated
@@ -188,6 +189,8 @@ async def convert(
     file: Annotated[UploadFile, File()],
     output_format: Annotated[str, Form()] = "docx",
     template_slug: Annotated[str, Form()] = "academic",
+    title_page: Annotated[str, Form()] = "false",
+    page_header: Annotated[str, Form()] = "",
     toc: Annotated[str, Form()] = "false",
     toc_depth: Annotated[int, Form()] = 3,
     formula_position: Annotated[str, Form()] = "inline",
@@ -212,19 +215,29 @@ async def convert(
     # 组装额外参数
     from app.models.templates import ConversionOptions
 
+    parsed_metadata = _parse_metadata(metadata)
+    if title_page.lower() == "true" and not parsed_metadata.get("title"):
+        markdown_title = _extract_markdown_title(content)
+        parsed_metadata["title"] = markdown_title or Path(
+            file.filename or "document",
+        ).stem
+
     options = ConversionOptions(
         template_slug=template_slug,
+        title_page=(title_page.lower() == "true"),
+        page_header=page_header,
         toc=(toc.lower() == "true"),
         toc_depth=toc_depth,
         formula_position=formula_position,
         keep_separator=(keep_separator.lower() == "true"),
         convert_images=(convert_images.lower() == "true"),
         convert_mermaid=(convert_mermaid.lower() == "true"),
-        metadata=_parse_metadata(metadata),
+        metadata=parsed_metadata,
     )
     extra_args = mgr.build_extra_args(options)
     log.info(
-        f"模版={template_slug}, toc={toc}, formula={formula_position}, "
+        f"模版={template_slug}, title_page={title_page}, page_header={page_header!r}, "
+        f"toc={toc}, formula={formula_position}, "
         f"keep_sep={keep_separator}, convert_images={convert_images}, "
         f"convert_mermaid={convert_mermaid}, "
         f"metadata={options.metadata}, args={extra_args}"
@@ -489,6 +502,34 @@ def _parse_metadata(raw: str | None) -> dict[str, str]:
     if not raw:
         return {}
     try:
-        return json.loads(raw)
+        data = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(key): str(value) for key, value in data.items()}
+
+
+def _extract_markdown_title(content: bytes) -> str:
+    """从 Markdown 的首个 ATX 一级标题提取标题页标题。"""
+    text = content.decode("utf-8-sig", errors="replace")
+    in_fence = False
+    fence_marker = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        fence = re.match(r"^(`{3,}|~{3,})", stripped)
+        if fence:
+            marker = fence.group(1)[0]
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker
+            elif marker == fence_marker:
+                in_fence = False
+                fence_marker = ""
+            continue
+        if in_fence:
+            continue
+        heading = re.match(r"^#(?!#)\s+(.+?)\s*#*\s*$", stripped)
+        if heading:
+            return heading.group(1).strip()
+    return ""

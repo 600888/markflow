@@ -81,6 +81,14 @@ class TemplateManager:
                 for lua_file in sorted(filters_dir.glob("*.lua")):
                     args.extend(["--lua-filter", str(lua_file.resolve())])
 
+        # 标题页与顶部页眉（由 DOCX 后处理消费）
+        if options.title_page:
+            args.extend(["--metadata", "markflow-title-page=true"])
+        if options.page_header.strip():
+            args.extend(
+                ["--metadata", f"markflow-page-header={options.page_header.strip()}"]
+            )
+
         # toc
         if options.toc:
             args.append("--toc")
@@ -118,6 +126,17 @@ class TemplateManager:
         if data is None:
             return None
         return data.get("styles", {}).get("table")
+
+    def get_header_config(self, slug: str) -> dict | None:
+        """获取模板的页眉样式配置（styles.header）。"""
+        data = self._yaml_cache.get(slug)
+        if data is None:
+            data = self._load_yaml(slug)
+            if data:
+                self._yaml_cache[slug] = data
+        if data is None:
+            return None
+        return data.get("styles", {}).get("header")
 
     def _load_yaml(self, slug: str) -> dict | None:
         """按 slug 加载 template.yaml（内置 > 自定义）"""

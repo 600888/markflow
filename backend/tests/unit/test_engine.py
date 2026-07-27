@@ -81,6 +81,98 @@ class TestPandocEngine:
         assert PandocEngine._get_toc_depth(["--toc-depth=2"]) == 2  # noqa: SLF001
         assert PandocEngine._get_toc_depth(["--toc-depth", "invalid"]) == 3  # noqa: SLF001
 
+    def test_internal_page_metadata_is_read_and_removed(self) -> None:
+        args = [
+            "--metadata",
+            "title=报告",
+            "--metadata",
+            "markflow-title-page=true",
+            "--metadata=markflow-page-header=季度报告",
+        ]
+        value = PandocEngine._get_metadata_value(  # noqa: SLF001
+            args,
+            "markflow-title-page",
+        )
+        assert value == "true"
+        filtered = PandocEngine._remove_metadata_keys(  # noqa: SLF001
+            args,
+            {"markflow-title-page", "markflow-page-header"},
+        )
+        assert filtered == ["--metadata", "title=报告"]
+
+    def test_apply_docx_title_page_and_header(self, tmp_path: Path) -> None:
+        document = Document()
+        document.add_paragraph("季度总结", style="Title")
+        document.add_paragraph("张三", style="Subtitle")
+        document.add_heading("第一章", level=1)
+        output = tmp_path / "page-options.docx"
+        document.save(output)
+
+        PandocEngine._apply_docx_page_options(  # noqa: SLF001
+            output,
+            title_page=True,
+            page_header="季度报告",
+        )
+
+        converted = Document(output)
+        assert converted.sections[0].different_first_page_header_footer is False
+        assert converted.sections[0].header.paragraphs[0].text == "季度报告"
+        assert (
+            converted.sections[0].header.paragraphs[0].alignment
+            == WD_ALIGN_PARAGRAPH.CENTER
+        )
+        header_run = converted.sections[0].header.paragraphs[0].runs[0]
+        assert header_run.font.name == "宋体"
+        assert header_run.font.size.pt == 10.5
+        run_fonts = header_run._r.rPr.find(qn("w:rFonts"))  # noqa: SLF001
+        assert run_fonts.get(qn("w:eastAsia")) == "宋体"
+        bottom_border = converted.sections[0].header.paragraphs[0]._p.find(  # noqa: SLF001
+            "./" + qn("w:pPr") + "/" + qn("w:pBdr") + "/" + qn("w:bottom"),
+        )
+        assert bottom_border is not None
+        assert bottom_border.get(qn("w:val")) == "single"
+        assert bottom_border.get(qn("w:color")) == "000000"
+        assert bottom_border.get(qn("w:space")) == "1"
+        assert converted.paragraphs[0].alignment == WD_ALIGN_PARAGRAPH.CENTER
+        assert converted.paragraphs[1].alignment == WD_ALIGN_PARAGRAPH.CENTER
+        assert not converted.paragraphs[1]._p.findall(  # noqa: SLF001
+            ".//" + qn("w:br")
+        )
+        title_page_break = converted.paragraphs[2]._p.find(  # noqa: SLF001
+            "./" + qn("w:pPr") + "/" + qn("w:pageBreakBefore"),
+        )
+        assert title_page_break is not None
+        assert title_page_break.get(qn("w:val")) == "1"
+
+    def test_apply_docx_header_uses_template_config(self, tmp_path: Path) -> None:
+        document = Document()
+        output = tmp_path / "custom-header.docx"
+        document.save(output)
+
+        PandocEngine._apply_docx_page_options(  # noqa: SLF001
+            output,
+            title_page=False,
+            page_header="自定义页眉",
+            header_config={
+                "font": "微软雅黑",
+                "size": "小四",
+                "alignment": "right",
+                "border_bottom": {"weight": 1.5, "color": "#123456"},
+            },
+        )
+
+        converted = Document(output)
+        paragraph = converted.sections[0].header.paragraphs[0]
+        assert paragraph.alignment == WD_ALIGN_PARAGRAPH.RIGHT
+        assert paragraph.runs[0].font.name == "微软雅黑"
+        assert paragraph.runs[0].font.size.pt == 12
+        bottom_border = paragraph._p.find(  # noqa: SLF001
+            "./" + qn("w:pPr") + "/" + qn("w:pBdr") + "/" + qn("w:bottom"),
+        )
+        assert bottom_border is not None
+        assert bottom_border.get(qn("w:sz")) == "12"
+        assert bottom_border.get(qn("w:color")) == "123456"
+
     def test_populate_docx_toc_cache(self, tmp_path: Path) -> None:
         document = Document()
         body = document.element.body
@@ -150,6 +242,22 @@ class TestPandocEngine:
         update_fields = converted.settings.element.find(qn("w:updateFields"))
         assert update_fields is not None
         assert update_fields.get(qn("w:val")) == "true"
+
+        toc_container = converted_content.getparent()
+        assert toc_container is not None
+        body = converted.element.body
+        paragraphs_after_toc = [
+            element
+            for element in list(body)[body.index(toc_container) + 1 :]
+            if element.tag == qn("w:p")
+        ]
+        assert paragraphs_after_toc
+        page_break = paragraphs_after_toc[0].find(
+            "./" + qn("w:pPr") + "/" + qn("w:pageBreakBefore"),
+        )
+        assert page_break is not None
+        assert page_break.get(qn("w:val")) == "1"
+        assert paragraphs_after_toc[0].find(".//" + qn("w:br")) is None
 
     @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
     async def test_convert_populates_visible_toc(

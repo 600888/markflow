@@ -18,7 +18,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Inches
+from docx.shared import Inches, Pt
 from PIL import Image, ImageOps
 
 from app.core.interfaces import ConversionEngine, ProgressCallback
@@ -61,6 +61,8 @@ ALIGN_MAP: dict[str, WD_ALIGN_PARAGRAPH] = {
 }
 
 MERMAID_IMAGE_MARKER = "markflow-mermaid-diagram"
+TITLE_PAGE_METADATA = "markflow-title-page"
+PAGE_HEADER_METADATA = "markflow-page-header"
 
 
 def _parse_size(raw: str | float) -> float | None:
@@ -387,7 +389,7 @@ class PandocEngine(ConversionEngine):
         created_dirs.extend(self._preprocess_images(input_path, convert_images))
 
         output_path = input_path.with_suffix(f".{output_format.value}")
-        args = extra_args or []
+        args = list(extra_args or [])
 
         # 组装模版参数
         if template_slug:
@@ -396,6 +398,13 @@ class PandocEngine(ConversionEngine):
             )
             args = template_args + args
             log.info(f"使用模版: {template_slug}, 参数: {template_args}")
+
+        title_page = self._get_metadata_value(args, TITLE_PAGE_METADATA) == "true"
+        page_header = self._get_metadata_value(args, PAGE_HEADER_METADATA)
+        pandoc_args = self._remove_metadata_keys(
+            args,
+            {TITLE_PAGE_METADATA, PAGE_HEADER_METADATA},
+        )
 
         start = time.monotonic()
 
@@ -411,7 +420,7 @@ class PandocEngine(ConversionEngine):
                     to=pandoc_target,
                     format="markdown",
                     outputfile=str(output_path),
-                    extra_args=args,
+                    extra_args=pandoc_args,
                 )
 
             if self.settings.pandoc_timeout > 0:
@@ -426,7 +435,7 @@ class PandocEngine(ConversionEngine):
             # 后处理：应用表格样式（仅 docx）
             # Pandoc 在 DOCX 中只写入空的 TOC 域。填充可见缓存，并让 Word
             # 打开文档时自动更新目录和页码。
-            if output_format == OutputFormat.DOCX and "--toc" in args:
+            if output_format == OutputFormat.DOCX and "--toc" in pandoc_args:
                 toc_depth = self._get_toc_depth(args)
                 if on_progress:
                     await on_progress(0.88, "生成目录...")
@@ -435,6 +444,23 @@ class PandocEngine(ConversionEngine):
                     self._populate_docx_toc_cache,
                     output_path,
                     toc_depth,
+                )
+
+            if output_format == OutputFormat.DOCX and (title_page or page_header):
+                if on_progress:
+                    await on_progress(0.89, "设置标题页和页眉...")
+                header_config = (
+                    self._template_mgr.get_header_config(template_slug)
+                    if template_slug
+                    else None
+                )
+                await loop.run_in_executor(
+                    None,
+                    self._apply_docx_page_options,
+                    output_path,
+                    title_page,
+                    page_header,
+                    header_config,
                 )
 
             if output_format == OutputFormat.DOCX and template_slug:
@@ -510,6 +536,153 @@ class PandocEngine(ConversionEngine):
                 except ValueError:
                     return 3
         return 3
+
+    @staticmethod
+    def _get_metadata_value(args: list[str], key: str) -> str:
+        """读取 ``--metadata key=value`` 形式的 Pandoc 参数。"""
+        for index, arg in enumerate(args):
+            value = ""
+            if arg == "--metadata" and index + 1 < len(args):
+                value = args[index + 1]
+            elif arg.startswith("--metadata="):
+                value = arg.partition("=")[2]
+            if value.partition("=")[0] == key:
+                return value.partition("=")[2]
+        return ""
+
+    @staticmethod
+    def _remove_metadata_keys(args: list[str], keys: set[str]) -> list[str]:
+        """移除仅供 MarkFlow 后处理使用的内部元数据参数。"""
+        filtered: list[str] = []
+        index = 0
+        while index < len(args):
+            arg = args[index]
+            if arg == "--metadata" and index + 1 < len(args):
+                value = args[index + 1]
+                if value.partition("=")[0] in keys:
+                    index += 2
+                    continue
+            elif arg.startswith("--metadata="):
+                value = arg.partition("=")[2]
+                if value.partition("=")[0] in keys:
+                    index += 1
+                    continue
+            filtered.append(arg)
+            index += 1
+        return filtered
+
+    @staticmethod
+    def _apply_docx_page_options(
+        docx_path: Path,
+        title_page: bool,
+        page_header: str,
+        header_config: dict | None = None,
+    ) -> None:
+        """为 DOCX 设置独立标题页和顶部页眉。"""
+        doc = Document(docx_path)
+
+        if title_page:
+            title_style_names = {"Title", "Subtitle", "Author", "Date"}
+            last_title_paragraph = None
+            found_title = False
+            for paragraph in doc.paragraphs:
+                style_name = paragraph.style.name if paragraph.style is not None else ""
+                if style_name in title_style_names:
+                    found_title = True
+                    last_title_paragraph = paragraph
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    continue
+                if found_title and not paragraph.text.strip():
+                    last_title_paragraph = paragraph
+                    continue
+                if found_title:
+                    break
+
+            if last_title_paragraph is not None:
+                next_element = last_title_paragraph._p.getnext()
+                next_paragraph = None
+                while next_element is not None and next_paragraph is None:
+                    if next_element.tag == qn("w:p"):
+                        next_paragraph = next_element
+                    else:
+                        next_paragraph = next_element.find(".//" + qn("w:p"))
+                    next_element = next_element.getnext()
+                if next_paragraph is not None:
+                    PandocEngine._set_page_break_before(next_paragraph)
+                else:
+                    log.warning(
+                        f"DOCX 中标题后没有可分页的内容: {docx_path.name}"
+                    )
+            else:
+                log.warning(f"DOCX 中未找到标题段落，无法生成独立标题页: {docx_path.name}")
+
+        normalized_header = page_header.strip()
+        config = header_config if isinstance(header_config, dict) else {}
+        font_name = str(config.get("font", "宋体"))
+        font_size = _parse_size(config.get("size", "五号")) or 10.5
+        alignment = ALIGN_MAP.get(
+            str(config.get("alignment", "center")),
+            WD_ALIGN_PARAGRAPH.CENTER,
+        )
+        raw_border_config = config.get("border_bottom", {})
+        border_config = raw_border_config if isinstance(raw_border_config, dict) else {}
+        border_weight = float(border_config.get("weight", 0.75))
+        border_color = str(border_config.get("color", "000000")).lstrip("#")
+        if border_color.lower() == "black":
+            border_color = "000000"
+
+        for section_index, section in enumerate(doc.sections):
+            if title_page and section_index == 0:
+                # 标题页也使用正常页眉，避免 Word 把首页页眉隐藏。
+                section.different_first_page_header_footer = False
+            if not normalized_header:
+                continue
+            header = section.header
+            paragraph = header.paragraphs[0]
+            paragraph.clear()
+            paragraph.paragraph_format.left_indent = Pt(0)
+            paragraph.paragraph_format.right_indent = Pt(0)
+            paragraph.alignment = alignment
+
+            run = paragraph.add_run(normalized_header)
+            run.font.name = font_name
+            run.font.size = Pt(font_size)
+            run_properties = run._r.get_or_add_rPr()
+            run_fonts = run_properties.find(qn("w:rFonts"))
+            if run_fonts is None:
+                run_fonts = OxmlElement("w:rFonts")
+                run_properties.insert(0, run_fonts)
+            for attribute in ("ascii", "eastAsia", "hAnsi"):
+                run_fonts.set(qn(f"w:{attribute}"), font_name)
+
+            paragraph_properties = paragraph._p.get_or_add_pPr()
+            borders = paragraph_properties.find(qn("w:pBdr"))
+            if borders is None:
+                borders = OxmlElement("w:pBdr")
+                paragraph_properties.append(borders)
+            for old_bottom in borders.findall(qn("w:bottom")):
+                borders.remove(old_bottom)
+            bottom = OxmlElement("w:bottom")
+            bottom.set(qn("w:val"), "single")
+            bottom.set(qn("w:sz"), str(max(2, round(border_weight * 8))))
+            bottom.set(qn("w:space"), "1")
+            bottom.set(qn("w:color"), border_color)
+            borders.append(bottom)
+
+        doc.save(docx_path)
+
+    @staticmethod
+    def _set_page_break_before(paragraph: object) -> None:
+        """使用段前分页，避免 Word 显示可见的“分页符”标记。"""
+        paragraph_properties = paragraph.find(qn("w:pPr"))
+        if paragraph_properties is None:
+            paragraph_properties = OxmlElement("w:pPr")
+            paragraph.insert(0, paragraph_properties)
+        page_break = paragraph_properties.find(qn("w:pageBreakBefore"))
+        if page_break is None:
+            page_break = OxmlElement("w:pageBreakBefore")
+            paragraph_properties.append(page_break)
+        page_break.set(qn("w:val"), "1")
 
     @staticmethod
     def _populate_docx_toc_cache(docx_path: Path, toc_depth: int) -> None:
@@ -606,6 +779,17 @@ class PandocEngine(ConversionEngine):
         end_run.append(end_field)
         end_paragraph.append(end_run)
         toc_content.insert(insert_at, end_paragraph)
+
+        # 目录必须独占页面：对 TOC 后的首个正文段落设置“段前分页”。
+        # 这不会像手动分页符那样在 Word 中显示“——分页符——”标记。
+        toc_container = toc_content.getparent()
+        if toc_container is not None:
+            toc_index = body.index(toc_container)
+            for following in list(body)[toc_index + 1 :]:
+                if following.tag != qn("w:p"):
+                    continue
+                PandocEngine._set_page_break_before(following)
+                break
 
         settings = doc.settings.element
         update_fields = settings.find(qn("w:updateFields"))

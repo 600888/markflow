@@ -43,6 +43,8 @@ class TestConversionOptions:
     def test_defaults(self) -> None:
         opts = ConversionOptions()
         assert opts.template_slug == "academic"
+        assert opts.title_page is False
+        assert opts.page_header == ""
         assert opts.toc is False
         assert opts.toc_depth == 3
         assert opts.metadata == {}
@@ -50,11 +52,15 @@ class TestConversionOptions:
     def test_custom(self) -> None:
         opts = ConversionOptions(
             template_slug="academic",
+            title_page=True,
+            page_header="学术论文",
             toc=True,
             toc_depth=4,
             metadata={"author": "张三", "title": "论文标题"},
         )
         assert opts.toc is True
+        assert opts.title_page is True
+        assert opts.page_header == "学术论文"
         assert opts.toc_depth == 4
         assert opts.metadata["author"] == "张三"
 
@@ -77,6 +83,12 @@ class TestTemplateManager:
                         "version": "1.0",
                         "description": "单元测试模版",
                         "target_formats": ["docx"],
+                        "styles": {
+                            "header": {
+                                "font": "宋体",
+                                "size": "五号",
+                            },
+                        },
                     }
                 ),
                 encoding="utf-8",
@@ -122,6 +134,16 @@ class TestTemplateManager:
         assert "2" in args
         assert "toc-title=目录" in args
 
+    def test_build_extra_args_with_title_page_and_header(
+        self,
+        tmp_templates: Path,
+    ) -> None:
+        mgr = TemplateManager(tmp_templates)
+        opts = ConversionOptions(title_page=True, page_header=" 项目报告 ")
+        args = mgr.build_extra_args(opts)
+        assert "markflow-title-page=true" in args
+        assert "markflow-page-header=项目报告" in args
+
     def test_build_extra_args_with_metadata(self, tmp_templates: Path) -> None:
         mgr = TemplateManager(tmp_templates)
         opts = ConversionOptions(metadata={"author": "张三"})
@@ -134,6 +156,11 @@ class TestTemplateManager:
         opts = ConversionOptions(template_slug="test-tpl")
         args = mgr.build_extra_args(opts)
         assert "--reference-doc" in args
+
+    def test_get_header_config(self, tmp_templates: Path) -> None:
+        mgr = TemplateManager(tmp_templates)
+        config = mgr.get_header_config("test-tpl")
+        assert config == {"font": "宋体", "size": "五号"}
 
     def test_list_templates_empty_dir(self, tmp_templates: Path) -> None:
         """空目录不应报错"""

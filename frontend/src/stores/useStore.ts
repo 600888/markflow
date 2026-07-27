@@ -38,6 +38,10 @@ interface AppState {
   setTemplates: (t: TemplateInfo[]) => void;
 
   // 高级选项
+  titlePage: boolean;
+  setTitlePage: (v: boolean) => void;
+  pageHeader: string;
+  setPageHeader: (v: string) => void;
   toc: boolean;
   setToc: (v: boolean) => void;
   tocDepth: number;
@@ -135,7 +139,11 @@ export const useStore = create<AppState>((set) => ({
   templates: [],
   setTemplates: (templates) => set({ templates }),
 
-  toc: false,
+  titlePage: true,
+  setTitlePage: (titlePage) => set({ titlePage }),
+  pageHeader: "",
+  setPageHeader: (pageHeader) => set({ pageHeader }),
+  toc: true,
   setToc: (toc) => set({ toc }),
   tocDepth: 3,
   setTocDepth: (tocDepth) => set({ tocDepth }),

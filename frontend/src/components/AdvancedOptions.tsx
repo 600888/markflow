@@ -13,6 +13,10 @@ import { cn } from "../lib/utils";
 export function AdvancedOptions() {
   const show = useStore((s) => s.showAdvanced);
   const toggle = useStore((s) => s.toggleAdvanced);
+  const titlePage = useStore((s) => s.titlePage);
+  const setTitlePage = useStore((s) => s.setTitlePage);
+  const pageHeader = useStore((s) => s.pageHeader);
+  const setPageHeader = useStore((s) => s.setPageHeader);
   const toc = useStore((s) => s.toc);
   const setToc = useStore((s) => s.setToc);
   const tocDepth = useStore((s) => s.tocDepth);
@@ -45,6 +49,63 @@ export function AdvancedOptions() {
         )}
       >
         <div className="flex flex-col gap-2.5">
+          {/* 首页标题页 */}
+          <div className="flex items-center gap-2.5 h-7">
+            <Checkbox
+              id="title-page"
+              checked={titlePage}
+              onCheckedChange={(v) => setTitlePage(v === true)}
+            />
+            <label
+              htmlFor="title-page"
+              className="text-xs cursor-pointer select-none"
+            >
+              生成首页标题页
+            </label>
+          </div>
+
+          {/* 文档标题 */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
+              文档标题
+            </span>
+            <input
+              type="text"
+              value={metaTitle}
+              onChange={(e) => setMetaTitle(e.target.value)}
+              placeholder="留空时使用首个一级标题"
+              className="flex-1 h-7 rounded-md border border-border bg-card text-foreground text-xs py-1 px-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground"
+            />
+          </div>
+
+          {/* 作者 */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
+              作者
+            </span>
+            <input
+              type="text"
+              value={metaAuthor}
+              onChange={(e) => setMetaAuthor(e.target.value)}
+              placeholder="你的名字"
+              className="flex-1 h-7 rounded-md border border-border bg-card text-foreground text-xs py-1 px-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground"
+            />
+          </div>
+
+          {/* 顶部页眉 */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
+              顶部页眉
+            </span>
+            <input
+              type="text"
+              value={pageHeader}
+              onChange={(e) => setPageHeader(e.target.value)}
+              placeholder="留空则不设置"
+              className="flex-1 h-7 rounded-md border border-border bg-card text-foreground text-xs py-1 px-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground"
+            />
+          </div>
+
           {/* TOC 开关 */}
           <div className="flex items-center gap-2.5 h-7">
             <Checkbox
@@ -80,34 +141,6 @@ export function AdvancedOptions() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* 文档标题 */}
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
-              文档标题
-            </span>
-            <input
-              type="text"
-              value={metaTitle}
-              onChange={(e) => setMetaTitle(e.target.value)}
-              placeholder="自动从 Markdown 获取"
-              className="flex-1 h-7 rounded-md border border-border bg-card text-foreground text-xs py-1 px-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground"
-            />
-          </div>
-
-          {/* 作者 */}
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs text-muted-foreground w-[60px] flex-shrink-0">
-              作者
-            </span>
-            <input
-              type="text"
-              value={metaAuthor}
-              onChange={(e) => setMetaAuthor(e.target.value)}
-              placeholder="你的名字"
-              className="flex-1 h-7 rounded-md border border-border bg-card text-foreground text-xs py-1 px-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground"
-            />
           </div>
         </div>
       </div>
