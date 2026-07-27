@@ -138,6 +138,18 @@ class TemplateManager:
             return None
         return data.get("styles", {}).get("header")
 
+    def get_styles_config(self, slug: str) -> dict:
+        """获取模板的完整样式配置，供 PDF/HTML 等输出复用。"""
+        data = self._yaml_cache.get(slug)
+        if data is None:
+            data = self._load_yaml(slug)
+            if data:
+                self._yaml_cache[slug] = data
+        if data is None:
+            return {}
+        styles = data.get("styles", {})
+        return styles if isinstance(styles, dict) else {}
+
     def _load_yaml(self, slug: str) -> dict | None:
         """按 slug 加载 template.yaml（内置 > 自定义）"""
         # 先查内置

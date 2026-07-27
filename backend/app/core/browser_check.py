@@ -13,7 +13,6 @@ Edge 是 Windows 10+ 自带浏览器，使用其 headless 模式渲染 Mermaid �
 from __future__ import annotations
 
 import shutil
-import sys
 from pathlib import Path
 
 from app.core.log import log
@@ -66,6 +65,10 @@ class EdgeManager:
         """同 is_ready"""
         return self.is_ready()
 
+    def executable_path(self) -> str | None:
+        """返回 Edge 可执行文件路径，供无头渲染任务使用。"""
+        return self._find_edge()
+
     def get_install_progress(self) -> dict[str, object]:
         """Edge 无需安装，始终返回已就绪或未找到"""
         if self.is_ready():
@@ -84,4 +87,4 @@ class EdgeManager:
 # ── 兼容别名 ────────────────────────────────────────────
 # 旧代码用 chromium_manager，保留别名以兼容调用方
 edge_manager = EdgeManager()
-chromium_manager = edge_manager  # noqa: F821
+chromium_manager = edge_manager

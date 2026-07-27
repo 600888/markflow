@@ -284,6 +284,108 @@ class TestPandocEngine:
         populate_toc.assert_called_once_with(output_file, 2)
 
     @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
+    async def test_convert_pdf_uses_embedded_html_and_edge(
+        self,
+        mock_pandoc_path,
+        tmp_path: Path,
+    ) -> None:
+        input_file = tmp_path / "report.md"
+        input_file.write_text("# 报告", encoding="utf-8")
+        engine = PandocEngine()
+
+        def fake_pandoc(**kwargs):
+            Path(kwargs["outputfile"]).write_text("<html>报告</html>", encoding="utf-8")
+            return ""
+
+        output_file = input_file.with_suffix(".pdf")
+        output_file.write_bytes(b"%PDF-1.7\n" + b"x" * 200)
+
+        with (
+            patch("pypandoc.convert_file", side_effect=fake_pandoc) as convert_file,
+            patch.object(engine, "_render_html_to_pdf", new=AsyncMock()) as render,
+        ):
+            result = await engine.convert(
+                input_file,
+                OutputFormat.PDF,
+                extra_args=[
+                    "--reference-doc",
+                    "reference.docx",
+                    "--toc",
+                    "--metadata",
+                    "title=报告",
+                ],
+                template_slug=None,
+            )
+
+        call = convert_file.call_args.kwargs
+        assert call["to"] == "html5"
+        assert "--standalone" in call["extra_args"]
+        assert "--embed-resources" in call["extra_args"]
+        assert "--mathml" in call["extra_args"]
+        assert "--reference-doc" not in call["extra_args"]
+        assert "--toc" in call["extra_args"]
+        render.assert_awaited_once()
+        assert result.output_format == OutputFormat.PDF
+        assert result.output_path.read_bytes().startswith(b"%PDF-")
+        assert not (tmp_path / "report.markflow-pdf.html").exists()
+        assert not (tmp_path / "report.markflow-pdf.css").exists()
+
+    @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
+    def test_pdf_css_reuses_template_styles(
+        self,
+        mock_pandoc_path,
+        tmp_path: Path,
+    ) -> None:
+        engine = PandocEngine()
+        engine._template_mgr.get_styles_config = lambda _slug: {  # noqa: SLF001
+            "body": {
+                "font": "微软雅黑",
+                "size": "五号",
+                "line_spacing": 1.25,
+                "first_line_indent": "2 字符",
+            },
+            "heading1": {"font": "黑体", "size": "二号", "color": "#123456"},
+            "table": {"stripe_rows": True, "stripe_color": "#eef6ff"},
+        }
+
+        css = engine._build_pdf_css(  # noqa: SLF001
+            "report",
+            title_page=True,
+            page_header='季度 "报告"',
+        )
+
+        assert '"微软雅黑"' in css
+        assert "font-size: 10.5pt" in css
+        assert "line-height: 1.25" in css
+        assert "text-indent: 2em" in css
+        assert "#123456" in css
+        assert "#eef6ff" in css
+        assert "break-after: page" in css
+        assert '季度 \\"报告\\"' in css
+
+    @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
+    async def test_pdf_requires_edge(
+        self,
+        mock_pandoc_path,
+        tmp_path: Path,
+    ) -> None:
+        engine = PandocEngine()
+        html_path = tmp_path / "document.html"
+        html_path.write_text("<html></html>", encoding="utf-8")
+
+        with (
+            patch(
+                "app.core.engine.edge_manager.executable_path",
+                return_value=None,
+            ),
+            pytest.raises(ConversionError, match="Microsoft Edge"),
+        ):
+            await engine._render_html_to_pdf(  # noqa: SLF001
+                html_path,
+                tmp_path / "document.pdf",
+            )
+
+    @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
     async def test_convert_can_skip_mermaid_preprocessing(
         self,
         mock_pandoc_path,

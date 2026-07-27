@@ -6,8 +6,9 @@ import asyncio
 import hashlib
 import re
 import shutil
+import tempfile
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -21,6 +22,7 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 from PIL import Image, ImageOps
 
+from app.core.browser_check import edge_manager
 from app.core.interfaces import ConversionEngine, ProgressCallback
 from app.core.log import log
 from app.core.mermaid_renderer import is_available as mermaid_renderer_available
@@ -63,6 +65,7 @@ ALIGN_MAP: dict[str, WD_ALIGN_PARAGRAPH] = {
 MERMAID_IMAGE_MARKER = "markflow-mermaid-diagram"
 TITLE_PAGE_METADATA = "markflow-title-page"
 PAGE_HEADER_METADATA = "markflow-page-header"
+MIN_PDF_SIZE = 100
 
 
 def _parse_size(raw: str | float) -> float | None:
@@ -276,7 +279,8 @@ def _apply_three_line_border(table: object, tc: dict) -> None:
 
 
 def _apply_grid_border(table: object, tc: dict) -> None:
-    """对表格应用全框线网格边框
+    """
+    对表格应用全框线网格边框
 
     标准测试报告风格：所有单元格四边均为 0.5~0.75pt 黑色实线。
     """
@@ -414,23 +418,65 @@ class PandocEngine(ConversionEngine):
         try:
             loop = asyncio.get_running_loop()
 
-            def _convert() -> str:
+            def _convert_with_pandoc(
+                target: str,
+                destination: Path,
+                conversion_args: list[str],
+            ) -> str:
                 return pypandoc.convert_file(
                     source_file=str(input_path),
-                    to=pandoc_target,
+                    to=target,
                     format="markdown",
-                    outputfile=str(output_path),
-                    extra_args=pandoc_args,
+                    outputfile=str(destination),
+                    extra_args=conversion_args,
                 )
 
-            if self.settings.pandoc_timeout > 0:
-                # 带超时的异步执行
-                await asyncio.wait_for(
-                    loop.run_in_executor(None, _convert),
-                    timeout=self.settings.pandoc_timeout,
+            if output_format == OutputFormat.PDF:
+                html_path = input_path.with_name(f"{input_path.stem}.markflow-pdf.html")
+                css_path = input_path.with_name(f"{input_path.stem}.markflow-pdf.css")
+                css_path.write_text(
+                    self._build_pdf_css(template_slug, title_page, page_header),
+                    encoding="utf-8",
                 )
+                pdf_args = self._remove_pandoc_options(
+                    pandoc_args,
+                    {"--reference-doc", "--pdf-engine"},
+                )
+                pdf_args.extend(
+                    [
+                        "--standalone",
+                        "--embed-resources",
+                        "--mathml",
+                        "--css",
+                        str(css_path.resolve()),
+                    ]
+                )
+                try:
+                    await self._run_with_timeout(
+                        loop.run_in_executor(
+                            None,
+                            _convert_with_pandoc,
+                            "html5",
+                            html_path,
+                            pdf_args,
+                        )
+                    )
+                    if on_progress:
+                        await on_progress(0.75, "正在生成 PDF...")
+                    await self._render_html_to_pdf(html_path, output_path)
+                finally:
+                    html_path.unlink(missing_ok=True)
+                    css_path.unlink(missing_ok=True)
             else:
-                await loop.run_in_executor(None, _convert)
+                await self._run_with_timeout(
+                    loop.run_in_executor(
+                        None,
+                        _convert_with_pandoc,
+                        pandoc_target,
+                        output_path,
+                        pandoc_args,
+                    )
+                )
 
             # 后处理：应用表格样式（仅 docx）
             # Pandoc 在 DOCX 中只写入空的 TOC 域。填充可见缓存，并让 Word
@@ -521,6 +567,179 @@ class PandocEngine(ConversionEngine):
     async def validate_format(self, output_format: OutputFormat) -> bool:
         """校验格式是否支持"""
         return output_format in self.FORMAT_MAP
+
+    async def _run_with_timeout(self, awaitable: Awaitable[Any]) -> Any:
+        if self.settings.pandoc_timeout > 0:
+            return await asyncio.wait_for(
+                awaitable,
+                timeout=self.settings.pandoc_timeout,
+            )
+        return await awaitable
+
+    @staticmethod
+    def _remove_pandoc_options(args: list[str], options: set[str]) -> list[str]:
+        """移除不适用于中间 HTML 的 Pandoc 参数及其值。"""
+        filtered: list[str] = []
+        index = 0
+        while index < len(args):
+            arg = args[index]
+            option = arg.partition("=")[0]
+            if option in options:
+                index += 1 if "=" in arg else 2
+                continue
+            filtered.append(arg)
+            index += 1
+        return filtered
+
+    async def _render_html_to_pdf(self, html_path: Path, output_path: Path) -> None:
+        """使用系统 Edge 将自包含 HTML 打印为 PDF。"""
+        edge = edge_manager.executable_path()
+        if not edge:
+            raise ConversionError(
+                "未找到 Microsoft Edge，无法导出 PDF",
+                detail={"hint": "请安装或修复 Microsoft Edge 后重试"},
+            )
+
+        with tempfile.TemporaryDirectory(
+            prefix="markflow-pdf-edge-",
+            dir=html_path.parent,
+        ) as profile_dir:
+            profile_path = Path(profile_dir).resolve()
+            process = await asyncio.create_subprocess_exec(
+                edge,
+                "--headless=new",
+                "--disable-gpu",
+                "--no-sandbox",
+                "--disable-breakpad",
+                "--disable-crash-reporter",
+                "--no-pdf-header-footer",
+                "--print-to-pdf-no-header",
+                f"--user-data-dir={profile_path}",
+                f"--print-to-pdf={output_path.resolve()}",
+                html_path.resolve().as_uri(),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            try:
+                _, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=self.settings.pandoc_timeout or 300,
+                )
+            except TimeoutError:
+                process.kill()
+                await process.communicate()
+                raise
+
+        if process.returncode != 0 or not output_path.exists():
+            detail = stderr.decode("utf-8", errors="replace").strip()[:500]
+            raise ConversionError(
+                "Edge 生成 PDF 失败",
+                detail={"exit_code": process.returncode, "error": detail},
+            )
+        if output_path.stat().st_size < MIN_PDF_SIZE:
+            raise ConversionError("生成的 PDF 文件无效")
+
+    def _build_pdf_css(
+        self,
+        template_slug: str | None,
+        title_page: bool,
+        page_header: str,
+    ) -> str:
+        """将模板的常用 Word 样式映射为可打印 CSS。"""
+        styles = (
+            self._template_mgr.get_styles_config(template_slug)
+            if template_slug
+            else {}
+        )
+        body = styles.get("body", {})
+        code = styles.get("code", {})
+        table = styles.get("table", {})
+
+        body_font = body.get("font", "宋体")
+        body_size = _parse_size(body.get("size", "小四")) or 12
+        line_spacing = body.get("line_spacing", 1.5)
+        first_indent = "2em" if body.get("first_line_indent") else "0"
+        code_font = code.get("font", "Consolas")
+        code_size = _parse_size(code.get("size", "五号")) or 10.5
+        code_background = code.get("background", "#f5f5f5")
+        header_css = ""
+        if page_header:
+            safe_header = page_header.replace("\\", "\\\\").replace('"', '\\"')
+            header_css = (
+                'body::before { content: "'
+                + safe_header
+                + '"; position: fixed; top: -13mm; left: 0; right: 0; '
+                "text-align: center; font-size: 10.5pt; color: #555; "
+                "border-bottom: .75pt solid #777; padding-bottom: 2mm; }"
+            )
+
+        heading_rules: list[str] = []
+        for level in range(1, 7):
+            config = styles.get(f"heading{level}", {})
+            fallback_size = max(12, 22 - level * 2)
+            size = _parse_size(config.get("size", fallback_size)) or fallback_size
+            font = config.get("font", body_font)
+            color = config.get("color", "#111")
+            alignment = config.get("alignment", "left")
+            weight = "700" if config.get("bold", True) else "400"
+            heading_rules.append(
+                f"h{level} {{ font-family: {self._css_font(font)}; font-size: {size}pt; "
+                f"font-weight: {weight}; color: {color}; text-align: {alignment}; "
+                "line-height: 1.35; break-after: avoid; }"
+            )
+
+        title_break = (
+            ".title-block-header { min-height: 230mm; display: flex; "
+            "flex-direction: column; justify-content: center; text-align: center; "
+            "break-after: page; }"
+            if title_page
+            else ""
+        )
+        stripe = (
+            f"tbody tr:nth-child(even) {{ background: {table.get('stripe_color', '#f7f7f7')}; }}"
+            if table.get("stripe_rows")
+            else ""
+        )
+        return "\n".join(
+            [
+                "@page { size: A4; margin: 22mm 20mm 20mm; }",
+                "html { print-color-adjust: exact; -webkit-print-color-adjust: exact; }",
+                (
+                    f"body {{ font-family: {self._css_font(body_font)}; "
+                    f"font-size: {body_size}pt; line-height: {line_spacing}; "
+                    "color: #222; overflow-wrap: anywhere; }}"
+                ),
+                "p { margin: .45em 0; }",
+                f"p:not(.author):not(.date) {{ text-indent: {first_indent}; }}",
+                *heading_rules,
+                "img, svg { display: block; max-width: 100%; height: auto; margin: 1em auto; }",
+                "figure { margin: 1em 0; break-inside: avoid; }",
+                "table { width: 100%; border-collapse: collapse; margin: 1em 0; "
+                "font-size: .9em; break-inside: auto; }",
+                "thead { display: table-header-group; } tr { break-inside: avoid; }",
+                "th, td { padding: 5pt 7pt; border-bottom: .5pt solid #bbb; }",
+                f"th {{ background: {table.get('header_background', '#f2f2f2')}; "
+                "font-weight: 700; }",
+                stripe,
+                (
+                    f"pre, code {{ font-family: {self._css_font(code_font)}; "
+                    f"font-size: {code_size}pt; }}"
+                ),
+                f"pre {{ background: {code_background}; padding: 10pt; border-radius: 4pt; "
+                "white-space: pre-wrap; break-inside: avoid; }",
+                "blockquote { margin: 1em 0; padding: .2em 1em; color: #555; "
+                "border-left: 3pt solid #bbb; }",
+                "a { color: inherit; text-decoration: none; }",
+                ".math.display { display: block; text-align: center; margin: 1em 0; }",
+                title_break,
+                header_css,
+            ]
+        )
+
+    @staticmethod
+    def _css_font(font: object) -> str:
+        name = str(font).replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{name}", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif'
 
     @staticmethod
     def _get_toc_depth(args: list[str]) -> int:
@@ -925,7 +1144,7 @@ class PandocEngine(ConversionEngine):
 
     @staticmethod
     def _normalize_math_in_file(path: Path) -> None:
-        """
+        r"""
         将 Markdown 中 `[ ... ]` 和 `\[...\]` 显示公式转为 Pandoc 标准语法 `$$ ... $$`
 
         Pandoc 只识别 $$...$$ 和 \\[...\\] 作为显示公式，

@@ -333,10 +333,18 @@ async def download_result(
         raise HTTPException(status_code=404, detail="任务不存在")
     if task.status != ConversionStatus.COMPLETED or task.output_path is None:
         raise HTTPException(status_code=400, detail="任务未完成")
+    media_types = {
+        OutputFormat.DOCX: (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ),
+        OutputFormat.PDF: "application/pdf",
+        OutputFormat.HTML: "text/html; charset=utf-8",
+        OutputFormat.EPUB: "application/epub+zip",
+    }
     return FileResponse(
         task.output_path,
-        media_type="application/octet-stream",
-        headers={"Content-Disposition": "inline"},
+        media_type=media_types.get(task.output_format, "application/octet-stream"),
+        filename=task.output_path.name,
     )
 
 
@@ -383,13 +391,21 @@ async def pandoc_status() -> PandocStatusResponse:
 async def _install_mermaid_flow():
     """Mermaid 使用系统 Edge，无需额外安装"""
     ok = edge_manager.is_ready()
-    yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Edge 已就绪" if ok else "未找到 Edge"})}
+    yield {
+        "event": "progress",
+        "data": json.dumps(
+            {"progress": 100, "message": "Edge 已就绪" if ok else "未找到 Edge"}
+        ),
+    }
     yield {"event": "completed", "data": json.dumps({"success": ok})}
 
 
 async def _uninstall_mermaid_flow():
     """Edge 是系统组件，不可卸载"""
-    yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Edge 是系统组件，无需卸载"})}
+    yield {
+        "event": "progress",
+        "data": json.dumps({"progress": 100, "message": "Edge 是系统组件，无需卸载"}),
+    }
     yield {"event": "completed", "data": json.dumps({"success": True})}
 
 
@@ -424,7 +440,10 @@ async def _install_pandoc_flow():
         await asyncio.sleep(0.5)
 
     if task.result():
-        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Pandoc 安装完成"})}
+        yield {
+            "event": "progress",
+            "data": json.dumps({"progress": 100, "message": "Pandoc 安装完成"}),
+        }
         yield {"event": "completed", "data": json.dumps({"success": True})}
     else:
         # 获取最终进度信息
@@ -454,7 +473,10 @@ async def _uninstall_pandoc_flow():
     success = await loop.run_in_executor(None, pandoc_manager.remove)
 
     if success:
-        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "Pandoc 卸载完成"})}
+        yield {
+            "event": "progress",
+            "data": json.dumps({"progress": 100, "message": "Pandoc 卸载完成"}),
+        }
         yield {"event": "completed", "data": json.dumps({"success": True})}
     else:
         prog = pandoc_manager.get_install_progress()
