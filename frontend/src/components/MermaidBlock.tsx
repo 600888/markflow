@@ -27,12 +27,14 @@ function prepareSvg(
   svg: string,
   theme: MermaidBlockProps["theme"],
 ): PreparedSvg {
-  const document = new DOMParser().parseFromString(svg, "image/svg+xml");
-  const root = document.documentElement;
-  if (
-    root.nodeName.toLowerCase() !== "svg" ||
-    document.querySelector("parsererror")
-  ) {
+  // Mermaid returns markup intended for insertion into an HTML document.  In
+  // particular, labels may contain foreignObject/XHTML and HTML-style void
+  // elements.  Parsing that markup directly as XML rejects otherwise valid
+  // diagrams in WebView2.  Let the HTML parser normalise it first, then use
+  // XMLSerializer to produce a standalone SVG.
+  const parsed = new DOMParser().parseFromString(svg, "text/html");
+  const root = parsed.querySelector("svg");
+  if (!root) {
     throw new Error("Mermaid SVG 无法解析");
   }
 
@@ -81,6 +83,45 @@ function prepareSvg(
     height,
     markup: `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(root)}`,
   };
+}
+
+async function svgToPng(svg: PreparedSvg): Promise<Uint8Array> {
+  const maxSide = 8192;
+  const maxPixels = 64_000_000;
+  const scale = Math.min(
+    2,
+    maxSide / Math.max(svg.width, svg.height),
+    Math.sqrt(maxPixels / (svg.width * svg.height)),
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.ceil(svg.width * scale));
+  canvas.height = Math.max(1, Math.ceil(svg.height * scale));
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("当前环境无法生成 PNG");
+
+  const objectUrl = URL.createObjectURL(
+    new Blob([svg.markup], { type: "image/svg+xml;charset=utf-8" }),
+  );
+  try {
+    const image = new Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Mermaid SVG 无法转换为 PNG"));
+      image.src = objectUrl;
+    });
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (value) => (value ? resolve(value) : reject(new Error("PNG 编码失败"))),
+        "image/png",
+      );
+    });
+    return new Uint8Array(await blob.arrayBuffer());
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 function downloadInBrowser(
@@ -145,7 +186,9 @@ export default function MermaidBlock({ source, theme }: MermaidBlockProps) {
       const bytes =
         format === "svg"
           ? new TextEncoder().encode(preparedSvg.markup)
-          : await renderMermaidPng(source, theme);
+          : await svgToPng(preparedSvg).catch(() =>
+              renderMermaidPng(source, theme),
+            );
       const fileName = `mermaid-diagram.${format}`;
       const mimeType = format === "svg" ? "image/svg+xml" : "image/png";
 
