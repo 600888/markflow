@@ -3,7 +3,7 @@ use tauri::Manager;
 mod backend;
 
 fn output_directory() -> Result<std::path::PathBuf, String> {
-    backend::data_directory()
+    Ok(backend::data_directory()?.join("artifacts"))
 }
 
 #[tauri::command]
