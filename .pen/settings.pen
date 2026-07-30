@@ -1,78 +1,137 @@
 {
-  "version": "2.13",
+  "version": "2.14",
   "children": [
     {
       "type": "frame",
       "id": "settingsPage",
-      "layout": "horizontal",
-      "width": 900,
-      "height": 600,
-      "clip": true,
       "x": 100,
       "y": 100,
       "name": "Settings Page",
+      "clip": true,
+      "width": 900,
+      "height": 600,
       "children": [
         {
           "type": "frame",
           "id": "settingsSidebar",
-          "layout": "vertical",
-          "width": 200,
-          "padding": [20, 20],
-          "gap": 8,
-          "fill": "#F9FAFB",
           "name": "Sidebar",
+          "width": 200,
+          "fill": "#F9FAFB",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 20,
           "children": [
             {
               "type": "text",
               "id": "settingsSidebarTitle",
+              "name": "SidebarTitle",
               "fill": "#111827",
+              "content": "设置",
               "fontFamily": "Inter",
               "fontSize": 16,
-              "fontWeight": "600",
-              "content": "设置",
-              "name": "SidebarTitle"
+              "fontWeight": "600"
             },
             {
               "type": "frame",
               "id": "menuGeneral",
-              "layout": "horizontal",
+              "name": "MenuGeneral",
               "width": "fill_container",
-              "padding": [12, 14],
-              "gap": 10,
               "fill": "#EEF2FF",
               "cornerRadius": 6,
-              "name": "MenuGeneral",
+              "gap": 10,
+              "padding": [
+                12,
+                14
+              ],
               "children": [
-                {"type": "text", "id": "menuGeneralIcon", "fill": "#6366F1", "fontFamily": "Inter", "fontSize": 16, "content": "\u2699", "name": "Icon"},
-                {"type": "text", "id": "menuGeneralLabel", "fill": "#6366F1", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "500", "content": "\u901A\u7528 General", "name": "Label"}
+                {
+                  "type": "text",
+                  "id": "menuGeneralIcon",
+                  "name": "Icon",
+                  "fill": "#6366F1",
+                  "content": "⚙",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "menuGeneralLabel",
+                  "name": "Label",
+                  "fill": "#6366F1",
+                  "content": "通用 General",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
               ]
             },
             {
               "type": "frame",
               "id": "menuModules",
-              "layout": "horizontal",
-              "width": "fill_container",
-              "padding": [12, 14],
-              "gap": 10,
-              "cornerRadius": 6,
               "name": "MenuModules",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "gap": 10,
+              "padding": [
+                12,
+                14
+              ],
               "children": [
-                {"type": "text", "id": "menuModulesIcon", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 16, "content": "\uD83E\uDDE9", "name": "Icon"},
-                {"type": "text", "id": "menuModulesLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 14, "content": "\u6A21\u5757 Modules", "name": "Label"}
+                {
+                  "type": "text",
+                  "id": "menuModulesIcon",
+                  "name": "Icon",
+                  "fill": "#6B7280",
+                  "content": "🧩",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "menuModulesLabel",
+                  "name": "Label",
+                  "fill": "#6B7280",
+                  "content": "模块 Modules",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
               ]
             },
             {
               "type": "frame",
               "id": "menuAbout",
-              "layout": "horizontal",
-              "width": "fill_container",
-              "padding": [12, 14],
-              "gap": 10,
-              "cornerRadius": 6,
               "name": "MenuAbout",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "gap": 10,
+              "padding": [
+                12,
+                14
+              ],
               "children": [
-                {"type": "text", "id": "menuAboutIcon", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 16, "content": "\u2139", "name": "Icon"},
-                {"type": "text", "id": "menuAboutLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 14, "content": "\u5173\u4E8E About", "name": "Label"}
+                {
+                  "type": "text",
+                  "id": "menuAboutIcon",
+                  "name": "Icon",
+                  "fill": "#6B7280",
+                  "content": "ℹ",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "menuAboutLabel",
+                  "name": "Label",
+                  "fill": "#6B7280",
+                  "content": "关于 About",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
               ]
             }
           ]
@@ -80,65 +139,217 @@
         {
           "type": "frame",
           "id": "settingsContent",
-          "layout": "vertical",
-          "width": "fill_container",
-          "padding": [28, 28],
-          "gap": 24,
-          "fill": "#FFFFFF",
           "name": "Content",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": 28,
           "children": [
             {
               "type": "frame",
               "id": "settingsContentHeader",
+              "name": "ContentHeader",
               "layout": "vertical",
               "gap": 4,
-              "name": "ContentHeader",
               "children": [
-                {"type": "text", "id": "settingsContentTitle", "fill": "#111827", "fontFamily": "Inter", "fontSize": 20, "fontWeight": "600", "content": "\u6A21\u5757 Modules", "name": "Title"},
-                {"type": "text", "id": "settingsContentDesc", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 13, "content": "\u7BA1\u7406 MarkFlow \u7684\u989D\u5916\u529F\u80FD\u6A21\u5757", "name": "Desc"}
+                {
+                  "type": "text",
+                  "id": "settingsContentTitle",
+                  "name": "Title",
+                  "fill": "#111827",
+                  "content": "模块 Modules",
+                  "fontFamily": "Inter",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "settingsContentDesc",
+                  "name": "Desc",
+                  "fill": "#6B7280",
+                  "content": "管理 MarkFlow 的额外功能模块",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
               ]
             },
-            {"type": "rectangle", "id": "settingsDivider", "width": "fill_container", "height": 1, "fill": "#E5E7EB", "name": "Divider"},
+            {
+              "type": "rectangle",
+              "id": "settingsDivider",
+              "name": "Divider",
+              "fill": "#E5E7EB",
+              "width": "fill_container",
+              "height": 1
+            },
             {
               "type": "frame",
               "id": "mermaidCard",
-              "layout": "vertical",
+              "name": "MermaidCard",
               "width": "fill_container",
-              "padding": [20, 20],
-              "gap": 16,
               "fill": "#F9FAFB",
               "cornerRadius": 10,
-              "name": "MermaidCard",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
               "children": [
                 {
                   "type": "frame",
                   "id": "mermaidCardHeader",
-                  "layout": "horizontal",
+                  "name": "CardHeader",
                   "width": "fill_container",
                   "gap": 14,
                   "alignItems": "center",
-                  "name": "CardHeader",
                   "children": [
-                    {"type": "frame", "id": "mermaidIconFrame", "padding": 10, "fill": "#EEF2FF", "cornerRadius": 8, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "IconFrame", "children": [{"type": "path", "id": "mermaidIcon", "width": 24, "height": 24, "viewBox": [0,0,24,24], "geometry": "M4 2h16a2 2 0 010 2v16a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zm0 2v16h16V4H4zm3 3h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z", "fill": "#6366F1", "name": "Icon"}]},
-                    {"type": "frame", "id": "mermaidNameCol", "layout": "vertical", "gap": 3, "width": "fill_container", "name": "NameCol", "children": [
-                      {"type": "text", "id": "mermaidNameLabel", "fill": "#111827", "fontFamily": "Inter", "fontSize": 15, "fontWeight": "600", "content": "Mermaid \u56FE\u8868\u6E32\u67D3", "name": "Name"},
-                      {"type": "text", "id": "mermaidDescLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 12, "content": "\u6D41\u7A0B\u56FE / \u65F6\u5E8F\u56FE / \u7518\u7279\u56FE\u7B49\u56FE\u8868\u6E32\u67D3\u652F\u6301", "name": "Desc"}
-                    ]},
-                    {"type": "frame", "id": "mermaidBadge", "padding": [8, 12], "fill": "#FEF3C7", "cornerRadius": 4, "name": "Badge", "children": [{"type": "text", "id": "mermaidBadgeText", "fill": "#D97706", "fontFamily": "Inter", "fontSize": 11, "fontWeight": "500", "content": "\u672A\u5B89\u88C5", "name": "BadgeText"}]}
+                    {
+                      "type": "frame",
+                      "id": "mermaidIconFrame",
+                      "name": "IconFrame",
+                      "fill": "#EEF2FF",
+                      "cornerRadius": 8,
+                      "padding": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "mermaidIcon",
+                          "name": "Icon",
+                          "geometry": "M4 2h16a2 2 0 0 1 0 2v16a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-16a2 2 0 0 1 2-2z m0 2v16h16v-16h-16z m3 3h10v2h-10v-2z m0 4h10v2h-10v-2z m0 4h10v2h-10v-2z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "#6366F1",
+                          "width": 24,
+                          "height": 24
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mermaidNameCol",
+                      "name": "NameCol",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mermaidNameLabel",
+                          "name": "Name",
+                          "fill": "#111827",
+                          "content": "Mermaid 图表渲染",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "mermaidDescLabel",
+                          "name": "Desc",
+                          "fill": "#6B7280",
+                          "content": "流程图 / 时序图 / 甘特图等图表渲染支持",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mermaidBadge",
+                      "name": "Badge",
+                      "fill": "#FEF3C7",
+                      "cornerRadius": 4,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mermaidBadgeText",
+                          "name": "BadgeText",
+                          "fill": "#D97706",
+                          "content": "未安装",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
                   ]
                 },
                 {
                   "type": "frame",
                   "id": "mermaidCardActions",
-                  "layout": "horizontal",
+                  "name": "CardActions",
                   "width": "fill_container",
                   "gap": 16,
                   "alignItems": "center",
-                  "name": "CardActions",
                   "children": [
-                    {"type": "frame", "id": "mermaidProgressBarBg", "height": 8, "fill": "#E5E7EB", "cornerRadius": 4, "width": 200, "layout": "none", "name": "ProgressBarBg", "children": [{"type": "rectangle", "id": "mermaidProgressFill", "x": 0, "y": 0, "width": 120, "height": 8, "fill": "#6366F1", "cornerRadius": 4, "name": "ProgressFill"}]},
-                    {"type": "text", "id": "mermaidProgressPct", "fill": "#6366F1", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "600", "content": "45%", "name": "ProgressPct"},
-                    {"type": "frame", "id": "mermaidInstallBtn", "padding": [10, 20], "fill": "#6366F1", "cornerRadius": 6, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "InstallBtn", "children": [{"type": "text", "id": "mermaidInstallBtnText", "fill": "#FFFFFF", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "500", "content": "\u5B89\u88C5", "name": "BtnText"}]}
+                    {
+                      "type": "frame",
+                      "id": "mermaidProgressBarBg",
+                      "name": "ProgressBarBg",
+                      "width": 200,
+                      "height": 8,
+                      "fill": "#E5E7EB",
+                      "cornerRadius": 4,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "mermaidProgressFill",
+                          "x": 0,
+                          "y": 0,
+                          "name": "ProgressFill",
+                          "fill": "#6366F1",
+                          "width": 120,
+                          "height": 8
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "mermaidProgressPct",
+                      "name": "ProgressPct",
+                      "fill": "#6366F1",
+                      "content": "45%",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mermaidInstallBtn",
+                      "name": "InstallBtn",
+                      "fill": "#6366F1",
+                      "cornerRadius": 6,
+                      "padding": [
+                        10,
+                        20
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mermaidInstallBtnText",
+                          "name": "BtnText",
+                          "fill": "#FFFFFF",
+                          "content": "安装",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
                   ]
                 }
               ]
@@ -146,40 +357,135 @@
             {
               "type": "frame",
               "id": "pandocCard",
-              "layout": "vertical",
+              "name": "PandocCard",
               "width": "fill_container",
-              "padding": [20, 20],
-              "gap": 16,
               "fill": "#F9FAFB",
               "cornerRadius": 10,
-              "name": "PandocCard",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
               "children": [
                 {
                   "type": "frame",
                   "id": "pandocCardHeader",
-                  "layout": "horizontal",
+                  "name": "CardHeader",
                   "width": "fill_container",
                   "gap": 14,
                   "alignItems": "center",
-                  "name": "CardHeader",
                   "children": [
-                    {"type": "frame", "id": "pandocIconFrame", "padding": 10, "fill": "#F0FDF4", "cornerRadius": 8, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "IconFrame", "children": [{"type": "path", "id": "pandocIcon", "width": 24, "height": 24, "viewBox": [0,0,24,24], "geometry": "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6z", "fill": "#22C55E", "name": "Icon"}]},
-                    {"type": "frame", "id": "pandocNameCol", "layout": "vertical", "gap": 3, "width": "fill_container", "name": "NameCol", "children": [
-                      {"type": "text", "id": "pandocNameLabel", "fill": "#111827", "fontFamily": "Inter", "fontSize": 15, "fontWeight": "600", "content": "Pandoc \u8F6C\u6362\u5F15\u64CE", "name": "Name"},
-                      {"type": "text", "id": "pandocDescLabel", "fill": "#6B7280", "fontFamily": "Inter", "fontSize": 12, "content": "\u6587\u6863\u683C\u5F0F\u8F6C\u6362\u6838\u5FC3\u5F15\u64CE\u652F\u6301", "name": "Desc"}
-                    ]},
-                    {"type": "frame", "id": "pandocBadge", "padding": [8, 12], "fill": "#DCFCE7", "cornerRadius": 4, "name": "Badge", "children": [{"type": "text", "id": "pandocBadgeText", "fill": "#16A34A", "fontFamily": "Inter", "fontSize": 11, "fontWeight": "500", "content": "\u5DF2\u5B89\u88C5", "name": "BadgeText"}]}
+                    {
+                      "type": "frame",
+                      "id": "pandocIconFrame",
+                      "name": "IconFrame",
+                      "fill": "#F0FDF4",
+                      "cornerRadius": 8,
+                      "padding": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "pandocIcon",
+                          "name": "Icon",
+                          "geometry": "M14 2h-8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-12l-6-6z m-8 18v-16h7v5h5v11h-12z",
+                          "viewBox": [
+                            0,
+                            0,
+                            24,
+                            24
+                          ],
+                          "fill": "#22C55E",
+                          "width": 24,
+                          "height": 24
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pandocNameCol",
+                      "name": "NameCol",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 3,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pandocNameLabel",
+                          "name": "Name",
+                          "fill": "#111827",
+                          "content": "Pandoc 转换引擎",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "pandocDescLabel",
+                          "name": "Desc",
+                          "fill": "#6B7280",
+                          "content": "文档格式转换核心引擎支持",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pandocBadge",
+                      "name": "Badge",
+                      "fill": "#DCFCE7",
+                      "cornerRadius": 4,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pandocBadgeText",
+                          "name": "BadgeText",
+                          "fill": "#16A34A",
+                          "content": "已安装",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
                   ]
                 },
                 {
                   "type": "frame",
                   "id": "pandocCardActions",
-                  "layout": "horizontal",
-                  "width": "fill_container",
-                  "justifyContent": "flex_end",
                   "name": "CardActions",
+                  "width": "fill_container",
                   "children": [
-                    {"type": "frame", "id": "pandocUninstallBtn", "padding": [10, 20], "fill": "#FEE2E2", "cornerRadius": 6, "layout": "horizontal", "alignItems": "center", "justifyContent": "center", "name": "UninstallBtn", "children": [{"type": "text", "id": "pandocUninstallBtnText", "fill": "#DC2626", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "500", "content": "\u5378\u8F7D", "name": "BtnText"}]}
+                    {
+                      "type": "frame",
+                      "id": "pandocUninstallBtn",
+                      "name": "UninstallBtn",
+                      "fill": "#FEE2E2",
+                      "cornerRadius": 6,
+                      "padding": [
+                        10,
+                        20
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pandocUninstallBtnText",
+                          "name": "BtnText",
+                          "fill": "#DC2626",
+                          "content": "卸载",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
                   ]
                 }
               ]
@@ -188,5 +494,6 @@
         }
       ]
     }
-  ]
+  ],
+  "fileToken": "58e8d475-e561-4d59-858c-8054ebb11dab"
 }

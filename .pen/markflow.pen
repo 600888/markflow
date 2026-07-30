@@ -1,5 +1,5 @@
 {
-  "version": "2.13",
+  "version": "2.14",
   "children": [
     {
       "type": "frame",
@@ -195,6 +195,113 @@
                       "fontWeight": "normal"
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "A2XRWJ",
+          "name": "Main Navigation Tabs",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "BJ6Ro",
+              "name": "Document Conversion Tab Active",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "JPcIz",
+                  "name": "Document Conversion Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file-output",
+                  "library": "lucide",
+                  "fill": "$accent"
+                },
+                {
+                  "type": "text",
+                  "id": "z2LR7g",
+                  "name": "Document Conversion Label",
+                  "fill": "$accent",
+                  "content": "文档转换",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": [
+                    2,
+                    2,
+                    0,
+                    0
+                  ],
+                  "id": "igV2F",
+                  "layoutPosition": "absolute",
+                  "x": 0,
+                  "y": 45,
+                  "name": "Document Conversion Active Indicator",
+                  "fill": "$accent",
+                  "width": 104,
+                  "height": 3
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "I4CNp",
+              "name": "History Tab Inactive",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "EuQMJ",
+                  "name": "History Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "history",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                },
+                {
+                  "type": "text",
+                  "id": "CBVo0",
+                  "name": "History Label",
+                  "fill": "$foregroundMuted",
+                  "content": "历史记录",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
                 }
               ]
             }
@@ -1098,6 +1205,7 @@
                       "type": "frame",
                       "id": "tabPreview",
                       "name": "TabPreview",
+                      "width": 120,
                       "layout": "vertical",
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -1351,6 +1459,1750 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "qvWHu",
+      "x": 1600,
+      "y": 100,
+      "name": "MarkFlow - History",
+      "clip": true,
+      "width": 1400,
+      "height": 900,
+      "fill": "$surface",
+      "cornerRadius": 8,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "VZZ97",
+          "name": "Titlebar",
+          "width": "fill_container",
+          "height": 40,
+          "fill": "$surfaceSecondary",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": 4,
+              "id": "uQaH8",
+              "name": "Logo",
+              "fill": "$accent",
+              "width": 20,
+              "height": 20
+            },
+            {
+              "type": "text",
+              "id": "jhsbj",
+              "name": "LogoText",
+              "fill": "#FFFFFF",
+              "content": "M",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "tKYYr",
+              "name": "AppTitle",
+              "fill": "$foregroundMuted",
+              "content": "MarkFlow v0.1",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "rectangle",
+              "id": "guM9j",
+              "name": "TitlebarSpacer",
+              "opacity": 0,
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "Z3Oz2n",
+              "name": "ThemeBtn",
+              "width": 28,
+              "height": 28,
+              "cornerRadius": 4,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "UfZzE",
+                  "name": "ThemeIcon",
+                  "fill": "$foregroundMuted",
+                  "content": "☀",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "QH4VI",
+              "name": "LogBtn",
+              "width": 28,
+              "height": 28,
+              "cornerRadius": 4,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "zIMqi",
+                  "name": "LogBtnIcon",
+                  "fill": "$foregroundMuted",
+                  "content": "📋",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "D1FEc",
+              "name": "WindowControls",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "PwbOJ",
+                  "name": "BtnMinimize",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "EqhyU",
+                      "name": "MinIcon",
+                      "fill": "$foregroundMuted",
+                      "content": "─",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e8Hbqj",
+                  "name": "BtnMaximize",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SShqF",
+                      "name": "MaxIcon",
+                      "fill": "$foregroundMuted",
+                      "content": "□",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hqo5o",
+                  "name": "BtnClose",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ZPlag",
+                      "name": "CloseIcon",
+                      "fill": "$foregroundMuted",
+                      "content": "✕",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LCzK0",
+          "name": "Main Navigation Tabs",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "LTWK0",
+              "name": "Document Conversion Tab Inactive",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "A2eU9",
+                  "name": "Document Conversion Icon Inactive",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file-output",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                },
+                {
+                  "type": "text",
+                  "id": "UUqe7",
+                  "name": "Document Conversion Label Inactive",
+                  "fill": "$foregroundMuted",
+                  "content": "文档转换",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Y9sIiy",
+              "name": "History Tab Active",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "sHdhf",
+                  "name": "History Icon Active",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "history",
+                  "library": "lucide",
+                  "fill": "$accent"
+                },
+                {
+                  "type": "text",
+                  "id": "weblL",
+                  "name": "History Label Active",
+                  "fill": "$accent",
+                  "content": "历史记录",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": [
+                    2,
+                    2,
+                    0,
+                    0
+                  ],
+                  "id": "pkaEm",
+                  "layoutPosition": "absolute",
+                  "x": 0,
+                  "y": 45,
+                  "name": "History Active Indicator",
+                  "fill": "$accent",
+                  "width": 104,
+                  "height": 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "c9C9y6",
+          "name": "History Main Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$surfaceSecondary",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            26,
+            32
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "M9lEck",
+              "name": "History Page Header",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "abBmd",
+                  "name": "History Heading Group",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tyMiz",
+                      "name": "History Page Title",
+                      "fill": "$foreground",
+                      "content": "历史记录",
+                      "fontFamily": "Geist",
+                      "fontSize": 24,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "AnztM",
+                      "name": "History Page Subtitle",
+                      "fill": "$foregroundMuted",
+                      "content": "查看原始文件及其导出结果，可随时重新打开或下载",
+                      "fontFamily": "Geist",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ex5xy",
+                  "name": "History Header Actions",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DuOQO",
+                      "name": "Clear History Button",
+                      "height": 34,
+                      "fill": "$surface",
+                      "cornerRadius": 6,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 7,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "YqC0o",
+                          "name": "Clear History Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "trash-2",
+                          "library": "lucide",
+                          "fill": "$foregroundMuted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wuZAt",
+                          "name": "Clear History Label",
+                          "fill": "$foregroundMuted",
+                          "content": "清空记录",
+                          "fontFamily": "Geist",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xfobt",
+                      "name": "Open Output Folder Button",
+                      "height": 34,
+                      "fill": "$accent",
+                      "cornerRadius": 6,
+                      "gap": 7,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "DBZMW",
+                          "name": "Open Output Folder Icon",
+                          "width": 15,
+                          "height": 15,
+                          "icon": "folder-open",
+                          "library": "lucide",
+                          "fill": "#FFFFFFFF"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ipuV3",
+                          "name": "Open Output Folder Label",
+                          "fill": "#FFFFFFFF",
+                          "content": "打开输出目录",
+                          "fontFamily": "Geist",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DYVa0",
+              "name": "History Summary",
+              "width": "fill_container",
+              "height": 66,
+              "fill": "$surface",
+              "cornerRadius": 8,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "NR1kJ",
+                  "name": "Total Conversion Metric",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    11,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "r8ZuO",
+                      "name": "Total Conversion Label",
+                      "fill": "$foregroundMuted",
+                      "content": "累计转换",
+                      "fontFamily": "Geist",
+                      "fontSize": 10,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NN3pn",
+                      "name": "Total Conversion Value",
+                      "fill": "$foreground",
+                      "content": "24 次",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "W60Bmb",
+                  "name": "Metric Divider One",
+                  "fill": "$border",
+                  "width": 1,
+                  "height": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "PYJ45",
+                  "name": "Success Conversion Metric",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    11,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "P5uhy",
+                      "name": "Success Conversion Label",
+                      "fill": "$foregroundMuted",
+                      "content": "成功导出",
+                      "fontFamily": "Geist",
+                      "fontSize": 10,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "l1Tq0",
+                      "name": "Success Conversion Value",
+                      "fill": "$success",
+                      "content": "22 个",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "cjmyd",
+                  "name": "Metric Divider Two",
+                  "fill": "$border",
+                  "width": 1,
+                  "height": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "mMFQW",
+                  "name": "Storage Metric",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    11,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "X9T0Q",
+                      "name": "Storage Metric Label",
+                      "fill": "$foregroundMuted",
+                      "content": "导出文件占用",
+                      "fontFamily": "Geist",
+                      "fontSize": 10,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "IGK2s",
+                      "name": "Storage Metric Value",
+                      "fill": "$foreground",
+                      "content": "128.6 MB",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UUUWB",
+              "name": "History Toolbar",
+              "width": "fill_container",
+              "height": 36,
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YHvTd",
+                  "name": "History Search",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": 6,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    11
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "i6o7zL",
+                      "name": "History Search Icon",
+                      "width": 15,
+                      "height": 15,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$foregroundMuted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "q3xkI",
+                      "name": "History Search Placeholder",
+                      "fill": "$foregroundMuted",
+                      "content": "搜索原始文件或导出文件名",
+                      "fontFamily": "Geist",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Gj0Ex",
+                  "name": "History Status Filter",
+                  "width": 110,
+                  "height": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": 6,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "padding": [
+                    0,
+                    11
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "IZnK2",
+                      "name": "History Status Filter Label",
+                      "fill": "$foreground",
+                      "content": "全部状态",
+                      "fontFamily": "Geist",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "W8JOvr",
+                      "name": "History Status Filter Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$foregroundMuted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XVViF",
+                  "name": "History Time Filter",
+                  "width": 120,
+                  "height": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": 6,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "padding": [
+                    0,
+                    11
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "E9ljd",
+                      "name": "History Time Filter Label",
+                      "fill": "$foreground",
+                      "content": "最近 7 天",
+                      "fontFamily": "Geist",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "EsnF9",
+                      "name": "History Time Filter Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "calendar-days",
+                      "library": "lucide",
+                      "fill": "$foregroundMuted"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vxOoI",
+              "name": "History Record List",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EM9Lh",
+                  "name": "History List Caption",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ix04z",
+                      "name": "History List Date",
+                      "fill": "$foregroundMuted",
+                      "content": "最近记录",
+                      "fontFamily": "Geist",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tTxso",
+                      "name": "History List Count",
+                      "fill": "$foregroundMuted",
+                      "content": "共 3 条",
+                      "fontFamily": "Geist",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Hi5oW",
+                  "name": "History Record product_spec.md",
+                  "width": "fill_container",
+                  "height": 116,
+                  "fill": "$surface",
+                  "cornerRadius": 8,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 16,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SeWuq",
+                      "name": "Original File product_spec.md",
+                      "width": 330,
+                      "height": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ug82F",
+                          "name": "Original File Icon Container product_spec.md",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "#F3E8FFFF",
+                          "cornerRadius": 7,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "NlpDD",
+                              "name": "Original File Icon product_spec.md",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "file-text",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "VfOBW",
+                          "name": "Original File Details product_spec.md",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 5,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "A0ph7I",
+                              "name": "Original File Name product_spec.md",
+                              "fill": "$foreground",
+                              "content": "product_spec.md",
+                              "fontFamily": "Geist",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "I7ZbH",
+                              "name": "Original File Metadata product_spec.md",
+                              "fill": "$foregroundMuted",
+                              "content": "48 KB  ·  今天 14:32",
+                              "fontFamily": "Geist",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "lz8Lz",
+                              "name": "Success Status product_spec.md",
+                              "fill": "#DCFCE7FF",
+                              "cornerRadius": 10,
+                              "gap": 5,
+                              "padding": [
+                                2,
+                                7
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "O4aAMw",
+                                  "name": "Success Dot product_spec.md",
+                                  "fill": "$success",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "GZ0Bc",
+                                  "name": "Success Label product_spec.md",
+                                  "fill": "#15803DFF",
+                                  "content": "转换成功",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "e08b1",
+                          "name": "Original File Actions product_spec.md",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "G8UNlz",
+                              "name": "Open Original File product_spec.md",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "V86MXc",
+                              "name": "Download Original File product_spec.md",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zmz2J",
+                      "name": "Conversion Direction product_spec.md",
+                      "width": 36,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "xvCWh",
+                          "name": "Conversion Arrow product_spec.md",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$accent"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R4uvk",
+                      "name": "Exported Files product_spec.md",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "qORYR",
+                          "name": "Exported File product_spec.docx",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "$surface",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 9,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "ldn8e",
+                              "name": "Exported File Icon product_spec.docx",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "file-check-2",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "KQjok",
+                              "name": "Exported File Name product_spec.docx",
+                              "fill": "$foreground",
+                              "content": "product_spec.docx",
+                              "fontFamily": "Geist",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "I7vxye",
+                              "name": "Exported File Type product_spec.docx",
+                              "fill": "$foregroundMuted",
+                              "content": "DOCX",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "WIJVa",
+                              "name": "Exported File Spacer product_spec.docx",
+                              "opacity": 0,
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "NgMHd",
+                              "name": "Exported File Size product_spec.docx",
+                              "fill": "$foregroundMuted",
+                              "content": "2.4 MB",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "G8IWM",
+                              "name": "Open Exported File product_spec.docx",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "o8HET",
+                              "name": "Download Exported File product_spec.docx",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "h0IDZ0",
+                          "name": "Exported File product_spec.pdf",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "$surface",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 9,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "h7C12",
+                              "name": "Exported File Icon product_spec.pdf",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "file-check-2",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "k5wam",
+                              "name": "Exported File Name product_spec.pdf",
+                              "fill": "$foreground",
+                              "content": "product_spec.pdf",
+                              "fontFamily": "Geist",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "G9VLuq",
+                              "name": "Exported File Type product_spec.pdf",
+                              "fill": "$foregroundMuted",
+                              "content": "PDF",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "OORfW",
+                              "name": "Exported File Spacer product_spec.pdf",
+                              "opacity": 0,
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "EfJpy",
+                              "name": "Exported File Size product_spec.pdf",
+                              "fill": "$foregroundMuted",
+                              "content": "1.8 MB",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "a3OJue",
+                              "name": "Open Exported File product_spec.pdf",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "mLZ0S",
+                              "name": "Download Exported File product_spec.pdf",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EzeHQ",
+                  "name": "History Record quarterly_report.md",
+                  "width": "fill_container",
+                  "height": 116,
+                  "fill": "$surface",
+                  "cornerRadius": 8,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 16,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "n4wWK",
+                      "name": "Original File quarterly_report.md",
+                      "width": 330,
+                      "height": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "iSHk8",
+                          "name": "Original File Icon Container quarterly_report.md",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "#F3E8FFFF",
+                          "cornerRadius": 7,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "p9ZOe",
+                              "name": "Original File Icon quarterly_report.md",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "file-text",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EWQAK",
+                          "name": "Original File Details quarterly_report.md",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 5,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DYEF6",
+                              "name": "Original File Name quarterly_report.md",
+                              "fill": "$foreground",
+                              "content": "quarterly_report.md",
+                              "fontFamily": "Geist",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Y0rji9",
+                              "name": "Original File Metadata quarterly_report.md",
+                              "fill": "$foregroundMuted",
+                              "content": "1.2 MB  ·  今天 10:18",
+                              "fontFamily": "Geist",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "jIzDH",
+                              "name": "Success Status quarterly_report.md",
+                              "fill": "#DCFCE7FF",
+                              "cornerRadius": 10,
+                              "gap": 5,
+                              "padding": [
+                                2,
+                                7
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "xnk6M",
+                                  "name": "Success Dot quarterly_report.md",
+                                  "fill": "$success",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "eIfFY",
+                                  "name": "Success Label quarterly_report.md",
+                                  "fill": "#15803DFF",
+                                  "content": "转换成功",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "s2JOe",
+                          "name": "Original File Actions quarterly_report.md",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "Tksxp",
+                              "name": "Open Original File quarterly_report.md",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "XGPwg",
+                              "name": "Download Original File quarterly_report.md",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sRiF0",
+                      "name": "Conversion Direction quarterly_report.md",
+                      "width": 36,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Oofi6",
+                          "name": "Conversion Arrow quarterly_report.md",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$accent"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sag6N",
+                      "name": "Exported Files quarterly_report.md",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "i0xO9c",
+                          "name": "Exported File quarterly_report.pdf",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "$surface",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 9,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "cOxYM",
+                              "name": "Exported File Icon quarterly_report.pdf",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "file-check-2",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "vq0qX",
+                              "name": "Exported File Name quarterly_report.pdf",
+                              "fill": "$foreground",
+                              "content": "quarterly_report.pdf",
+                              "fontFamily": "Geist",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "lFxMO",
+                              "name": "Exported File Type quarterly_report.pdf",
+                              "fill": "$foregroundMuted",
+                              "content": "PDF",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "lpLpS",
+                              "name": "Exported File Spacer quarterly_report.pdf",
+                              "opacity": 0,
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "QkNtl",
+                              "name": "Exported File Size quarterly_report.pdf",
+                              "fill": "$foregroundMuted",
+                              "content": "6.8 MB",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "A8FeZt",
+                              "name": "Open Exported File quarterly_report.pdf",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "o497e",
+                              "name": "Download Exported File quarterly_report.pdf",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "G6bp5y",
+                  "name": "History Record api_reference.md",
+                  "width": "fill_container",
+                  "height": 116,
+                  "fill": "$surface",
+                  "cornerRadius": 8,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "gap": 16,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "e2jO9",
+                      "name": "Original File api_reference.md",
+                      "width": 330,
+                      "height": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vU8nX",
+                          "name": "Original File Icon Container api_reference.md",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "#F3E8FFFF",
+                          "cornerRadius": 7,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "PYLPc",
+                              "name": "Original File Icon api_reference.md",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "file-text",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hlyzN",
+                          "name": "Original File Details api_reference.md",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 5,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "bP3bt",
+                              "name": "Original File Name api_reference.md",
+                              "fill": "$foreground",
+                              "content": "api_reference.md",
+                              "fontFamily": "Geist",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "s3Aid",
+                              "name": "Original File Metadata api_reference.md",
+                              "fill": "$foregroundMuted",
+                              "content": "326 KB  ·  昨天 18:45",
+                              "fontFamily": "Geist",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "DrQOm",
+                              "name": "Success Status api_reference.md",
+                              "fill": "#DCFCE7FF",
+                              "cornerRadius": 10,
+                              "gap": 5,
+                              "padding": [
+                                2,
+                                7
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "psBqU",
+                                  "name": "Success Dot api_reference.md",
+                                  "fill": "$success",
+                                  "width": 6,
+                                  "height": 6
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "UM4uE",
+                                  "name": "Success Label api_reference.md",
+                                  "fill": "#15803DFF",
+                                  "content": "转换成功",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ojQDZ",
+                          "name": "Original File Actions api_reference.md",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "crV2m",
+                              "name": "Open Original File api_reference.md",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "XlXtI",
+                              "name": "Download Original File api_reference.md",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Ni2hJ",
+                      "name": "Conversion Direction api_reference.md",
+                      "width": 36,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "hPyZX",
+                          "name": "Conversion Arrow api_reference.md",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$accent"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OMuMO",
+                      "name": "Exported Files api_reference.md",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N7pIeZ",
+                          "name": "Exported File api_reference.html",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "$surface",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 9,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "Z9IYk",
+                              "name": "Exported File Icon api_reference.html",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "file-check-2",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "jPp52",
+                              "name": "Exported File Name api_reference.html",
+                              "fill": "$foreground",
+                              "content": "api_reference.html",
+                              "fontFamily": "Geist",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "CB1Zw",
+                              "name": "Exported File Type api_reference.html",
+                              "fill": "$foregroundMuted",
+                              "content": "HTML",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "FAmeO",
+                              "name": "Exported File Spacer api_reference.html",
+                              "opacity": 0,
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "GNGDe",
+                              "name": "Exported File Size api_reference.html",
+                              "fill": "$foregroundMuted",
+                              "content": "842 KB",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "TWhIS",
+                              "name": "Open Exported File api_reference.html",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "fQLaq",
+                              "name": "Download Exported File api_reference.html",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "o2IHQ",
+                          "name": "Exported File api_reference.epub",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "$surface",
+                          "cornerRadius": 6,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "gap": 9,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "yzzhl",
+                              "name": "Exported File Icon api_reference.epub",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "file-check-2",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ycO55",
+                              "name": "Exported File Name api_reference.epub",
+                              "fill": "$foreground",
+                              "content": "api_reference.epub",
+                              "fontFamily": "Geist",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "lahyB",
+                              "name": "Exported File Type api_reference.epub",
+                              "fill": "$foregroundMuted",
+                              "content": "EPUB",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "f32d4",
+                              "name": "Exported File Spacer api_reference.epub",
+                              "opacity": 0,
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "L2S4xm",
+                              "name": "Exported File Size api_reference.epub",
+                              "fill": "$foregroundMuted",
+                              "content": "1.1 MB",
+                              "fontFamily": "Geist Mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "l5lV38",
+                              "name": "Open Exported File api_reference.epub",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "external-link",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "q9obT",
+                              "name": "Download Exported File api_reference.epub",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "download",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JhEPJ",
+          "name": "Statusbar",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$surfaceSecondary",
+          "stroke": "$border",
+          "strokeWidth": {
+            "top": 1
+          },
+          "gap": 8,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "GzrW1",
+              "name": "StatusDot",
+              "fill": "$success",
+              "width": 7,
+              "height": 7
+            },
+            {
+              "type": "text",
+              "id": "Amruo",
+              "name": "StatusAddress",
+              "fill": "$foregroundMuted",
+              "content": "服务已连接",
+              "fontFamily": "Geist",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
@@ -1507,5 +3359,6 @@
       "type": "color",
       "value": "#EF4444FF"
     }
-  }
+  },
+  "fileToken": "9f0b2e9b-f8a5-48e9-9e81-9716ec03c2ac"
 }

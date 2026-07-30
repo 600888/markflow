@@ -9,6 +9,13 @@ import {
 import { toast } from "./ui/toast";
 import { Progress } from "./ui/progress";
 import { cn } from "../lib/utils";
+import { getResponseFileName, saveBlob } from "../services/history";
+
+function getOutputFileName(sourceFileName: string, format: string): string {
+  const extension = format === "latex" ? "tex" : format;
+  const baseName = sourceFileName.replace(/\.[^.]+$/, "") || "output";
+  return `${baseName}.${extension}`;
+}
 
 export function ConvertSection() {
   const file = useStore((s) => s.file);
@@ -52,9 +59,10 @@ export function ConvertSection() {
       const metadata: Record<string, string> = {};
       if (metaTitle) metadata["title"] = metaTitle;
       if (metaAuthor) metadata["author"] = metaAuthor;
+      const sourceFileName = fileName || "document.md";
       const { task_id } = await submitConvertFromContent(
         content,
-        fileName || "document.md",
+        sourceFileName,
         format,
         template,
         toc,
@@ -118,27 +126,9 @@ export function ConvertSection() {
       }
 
       const blob = new Blob(chunks);
-      const ext = format === "latex" ? "tex" : format;
-      const m: Record<string, string> = {
-        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        pdf: "application/pdf",
-        html: "text/html",
-        epub: "application/epub+zip",
-      };
       setDownloadProgress(100);
-
-      const h = await window.showSaveFilePicker({
-        suggestedName: `output.${ext}`,
-        types: [
-          {
-            description: format.toUpperCase(),
-            accept: { [m[format] ?? "application/octet-stream"]: [`.${ext}`] },
-          },
-        ],
-      });
-      const w = await h.createWritable();
-      await w.write(blob);
-      await w.close();
+      const fallbackName = getOutputFileName(fileName || "document.md", format);
+      await saveBlob(blob, getResponseFileName(r, fallbackName));
       toast("文件保存成功", "success");
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === "AbortError") return;

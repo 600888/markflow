@@ -75,24 +75,21 @@ export async function submitConvert(
   convertImages: boolean = true,
   convertMermaid: boolean = true,
 ): Promise<{ task_id: string; status: string; message: string }> {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("output_format", outputFormat);
-  if (templateSlug) form.append("template_slug", templateSlug);
-  if (toc) {
-    form.append("toc", "true");
-    form.append("toc_depth", String(tocDepth));
-  }
-  form.append("title_page", titlePage ? "true" : "false");
-  if (pageHeader.trim()) form.append("page_header", pageHeader.trim());
-  form.append("formula_position", formulaPosition);
-  form.append("keep_separator", keepSeparator ? "true" : "false");
-  form.append("convert_images", convertImages ? "true" : "false");
-  form.append("convert_mermaid", convertMermaid ? "true" : "false");
-  if (Object.keys(metadata).length > 0) {
-    form.append("metadata", JSON.stringify(metadata));
-  }
-  return api().post("convert", { body: form }).json();
+  return submitConvertFromContent(
+    await file.text(),
+    file.name,
+    outputFormat,
+    templateSlug,
+    toc,
+    tocDepth,
+    metadata,
+    titlePage,
+    pageHeader,
+    formulaPosition,
+    keepSeparator,
+    convertImages,
+    convertMermaid,
+  );
 }
 
 /** 直接用 Markdown 文本内容提交转换（无需上传文件） */
@@ -111,24 +108,28 @@ export async function submitConvertFromContent(
   convertImages: boolean = true,
   convertMermaid: boolean = true,
 ): Promise<{ task_id: string; status: string; message: string }> {
-  const blob = new Blob([content], { type: "text/markdown" });
-  const file = new File([blob], fileName || "document.md", {
-    type: "text/markdown",
-  });
-  return submitConvert(
-    file,
-    outputFormat,
-    templateSlug,
-    toc,
-    tocDepth,
-    metadata,
-    titlePage,
-    pageHeader,
-    formulaPosition,
-    keepSeparator,
-    convertImages,
-    convertMermaid,
-  );
+  return api()
+    .post("convert", {
+      json: {
+        file_name: fileName || "document.md",
+        content,
+        output_format: outputFormat,
+        template_slug: templateSlug || "academic",
+        options: {
+          toc,
+          toc_depth: tocDepth,
+          metadata,
+          title_page: titlePage,
+          page_header: pageHeader.trim(),
+          formula_position: formulaPosition,
+          keep_separator: keepSeparator,
+          convert_images: convertImages,
+          convert_mermaid: convertMermaid,
+        },
+      },
+      timeout: 60_000,
+    })
+    .json();
 }
 
 export async function fetchTaskStatus(taskId: string): Promise<TaskStatus> {
@@ -180,7 +181,7 @@ export async function fetchCustomTemplates(): Promise<{
 }
 
 export async function deleteTemplate(slug: string): Promise<void> {
-  await api().delete(`templates/${slug}`);
+  await api().post("templates/delete", { json: { slug } });
 }
 
 // ==== 日志 ====
@@ -201,7 +202,7 @@ export async function fetchLogs(
 }
 
 export async function clearLogs(): Promise<void> {
-  await api().delete("logs");
+  await api().post("logs/clear", { json: { confirm: true } });
 }
 
 // ==== 模块管理 ====

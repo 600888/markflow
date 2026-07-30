@@ -14,8 +14,9 @@ from loguru import logger
 from app.api.errors import register_error_handlers
 from app.api.router import init, router
 from app.core.engine import PandocEngine
-from app.core.file_manager import TempFileManager
 from app.core.template_manager import TemplateManager
+from app.db import ConversionRepository, Database
+from app.services.artifact_storage import ArtifactStorage
 from app.services.converter import ConversionService
 from app.services.log_service import LogService, install_loguru_sink
 from app.services.template_generator import TemplateGenerator
@@ -28,7 +29,9 @@ def _parse_cli_args() -> argparse.Namespace:
     """解析命令行参数（Tauri sidecar 传入 --port 和 --data-dir）"""
     parser = argparse.ArgumentParser(description="MarkFlow Backend")
     parser.add_argument("--port", type=int, default=None, help="服务端口号")
-    parser.add_argument("--data-dir", type=str, default=None, help="数据资源目录（含 Pandoc MSI 等）")
+    parser.add_argument(
+        "--data-dir", type=str, default=None, help="数据资源目录（含 Pandoc MSI 等）"
+    )
     args, _ = parser.parse_known_args()
     return args
 
@@ -46,13 +49,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     logger.info("MarkFlow 后端启动，端口: {}", settings.port)
 
     # 依赖组装
+    database = Database(settings.data_dir)
+    database.initialize()
+    repository = ConversionRepository(database.session_factory)
+    interrupted = repository.mark_interrupted()
+    if interrupted:
+        logger.warning("已将 {} 个未完成任务标记为中断", interrupted)
+
     engine = PandocEngine(settings)
-    file_mgr = TempFileManager(settings)
+    artifact_storage = ArtifactStorage(settings.data_dir)
     template_mgr = TemplateManager()
     template_gen = TemplateGenerator()
     conv_svc = ConversionService(
         engine=engine,
-        file_manager=file_mgr,
+        repository=repository,
+        artifact_storage=artifact_storage,
         max_file_size=settings.max_file_size,
         max_concurrent=settings.max_concurrent_tasks,
     )
@@ -62,7 +73,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     install_loguru_sink(log_svc)
 
     # 注入到路由层
-    init(conv_svc, template_mgr, template_gen, log_svc=log_svc)
+    init(
+        conv_svc,
+        template_mgr,
+        template_gen,
+        log_svc=log_svc,
+        repository=repository,
+        artifact_storage=artifact_storage,
+    )
 
     # ── 启动时检查 Mermaid 和 Pandoc 环境 ──
     from app.core.mermaid_renderer import get_diagnostic_message as mermaid_diag
@@ -80,6 +98,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     yield
 
     logger.info("MarkFlow 后端关闭")
+    database.close()
 
 
 settings = AppSettings()

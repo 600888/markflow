@@ -2,6 +2,48 @@ use tauri::Manager;
 
 mod backend;
 
+#[tauri::command]
+async fn open_temp_file(file_name: String, bytes: Vec<u8>) -> Result<(), String> {
+    let safe_name = std::path::Path::new(&file_name)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .unwrap_or("document");
+    let preview_id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_millis();
+    let directory = std::env::temp_dir()
+        .join("markflow")
+        .join("history-preview")
+        .join(preview_id.to_string());
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let path = directory.join(safe_name);
+    std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = std::process::Command::new("explorer.exe");
+        command.arg(&path);
+        command
+    };
+    #[cfg(target_os = "macos")]
+    let mut command = {
+        let mut command = std::process::Command::new("open");
+        command.arg(&path);
+        command
+    };
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = {
+        let mut command = std::process::Command::new("xdg-open");
+        command.arg(&path);
+        command
+    };
+
+    command.spawn().map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -35,6 +77,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             backend::get_backend_url,
             backend::is_backend_ready,
+            open_temp_file,
         ])
         .build(tauri::generate_context!())
         .expect("启动 MarkFlow 失败");

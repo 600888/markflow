@@ -6,10 +6,14 @@ import asyncio
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.core.interfaces import ConversionEngine, FileManager
+from app.core.interfaces import ConversionEngine
+from app.db.repository import ConversionRepository
 from app.models import ConversionResult, ConversionStatus, ConversionTask, OutputFormat
+from app.services.artifact_storage import ArtifactStorage
 from app.services.log import log
 from app.utils.exceptions import FileTooLargeError
+
+PROGRESS_PERSIST_STEP = 0.05
 
 
 class ConversionService:
@@ -18,12 +22,14 @@ class ConversionService:
     def __init__(
         self,
         engine: ConversionEngine,
-        file_manager: FileManager,
+        repository: ConversionRepository,
+        artifact_storage: ArtifactStorage,
         max_file_size: int = 50 * 1024 * 1024,
         max_concurrent: int = 4,
     ) -> None:
         self._engine = engine
-        self._file_manager = file_manager
+        self._repository = repository
+        self._artifact_storage = artifact_storage
         self._max_file_size = max_file_size
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._tasks: dict[UUID, ConversionTask] = {}
@@ -35,6 +41,7 @@ class ConversionService:
         output_format: OutputFormat,
         extra_args: list[str] | None = None,
         template_slug: str | None = None,
+        options: dict | None = None,
         *,
         convert_images: bool = True,
         convert_mermaid: bool = True,
@@ -45,9 +52,14 @@ class ConversionService:
                 f"文件大小 {len(content)} 超过上限 {self._max_file_size} bytes",
             )
 
-        input_path = await self._file_manager.save_upload(content, filename)
+        task_id = uuid4()
+        input_path, source_artifact = await self._artifact_storage.save_source(
+            task_id,
+            content,
+            filename,
+        )
         task = ConversionTask(
-            task_id=uuid4(),
+            task_id=task_id,
             input_path=input_path,
             output_format=output_format,
             template_slug=template_slug,
@@ -55,6 +67,11 @@ class ConversionService:
             convert_mermaid=convert_mermaid,
             extra_args=extra_args or [],
         )
+        try:
+            self._repository.create_job(task, filename, options or {}, source_artifact)
+        except Exception:
+            self._artifact_storage.delete_task(task_id)
+            raise
         self._tasks[task.task_id] = task
         return task
 
@@ -67,15 +84,25 @@ class ConversionService:
 
         task.status = ConversionStatus.RUNNING
         task.progress = 0.0
+        self._repository.mark_running(task_id)
+        last_persisted_progress = 0.0
+        working_path = self._artifact_storage.prepare_working_copy(
+            task_id,
+            task.input_path,
+        )
 
         async def _on_progress(pct: float, msg: str = "") -> None:
+            nonlocal last_persisted_progress
             task.progress = pct
+            if pct >= 1.0 or pct - last_persisted_progress >= PROGRESS_PERSIST_STEP:
+                self._repository.update_progress(task_id, pct)
+                last_persisted_progress = pct
             log.debug(f"任务 {task_id}: {pct * 100:.0f}% - {msg}")
 
         try:
             async with self._semaphore:
                 result = await self._engine.convert(
-                    input_path=task.input_path,
+                    input_path=working_path,
                     output_format=task.output_format,
                     extra_args=task.extra_args,
                     template_slug=task.template_slug,
@@ -85,10 +112,23 @@ class ConversionService:
                 )
 
             result.task_id = task_id
+            result.output_path = self._artifact_storage.persist_output(
+                task_id,
+                result.output_path,
+            )
             task.status = ConversionStatus.COMPLETED
             task.progress = 1.0
             task.completed_at = datetime.now(UTC)
             task.output_path = result.output_path
+            output_artifact = self._artifact_storage.describe(
+                result.output_path,
+                "output",
+            )
+            self._repository.mark_completed(
+                task_id,
+                duration_ms=result.duration_ms,
+                output_artifact=output_artifact,
+            )
 
             return result
 
@@ -96,11 +136,29 @@ class ConversionService:
             task.status = ConversionStatus.FAILED
             task.error = str(e)
             task.completed_at = datetime.now(UTC)
+            self._repository.mark_failed(task_id, str(e))
             log.error(f"任务 {task_id} 失败: {e}")
             raise
         finally:
-            await self._file_manager.cleanup(task.input_path)
+            self._artifact_storage.cleanup_work(task_id)
 
     def get_task(self, task_id: UUID) -> ConversionTask | None:
         """查询任务"""
-        return self._tasks.get(task_id)
+        task = self._tasks.get(task_id)
+        if task is not None:
+            return task
+        task = self._repository.get_task(task_id)
+        if task is None:
+            return None
+        job = self._repository.get_job(task_id)
+        if job is not None:
+            artifacts = {artifact.kind: artifact for artifact in job.artifacts}
+            if source := artifacts.get("source"):
+                task.input_path = self._artifact_storage.resolve(source.relative_path)
+            if output := artifacts.get("output"):
+                task.output_path = self._artifact_storage.resolve(output.relative_path)
+        return task
+
+    def forget_task(self, task_id: UUID | str) -> None:
+        """删除历史后同步清理运行时任务缓存。"""
+        self._tasks.pop(UUID(str(task_id)), None)

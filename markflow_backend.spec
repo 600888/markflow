@@ -22,6 +22,7 @@ datas = [
     (str(BACKEND_DIR / "templates"), "templates"),
     (str(BACKEND_DIR / "filters"), "filters"),
     (str(BACKEND_DIR / "static"), "static"),
+    (str(BACKEND_DIR / "migrations"), "migrations"),
 ]
 
 hiddenimports = [
@@ -37,6 +38,12 @@ hiddenimports = [
     "uvicorn.lifespan",
     "uvicorn.lifespan.on",
     "sse_starlette",
+    "sqlalchemy",
+    "sqlalchemy.dialects.sqlite",
+    "alembic",
+    "alembic.ddl.sqlite",
+    "alembic.runtime.migration",
+    "mako",
 ]
 
 a = Analysis(
@@ -54,7 +61,6 @@ a = Analysis(
         "pandas",
         "numpy",
         "matplotlib",
-        "sqlalchemy",
         "tkinter",
         "_tkinter",
     ],

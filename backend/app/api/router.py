@@ -10,19 +10,26 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, Response
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.log import log
 from app.api.schemas import (
+    ConfirmRequest,
+    ConvertRequest,
     ConvertResponse,
     HealthResponse,
+    HistoryArtifactResponse,
+    HistoryItemResponse,
+    HistoryListResponse,
     LogEntryResponse,
     LogListResponse,
     MermaidRenderRequest,
     MermaidStatusResponse,
     PandocStatusResponse,
+    SlugRequest,
+    TaskIdRequest,
     TaskStatusResponse,
     TemplateGenerateRequest,
     TemplateGenerateResponse,
@@ -32,7 +39,9 @@ from app.api.schemas import (
 from app.core.browser_check import edge_manager
 from app.core.pandoc_check import pandoc_manager
 from app.core.template_manager import TemplateManager
+from app.db.repository import ConversionRepository
 from app.models.models import ConversionStatus, OutputFormat
+from app.services.artifact_storage import ArtifactStorage
 from app.services.converter import ConversionService
 from app.services.log_service import LogService
 from app.services.template_generator import TemplateGenerator
@@ -44,6 +53,8 @@ _conv_service: ConversionService | None = None
 _template_mgr: TemplateManager | None = None
 _template_gen: TemplateGenerator | None = None
 _log_svc: LogService | None = None
+_repository: ConversionRepository | None = None
+_artifact_storage: ArtifactStorage | None = None
 
 
 def init(
@@ -51,13 +62,29 @@ def init(
     mgr: TemplateManager,
     gen: TemplateGenerator,
     log_svc: LogService | None = None,
+    repository: ConversionRepository | None = None,
+    artifact_storage: ArtifactStorage | None = None,
 ) -> None:
     """初始化全局服务实例"""
-    global _conv_service, _template_mgr, _template_gen, _log_svc
+    global _conv_service, _template_mgr, _template_gen, _log_svc, _repository, _artifact_storage
     _conv_service = svc
     _template_mgr = mgr
     _template_gen = gen
     _log_svc = log_svc
+    _repository = repository
+    _artifact_storage = artifact_storage
+
+
+def get_repository() -> ConversionRepository:
+    if _repository is None:
+        raise RuntimeError("ConversionRepository 未初始化")
+    return _repository
+
+
+def get_artifact_storage() -> ArtifactStorage:
+    if _artifact_storage is None:
+        raise RuntimeError("ArtifactStorage 未初始化")
+    return _artifact_storage
 
 
 def get_log_svc() -> LogService:
@@ -170,11 +197,12 @@ async def list_custom_templates(
     return TemplateListResponse(templates=[TemplateItem(**t) for t in items])
 
 
-@router.delete("/templates/{slug}")
+@router.post("/templates/delete")
 async def delete_template(
-    slug: str,
+    req: SlugRequest,
     gen: Annotated[TemplateGenerator, Depends(get_gen)],
 ) -> dict:
+    slug = req.slug
     # 仅允许删除自定义模版
     custom_gen = gen.list_custom_templates()
     if not any(t["slug"] == slug for t in custom_gen):
@@ -186,71 +214,57 @@ async def delete_template(
 # ========== 文件转换 ==========
 @router.post("/convert", response_model=ConvertResponse)
 async def convert(
-    file: Annotated[UploadFile, File()],
-    output_format: Annotated[str, Form()] = "docx",
-    template_slug: Annotated[str, Form()] = "academic",
-    title_page: Annotated[str, Form()] = "false",
-    page_header: Annotated[str, Form()] = "",
-    toc: Annotated[str, Form()] = "false",
-    toc_depth: Annotated[int, Form()] = 3,
-    formula_position: Annotated[str, Form()] = "inline",
-    keep_separator: Annotated[str, Form()] = "true",
-    convert_images: Annotated[str, Form()] = "true",
-    convert_mermaid: Annotated[str, Form()] = "true",
-    metadata: Annotated[str | None, Form()] = None,
+    req: ConvertRequest,
     svc: Annotated[ConversionService | None, Depends(get_svc)] = None,
     mgr: Annotated[TemplateManager | None, Depends(get_mgr)] = None,
 ) -> ConvertResponse:
     # 解析输出格式
     try:
-        fmt = OutputFormat(output_format)
+        fmt = OutputFormat(req.output_format)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"不支持的格式: {output_format}")
+        raise HTTPException(status_code=400, detail=f"不支持的格式: {req.output_format}")
 
-    # 读取文件
-    content = await file.read()
+    content = req.content.encode("utf-8")
     if not content:
         raise HTTPException(status_code=400, detail="文件为空")
 
     # 组装额外参数
     from app.models.templates import ConversionOptions
 
-    parsed_metadata = _parse_metadata(metadata)
-    if title_page.lower() == "true" and not parsed_metadata.get("title"):
+    parsed_metadata = dict(req.options.metadata)
+    if req.options.title_page and not parsed_metadata.get("title"):
         markdown_title = _extract_markdown_title(content)
-        parsed_metadata["title"] = markdown_title or Path(
-            file.filename or "document",
-        ).stem
+        parsed_metadata["title"] = markdown_title or Path(req.file_name).stem
 
     options = ConversionOptions(
-        template_slug=template_slug,
-        title_page=(title_page.lower() == "true"),
-        page_header=page_header,
-        toc=(toc.lower() == "true"),
-        toc_depth=toc_depth,
-        formula_position=formula_position,
-        keep_separator=(keep_separator.lower() == "true"),
-        convert_images=(convert_images.lower() == "true"),
-        convert_mermaid=(convert_mermaid.lower() == "true"),
+        template_slug=req.template_slug,
+        title_page=req.options.title_page,
+        page_header=req.options.page_header,
+        toc=req.options.toc,
+        toc_depth=req.options.toc_depth,
+        formula_position=req.options.formula_position,
+        keep_separator=req.options.keep_separator,
+        convert_images=req.options.convert_images,
+        convert_mermaid=req.options.convert_mermaid,
         metadata=parsed_metadata,
     )
     extra_args = mgr.build_extra_args(options)
     log.info(
-        f"模版={template_slug}, title_page={title_page}, page_header={page_header!r}, "
-        f"toc={toc}, formula={formula_position}, "
-        f"keep_sep={keep_separator}, convert_images={convert_images}, "
-        f"convert_mermaid={convert_mermaid}, "
+        f"模版={req.template_slug}, title_page={options.title_page}, "
+        f"page_header={options.page_header!r}, toc={options.toc}, "
+        f"formula={options.formula_position}, keep_sep={options.keep_separator}, "
+        f"convert_images={options.convert_images}, convert_mermaid={options.convert_mermaid}, "
         f"metadata={options.metadata}, args={extra_args}"
     )
 
     # 提交任务
-    filename = file.filename or "input.md"
     task = await svc.submit(
         content,
-        filename,
+        req.file_name,
         fmt,
         extra_args,
-        template_slug,
+        req.template_slug,
+        options=options.model_dump(mode="json"),
         convert_images=options.convert_images,
         convert_mermaid=options.convert_mermaid,
     )
@@ -348,6 +362,92 @@ async def download_result(
     )
 
 
+# ========== 历史记录 ==========
+@router.get("/history", response_model=HistoryListResponse)
+async def list_history(
+    search: str = "",
+    days: Annotated[int | None, Query(ge=1, le=3650)] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    repository: Annotated[ConversionRepository, Depends(get_repository)] = None,
+) -> HistoryListResponse:
+    jobs, total, output_bytes = repository.list_history(
+        search=search,
+        days=days,
+        limit=limit,
+        offset=offset,
+    )
+    return HistoryListResponse(
+        items=[_history_item(job) for job in jobs],
+        total=total,
+        output_bytes=output_bytes,
+    )
+
+
+@router.get("/history/{task_id}", response_model=HistoryItemResponse)
+async def get_history(
+    task_id: UUID,
+    repository: Annotated[ConversionRepository, Depends(get_repository)],
+) -> HistoryItemResponse:
+    job = repository.get_job(task_id)
+    if job is None or job.status != ConversionStatus.COMPLETED.value:
+        raise HTTPException(status_code=404, detail="历史记录不存在")
+    return _history_item(job)
+
+
+@router.get("/history/{task_id}/{kind}")
+async def download_history_artifact(
+    task_id: UUID,
+    kind: str,
+    repository: Annotated[ConversionRepository, Depends(get_repository)],
+    storage: Annotated[ArtifactStorage, Depends(get_artifact_storage)],
+) -> FileResponse:
+    if kind not in {"source", "output"}:
+        raise HTTPException(status_code=404, detail="历史文件不存在")
+    job = repository.get_job(task_id)
+    if job is None or job.status != ConversionStatus.COMPLETED.value:
+        raise HTTPException(status_code=404, detail="历史记录不存在")
+    artifact = next((item for item in job.artifacts if item.kind == kind), None)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="历史文件不存在")
+    path = storage.resolve(artifact.relative_path)
+    if not path.is_file():
+        raise HTTPException(status_code=410, detail="历史文件已丢失")
+    return FileResponse(path, media_type=artifact.content_type, filename=artifact.file_name)
+
+
+@router.post("/history/delete")
+async def delete_history(
+    req: TaskIdRequest,
+    repository: Annotated[ConversionRepository, Depends(get_repository)],
+    storage: Annotated[ArtifactStorage, Depends(get_artifact_storage)],
+    svc: Annotated[ConversionService, Depends(get_svc)],
+) -> dict:
+    job = repository.get_job(req.task_id)
+    if job is None or job.status != ConversionStatus.COMPLETED.value:
+        raise HTTPException(status_code=404, detail="历史记录不存在")
+    storage.delete_task(req.task_id)
+    repository.delete_job(req.task_id)
+    svc.forget_task(req.task_id)
+    return {"detail": "历史记录已删除"}
+
+
+@router.post("/history/clear")
+async def clear_history(
+    req: ConfirmRequest,
+    repository: Annotated[ConversionRepository, Depends(get_repository)],
+    storage: Annotated[ArtifactStorage, Depends(get_artifact_storage)],
+    svc: Annotated[ConversionService, Depends(get_svc)],
+) -> dict:
+    if not req.confirm:
+        raise HTTPException(status_code=400, detail="需要确认清空历史记录")
+    task_ids = repository.clear_history()
+    for task_id in task_ids:
+        storage.delete_task(task_id)
+        svc.forget_task(task_id)
+    return {"detail": "历史记录已清空", "deleted": len(task_ids)}
+
+
 # ========== 日志 ==========
 @router.get("/logs", response_model=LogListResponse)
 async def get_logs(
@@ -364,10 +464,13 @@ async def get_logs(
     return LogListResponse(logs=[LogEntryResponse(**e) for e in logs], total=len(logs))
 
 
-@router.delete("/logs")
+@router.post("/logs/clear")
 async def clear_logs(
+    req: ConfirmRequest,
     log_svc: Annotated[LogService, Depends(get_log_svc)] = None,
 ) -> dict:
+    if not req.confirm:
+        raise HTTPException(status_code=400, detail="需要确认清空日志")
     log_svc.clear()
     return {"detail": "日志已清空"}
 
@@ -393,9 +496,7 @@ async def _install_mermaid_flow():
     ok = edge_manager.is_ready()
     yield {
         "event": "progress",
-        "data": json.dumps(
-            {"progress": 100, "message": "Edge 已就绪" if ok else "未找到 Edge"}
-        ),
+        "data": json.dumps({"progress": 100, "message": "Edge 已就绪" if ok else "未找到 Edge"}),
     }
     yield {"event": "completed", "data": json.dumps({"success": ok})}
 
@@ -555,3 +656,36 @@ def _extract_markdown_title(content: bytes) -> str:
         if heading:
             return heading.group(1).strip()
     return ""
+
+
+def _history_item(job) -> HistoryItemResponse:
+    artifacts = {artifact.kind: artifact for artifact in job.artifacts}
+    source = artifacts.get("source")
+    output = artifacts.get("output")
+    if source is None or output is None:
+        raise HTTPException(status_code=500, detail=f"历史记录 {job.id} 的文件索引不完整")
+
+    def artifact_response(artifact) -> HistoryArtifactResponse:
+        return HistoryArtifactResponse(
+            kind=artifact.kind,
+            file_name=artifact.file_name,
+            content_type=artifact.content_type,
+            size_bytes=artifact.size_bytes,
+            sha256=artifact.sha256,
+        )
+
+    return HistoryItemResponse(
+        task_id=job.id,
+        status=job.status,
+        source_file_name=job.source_file_name,
+        output_format=job.output_format,
+        template_slug=job.template_slug,
+        options=job.options_json,
+        progress=job.progress,
+        error_message=job.error_message,
+        duration_ms=job.duration_ms,
+        created_at=job.created_at,
+        completed_at=job.completed_at,
+        source=artifact_response(source),
+        output=artifact_response(output),
+    )

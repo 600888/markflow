@@ -6,6 +6,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
+from config.paths import DATA_DIR
+
 
 class AppSettings(BaseSettings):
     """全局应用配置"""
@@ -23,6 +25,7 @@ class AppSettings(BaseSettings):
     max_file_size: int = 50 * 1024 * 1024
     temp_dir: Path = Path("temp")
     output_dir: Path = Path("output")
+    data_dir: Path = DATA_DIR
 
     # 并发
     max_concurrent_tasks: int = 4

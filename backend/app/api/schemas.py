@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -29,6 +30,26 @@ class MermaidRenderRequest(BaseModel):
 
 
 # ========== 转换 ==========
+class ConversionOptionsRequest(BaseModel):
+    title_page: bool = False
+    page_header: str = ""
+    toc: bool = False
+    toc_depth: int = Field(default=3, ge=1, le=6)
+    formula_position: Literal["inline", "display", "smart"] = "inline"
+    keep_separator: bool = True
+    convert_images: bool = True
+    convert_mermaid: bool = True
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+
+class ConvertRequest(BaseModel):
+    file_name: str = Field(default="document.md", min_length=1, max_length=255)
+    content: str = Field(..., min_length=1)
+    output_format: str = "docx"
+    template_slug: str = "academic"
+    options: ConversionOptionsRequest = Field(default_factory=ConversionOptionsRequest)
+
+
 class ConvertResponse(BaseModel):
     task_id: str
     status: str
@@ -40,6 +61,49 @@ class TaskStatusResponse(BaseModel):
     task_id: str
     status: str
     progress: float
+
+
+# ========== 历史记录 ==========
+class HistoryArtifactResponse(BaseModel):
+    kind: str
+    file_name: str
+    content_type: str
+    size_bytes: int
+    sha256: str
+
+
+class HistoryItemResponse(BaseModel):
+    task_id: str
+    status: str
+    source_file_name: str
+    output_format: str
+    template_slug: str | None
+    options: dict
+    progress: float
+    error_message: str | None
+    duration_ms: int | None
+    created_at: datetime
+    completed_at: datetime | None
+    source: HistoryArtifactResponse
+    output: HistoryArtifactResponse
+
+
+class HistoryListResponse(BaseModel):
+    items: list[HistoryItemResponse]
+    total: int
+    output_bytes: int
+
+
+class ConfirmRequest(BaseModel):
+    confirm: bool = False
+
+
+class TaskIdRequest(BaseModel):
+    task_id: str
+
+
+class SlugRequest(BaseModel):
+    slug: str
 
 
 # ========== 错误 ==========

@@ -1,6 +1,6 @@
 [project]
 name = "markflow-backend"
-version = "1.4.0"
+version = "2.0.0"
 description = "Markdown to Word/PDF/HTML conversion service"
 requires-python = ">=3.11"
 
@@ -17,6 +17,8 @@ dependencies = [
     "loguru>=0.7.3",
     "pyyaml>=6.0",
     "pillow>=10.0.0",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14.0",
 ]
 
 [project.optional-dependencies]
