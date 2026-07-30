@@ -7,7 +7,6 @@ use std::os::windows::process::CommandExt;
 
 use reqwest::Client;
 use tauri::AppHandle;
-use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
 
@@ -66,6 +65,40 @@ static BACKEND_PROCESS: Mutex<Option<ProcessHandle>> = Mutex::new(None);
 static BACKEND_PORT: Mutex<u16> = Mutex::new(62581);
 static BACKEND_READY: Mutex<bool> = Mutex::new(false);
 
+/// 返回持久化数据目录。
+///
+/// 开发环境使用项目根目录下的 data；打包环境使用可执行文件（安装目录）
+/// 旁边的 data，确保历史数据库和“打开输出目录”指向同一位置。
+pub fn data_directory() -> Result<std::path::PathBuf, String> {
+    #[cfg(debug_assertions)]
+    {
+        let current_dir = std::env::current_dir().map_err(|error| error.to_string())?;
+        let project_root = if current_dir.join("start_back_end.py").is_file() {
+            current_dir
+        } else if current_dir
+            .parent()
+            .is_some_and(|parent| parent.join("start_back_end.py").is_file())
+        {
+            current_dir
+                .parent()
+                .expect("parent checked above")
+                .to_path_buf()
+        } else {
+            return Err("无法定位开发环境的数据目录".to_string());
+        };
+        Ok(project_root.join("data"))
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        let executable = std::env::current_exe().map_err(|error| error.to_string())?;
+        let install_directory = executable
+            .parent()
+            .ok_or_else(|| "无法定位 MarkFlow 安装目录".to_string())?;
+        Ok(install_directory.join("data"))
+    }
+}
+
 /// 同步启动后端进程并注册到静态变量，返回后端 URL。
 /// 必须在 `setup()` 中同步调用，确保窗口打开前 handle 已注册。
 pub fn spawn_backend(app: &AppHandle) -> String {
@@ -107,11 +140,8 @@ fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
 
     let mut cmd = sidecar_cmd.args(["--port", &port.to_string()]);
 
-    let data_dir = app
-        .path()
-        .app_local_data_dir()
+    let data_dir = data_directory()
         .ok()
-        .map(|dir| dir.join("data"))
         .filter(|dir| match std::fs::create_dir_all(dir) {
             Ok(()) => true,
             Err(error) => {
@@ -134,10 +164,7 @@ fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
         cmd = cmd.args(["--data-dir", &dir_str]);
     } else {
         eprintln!("[MarkFlow] WARN: cannot create app data directory");
-        eprintln!(
-            "[MarkFlow]   app_local_data_dir: {:?}",
-            app.path().app_local_data_dir()
-        );
+        eprintln!("[MarkFlow]   data_directory: {:?}", data_directory());
     }
 
     let (_, child) = cmd.spawn().ok()?;

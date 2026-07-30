@@ -45,3 +45,13 @@ export async function initializeBackend(): Promise<string> {
   const url = await getBackendUrl();
   return url;
 }
+
+/** 使用系统文件管理器打开持久化导出文件所在目录。 */
+export async function openOutputDirectory(): Promise<void> {
+  if (!isTauri()) {
+    throw new Error("打开输出目录仅支持桌面应用");
+  }
+
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_output_directory");
+}

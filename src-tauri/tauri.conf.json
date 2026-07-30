@@ -42,6 +42,7 @@
       "binaries/markflow-service"
     ],
     "resources": {
+      "../data/pandoc-*-windows-x86_64.msi": "data/",
       "binaries/markflow-service-runtime/": "markflow-service-runtime/"
     },
     "windows": {

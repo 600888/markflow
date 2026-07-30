@@ -3,6 +3,7 @@ import { X, Search } from "lucide-react";
 import { useStore } from "../stores/useStore";
 import { fetchLogs, clearLogs } from "../services/api";
 import type { LogEntry } from "../types";
+import { formatLogTime } from "../lib/date";
 
 type LogLevel = "ALL" | "INFO" | "WARN" | "ERROR";
 
@@ -75,7 +76,7 @@ export function LogPanel() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-[600px] h-[520px] rounded-lg shadow-xl bg-background border border-border flex flex-col overflow-hidden">
+      <div className="w-[800px] h-[640px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] rounded-lg shadow-xl bg-background border border-border flex flex-col overflow-hidden">
         {/* 标题栏 */}
         <div className="flex items-center h-11 px-4 bg-muted border-b border-border flex-shrink-0 gap-2">
           <div className="flex-1" />
@@ -149,8 +150,8 @@ export function LogPanel() {
                   key={`${entry.timestamp}-${i}`}
                   className="flex items-start py-1.5 px-3 rounded gap-2.5 hover:bg-accent/40 transition-colors"
                 >
-                  <span className="w-20 flex-shrink-0 text-[11px] font-mono text-muted-foreground font-medium leading-5">
-                    {entry.timestamp.split(" ")[1] || entry.timestamp}
+                  <span className="w-44 flex-shrink-0 text-[11px] font-mono text-muted-foreground font-medium leading-5">
+                    {formatLogTime(entry.timestamp)}
                   </span>
                   <span
                     className={`inline-flex items-center justify-center h-[18px] px-2 rounded-[3px] text-[10px] font-mono font-semibold flex-shrink-0 mt-[2px] ${badge.cls}`}

@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileCheck2,
   FileText,
+  FolderOpen,
   History,
   Search,
   Trash2,
@@ -17,6 +18,7 @@ import {
   saveHistoryArtifact,
   type ConversionHistoryRecord,
 } from "../services/history";
+import { openOutputDirectory } from "../services/tauri";
 import { toast } from "./ui/toast";
 
 type TimeFilter = "7" | "30" | "all";
@@ -168,6 +170,14 @@ export function HistoryPage() {
     }
   };
 
+  const handleOpenOutputDirectory = async () => {
+    try {
+      await openOutputDirectory();
+    } catch {
+      toast("打开输出目录失败", "error");
+    }
+  };
+
   return (
     <main className="flex-1 overflow-auto bg-background px-8 py-6">
       <div className="mx-auto flex w-full max-w-[1340px] flex-col gap-[18px]">
@@ -178,15 +188,25 @@ export function HistoryPage() {
               查看原始文件及其导出结果，可随时重新打开或下载
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={!records.length}
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Trash2 size={14} />
-            清空记录
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={!records.length}
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={14} />
+              清空记录
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleOpenOutputDirectory()}
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <FolderOpen size={15} />
+              打开输出目录
+            </button>
+          </div>
         </header>
 
         <section className="grid min-h-[66px] grid-cols-3 divide-x divide-border overflow-hidden rounded-lg border border-border bg-card">

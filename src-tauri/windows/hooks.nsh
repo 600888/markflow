@@ -6,12 +6,21 @@
   ; Tauri 2 将资源文件存放在 _up_ 目录下（保留原相对路径结构）
   StrCpy $R0 ""
 
-  ; _up_/data/pandoc-*.msi（Tauri 2 标准路径）
-  FindFirst $0 $R1 "$INSTDIR\_up_\data\pandoc*.msi"
+  ; data/pandoc-*.msi（tauri.conf.json 显式映射的资源路径）
+  FindFirst $0 $R1 "$INSTDIR\data\pandoc*.msi"
   ${If} $R1 != ""
-    StrCpy $R0 "$INSTDIR\_up_\data\$R1"
+    StrCpy $R0 "$INSTDIR\data\$R1"
   ${EndIf}
   FindClose $0
+
+  ; _up_/data/pandoc-*.msi（Tauri 2 标准路径）
+  ${If} $R0 == ""
+    FindFirst $0 $R1 "$INSTDIR\_up_\data\pandoc*.msi"
+    ${If} $R1 != ""
+      StrCpy $R0 "$INSTDIR\_up_\data\$R1"
+    ${EndIf}
+    FindClose $0
+  ${EndIf}
 
   ; 如果没找到，再试 resources/ 目录（旧版 Tauri 路径兼容）
   ${If} $R0 == ""

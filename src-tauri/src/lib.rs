@@ -2,6 +2,38 @@ use tauri::Manager;
 
 mod backend;
 
+fn output_directory() -> Result<std::path::PathBuf, String> {
+    backend::data_directory()
+}
+
+#[tauri::command]
+fn open_output_directory() -> Result<(), String> {
+    let directory = output_directory()?;
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = std::process::Command::new("explorer.exe");
+        command.arg(&directory);
+        command
+    };
+    #[cfg(target_os = "macos")]
+    let mut command = {
+        let mut command = std::process::Command::new("open");
+        command.arg(&directory);
+        command
+    };
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = {
+        let mut command = std::process::Command::new("xdg-open");
+        command.arg(&directory);
+        command
+    };
+
+    command.spawn().map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 async fn open_temp_file(file_name: String, bytes: Vec<u8>) -> Result<(), String> {
     let safe_name = std::path::Path::new(&file_name)
@@ -77,6 +109,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             backend::get_backend_url,
             backend::is_backend_ready,
+            open_output_directory,
             open_temp_file,
         ])
         .build(tauri::generate_context!())
