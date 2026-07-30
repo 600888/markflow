@@ -105,21 +105,23 @@ pub async fn wait_backend_ready(url: &str) {
 fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
     let sidecar_cmd = app.shell().sidecar("markflow-service").ok()?;
 
-    // 将 Tauri 资源目录传给 sidecar，以便找到捆绑的依赖安装包
-    let resource_dir = app.path().resource_dir().ok();
     let mut cmd = sidecar_cmd.args(["--port", &port.to_string()]);
 
-    let data_dir = resource_dir
-        .as_ref()
-        .map(|d| d.join("data"))
-        .or_else(|| {
-            // 若 resource_dir() 不可用时，尝试 app_local_data_dir
-            eprintln!("[MarkFlow] resource_dir unavailable, trying app_local_data_dir");
-            app.path().app_local_data_dir()
-                .ok()
-                .map(|d| d.join("data"))
-        })
-        .filter(|p| p.exists());
+    let data_dir = app
+        .path()
+        .app_local_data_dir()
+        .ok()
+        .map(|dir| dir.join("data"))
+        .filter(|dir| match std::fs::create_dir_all(dir) {
+            Ok(()) => true,
+            Err(error) => {
+                eprintln!(
+                    "[MarkFlow] cannot create app data directory {:?}: {}",
+                    dir, error
+                );
+                false
+            }
+        });
 
     if let Some(ref dir) = data_dir {
         let dir_str = dir.to_string_lossy().to_string();
@@ -131,11 +133,7 @@ fn try_spawn_sidecar(app: &AppHandle, port: u16) -> Option<CommandChild> {
         // 方式 3: 通过命令行参数传递（Python 端会读取 --data-dir）
         cmd = cmd.args(["--data-dir", &dir_str]);
     } else {
-        eprintln!("[MarkFlow] WARN: cannot find data resource directory");
-        eprintln!(
-            "[MarkFlow]   resource_dir (ok): {:?}",
-            app.path().resource_dir()
-        );
+        eprintln!("[MarkFlow] WARN: cannot create app data directory");
         eprintln!(
             "[MarkFlow]   app_local_data_dir: {:?}",
             app.path().app_local_data_dir()

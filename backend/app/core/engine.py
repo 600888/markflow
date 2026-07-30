@@ -66,6 +66,7 @@ MERMAID_IMAGE_MARKER = "markflow-mermaid-diagram"
 TITLE_PAGE_METADATA = "markflow-title-page"
 PAGE_HEADER_METADATA = "markflow-page-header"
 MIN_PDF_SIZE = 100
+PDF_STABLE_CHECKS = 2
 
 
 def _parse_size(raw: str | float) -> float | None:
@@ -600,6 +601,10 @@ class PandocEngine(ConversionEngine):
                 detail={"hint": "请安装或修复 Microsoft Edge 后重试"},
             )
 
+        # Edge 偶尔会把打印任务交给子进程后提前退出。若目标文件残留，
+        # 后续的存在性检查还会把旧文件误判成这次转换的结果。
+        output_path.unlink(missing_ok=True)
+        pdf_ready = False
         with tempfile.TemporaryDirectory(
             prefix="markflow-pdf-edge-",
             dir=html_path.parent,
@@ -629,15 +634,58 @@ class PandocEngine(ConversionEngine):
                 process.kill()
                 await process.communicate()
                 raise
+            if process.returncode == 0:
+                # 打包后的 sidecar 中较容易遇到 Edge 进程已退出、PDF 仍在
+                # 后台落盘的情况。临时配置和 HTML 必须保留到文件写完。
+                pdf_ready = await self._wait_for_pdf_output(output_path)
 
-        if process.returncode != 0 or not output_path.exists():
+        if process.returncode != 0 or not pdf_ready:
             detail = stderr.decode("utf-8", errors="replace").strip()[:500]
+            log.warning(
+                f"Edge 生成 PDF 失败 "
+                f"(exit={process.returncode}, ready={pdf_ready}, "
+                f"exists={output_path.exists()}): {detail}"
+            )
             raise ConversionError(
                 "Edge 生成 PDF 失败",
                 detail={"exit_code": process.returncode, "error": detail},
             )
-        if output_path.stat().st_size < MIN_PDF_SIZE:
-            raise ConversionError("生成的 PDF 文件无效")
+
+    @staticmethod
+    async def _wait_for_pdf_output(
+        output_path: Path,
+        timeout_seconds: float = 5.0,
+    ) -> bool:
+        """等待 Edge 的异步打印子进程完成写入。"""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout_seconds
+        previous_size = -1
+        stable_checks = 0
+
+        while loop.time() < deadline:
+            try:
+                size = output_path.stat().st_size
+                with output_path.open("rb") as stream:
+                    is_pdf = stream.read(5) == b"%PDF-"
+            except OSError:
+                size = 0
+                is_pdf = False
+
+            if is_pdf and size >= MIN_PDF_SIZE:
+                if size == previous_size:
+                    stable_checks += 1
+                    if stable_checks >= PDF_STABLE_CHECKS:
+                        return True
+                else:
+                    previous_size = size
+                    stable_checks = 0
+            else:
+                previous_size = size
+                stable_checks = 0
+
+            await asyncio.sleep(0.1)
+
+        return False
 
     def _build_pdf_css(
         self,

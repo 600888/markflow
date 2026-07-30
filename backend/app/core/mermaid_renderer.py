@@ -14,8 +14,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import shutil
-import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
@@ -24,6 +22,8 @@ from app.core.log import log
 # ── 模块级缓存 ──────────────────────────────────────────
 _MERMAID_JS: str | None = None
 _EDGE_PATH: str | None = None
+_MIN_PNG_BYTES = 100
+_EDGE_RENDER_SLOTS = asyncio.Semaphore(2)
 
 
 def _find_edge() -> str | None:
@@ -175,7 +175,44 @@ def _center_png(output_path: Path, padding: int = 48) -> bool:
     return True
 
 
-async def _render_one(html_path: Path, output_path: Path) -> bool:
+async def _run_edge(
+    edge: str,
+    *args: str,
+    stdout: int | None = asyncio.subprocess.PIPE,
+    timeout_seconds: float,
+) -> tuple[int, bytes, bytes]:
+    """在隔离的用户目录中运行 Edge，并确保超时进程被回收。"""
+    profile_dir = Path(tempfile.mkdtemp(prefix="markflow-edge-profile-"))
+    proc: asyncio.subprocess.Process | None = None
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            edge,
+            "--headless=new",
+            "--disable-gpu",
+            "--no-sandbox",
+            "--hide-scrollbars",
+            f"--user-data-dir={profile_dir}",
+            *args,
+            stdout=stdout,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        process_stdout, process_stderr = await asyncio.wait_for(
+            proc.communicate(),
+            timeout=timeout_seconds,
+        )
+        return proc.returncode or 0, process_stdout or b"", process_stderr or b""
+    except TimeoutError:
+        if proc is not None and proc.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                proc.kill()
+            with contextlib.suppress(Exception):
+                await proc.communicate()
+        raise
+    finally:
+        shutil.rmtree(profile_dir, ignore_errors=True)
+
+
+async def _render_one_unlocked(html_path: Path, output_path: Path) -> bool:
     """用 Edge headless 渲染单个 HTML 到 PNG（自适应尺寸）"""
     edge = _find_edge()
     if not edge:
@@ -184,18 +221,17 @@ async def _render_one(html_path: Path, output_path: Path) -> bool:
 
     try:
         # 第 1 步：渲染并获取 SVG 实际尺寸（通过 document.title）
-        proc = await asyncio.create_subprocess_exec(
+        returncode, stdout, stderr = await _run_edge(
             edge,
-            "--headless=new",
-            "--disable-gpu",
-            "--no-sandbox",
             "--virtual-time-budget=8000",
             "--dump-dom",
             f"file:///{html_path.resolve().as_posix()}",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            timeout_seconds=15,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=15)
+        if returncode != 0:
+            err = stderr.decode("utf-8", errors="replace")[:500]
+            log.warning(f"Edge 尺寸检测失败 (exit={returncode}): {err}")
+            return False
         dom = stdout.decode("utf-8", errors="replace")
 
         # 从 <title> 解析尺寸：WxH
@@ -217,38 +253,50 @@ async def _render_one(html_path: Path, output_path: Path) -> bool:
 
         log.debug(f"Mermaid 尺寸: {svg_w}x{svg_h}")
 
-        # 第 2 步：用正确尺寸 + 3x 高清截图
-        proc2 = await asyncio.create_subprocess_exec(
-            edge,
-            "--headless=new",
-            "--disable-gpu",
-            "--no-sandbox",
-            f"--screenshot={output_path.resolve()}",
-            f"--window-size={svg_w},{svg_h}",
-            "--force-device-scale-factor=3",
-            "--virtual-time-budget=8000",
-            f"file:///{html_path.resolve().as_posix()}",
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        _, stderr2 = await asyncio.wait_for(proc2.communicate(), timeout=20)
+        # 第 2 步：用正确尺寸 + 3x 高清截图。Edge 偶尔会因窗口边框取整
+        # 让内容贴住截图边缘，因此逐步扩大画布重试；每次调用都使用隔离配置。
+        for attempt, extra_space in enumerate((96, 256, 512), start=1):
+            with contextlib.suppress(OSError):
+                output_path.unlink()
+            screenshot_width = svg_w + extra_space
+            screenshot_height = svg_h + extra_space
+            returncode, _, screenshot_stderr = await _run_edge(
+                edge,
+                f"--screenshot={output_path.resolve()}",
+                f"--window-size={screenshot_width},{screenshot_height}",
+                "--force-device-scale-factor=3",
+                "--virtual-time-budget=8000",
+                f"file:///{html_path.resolve().as_posix()}",
+                stdout=asyncio.subprocess.DEVNULL,
+                timeout_seconds=20,
+            )
 
-        if proc2.returncode != 0 or not output_path.exists():
-            err = stderr2.decode("utf-8", errors="replace")[:200] if stderr2 else ""
-            log.warning(f"Edge 截图失败 (exit={proc2.returncode}): {err}")
-            return False
+            if returncode != 0 or not output_path.exists():
+                err = screenshot_stderr.decode("utf-8", errors="replace")[:500]
+                log.warning(
+                    f"Edge 截图失败，第 {attempt}/3 次 "
+                    f"(exit={returncode}, exists={output_path.exists()}): {err}"
+                )
+                continue
 
-        if not _center_png(output_path):
-            log.warning("Mermaid 截图未检测到有效图形内容")
-            return False
+            if output_path.stat().st_size < _MIN_PNG_BYTES:
+                log.warning(
+                    f"Mermaid 截图过小，第 {attempt}/3 次 ({output_path.stat().st_size} bytes)"
+                )
+                continue
 
-        if output_path.stat().st_size < 100:
-            log.warning(f"Mermaid 截图过小 ({output_path.stat().st_size} bytes)")
-            return False
+            if _center_png(output_path):
+                return True
 
-        return True
+            log.warning(
+                f"Mermaid 截图内容为空或触及边界，第 {attempt}/3 次，"
+                f"扩大画布后重试 ({screenshot_width}x{screenshot_height})"
+            )
 
-    except asyncio.TimeoutError:
+        log.warning("Mermaid 截图连续 3 次失败")
+        return False
+
+    except TimeoutError:
         log.warning("Edge 渲染超时")
         return False
     except FileNotFoundError:
@@ -257,6 +305,12 @@ async def _render_one(html_path: Path, output_path: Path) -> bool:
     except Exception as e:
         log.warning(f"Edge 渲染异常: {e}")
         return False
+
+
+async def _render_one(html_path: Path, output_path: Path) -> bool:
+    """限制 Edge 并发数，避免预览和文档转换同时渲染时耗尽资源。"""
+    async with _EDGE_RENDER_SLOTS:
+        return await _render_one_unlocked(html_path, output_path)
 
 
 async def render_diagrams(

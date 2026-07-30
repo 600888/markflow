@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -384,6 +385,43 @@ class TestPandocEngine:
                 html_path,
                 tmp_path / "document.pdf",
             )
+
+    @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
+    async def test_pdf_waits_for_edge_child_to_finish_writing(
+        self,
+        mock_pandoc_path,
+        tmp_path: Path,
+    ) -> None:
+        engine = PandocEngine()
+        html_path = tmp_path / "策略最终版本.html"
+        html_path.write_text("<html>报告</html>", encoding="utf-8")
+        output_path = tmp_path / "策略最终版本.pdf"
+
+        class EarlyExitProcess:
+            returncode = 0
+            print_task: asyncio.Task[None] | None = None
+
+            async def communicate(self):
+                async def finish_printing() -> None:
+                    await asyncio.sleep(0.05)
+                    output_path.write_bytes(b"%PDF-1.7\n" + b"x" * 200)
+
+                self.print_task = asyncio.create_task(finish_printing())
+                return b"", b""
+
+        with (
+            patch(
+                "app.core.engine.edge_manager.executable_path",
+                return_value="edge.exe",
+            ),
+            patch(
+                "asyncio.create_subprocess_exec",
+                return_value=EarlyExitProcess(),
+            ),
+        ):
+            await engine._render_html_to_pdf(html_path, output_path)  # noqa: SLF001
+
+        assert output_path.read_bytes().startswith(b"%PDF-")
 
     @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
     async def test_convert_can_skip_mermaid_preprocessing(

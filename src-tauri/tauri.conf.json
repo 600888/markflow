@@ -42,7 +42,6 @@
       "binaries/markflow-service"
     ],
     "resources": {
-      "../data/": "data/",
       "binaries/markflow-service-runtime/": "markflow-service-runtime/"
     },
     "windows": {
