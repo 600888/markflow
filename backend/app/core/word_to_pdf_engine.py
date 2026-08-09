@@ -46,6 +46,7 @@ async def _terminate_process(process: asyncio.subprocess.Process) -> None:
             "/F",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
+            creationflags=_windows_creation_flags(),
         )
         try:
             await asyncio.wait_for(killer.wait(), timeout=10)
@@ -55,6 +56,16 @@ async def _terminate_process(process: asyncio.subprocess.Process) -> None:
     if process.returncode is None:
         process.kill()
     await process.wait()
+
+
+def _windows_creation_flags(*, new_process_group: bool = False) -> int:
+    """返回不会创建控制台窗口的 Windows 子进程标志。"""
+    if os.name != "nt":
+        return 0
+    flags = subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
+    if new_process_group:
+        flags |= subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+    return flags
 
 
 class NativeOfficeWordToPdfEngine(ConversionEngine):
@@ -110,7 +121,6 @@ class NativeOfficeWordToPdfEngine(ConversionEngine):
             await on_progress(0.2, f"正在启动 {self.manager.name}")
         started = time.monotonic()
         encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
-        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
         process = await asyncio.create_subprocess_exec(
             shell,
             "-NoProfile",
@@ -119,7 +129,7 @@ class NativeOfficeWordToPdfEngine(ConversionEngine):
             encoded,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            creationflags=creationflags,
+            creationflags=_windows_creation_flags(new_process_group=True),
         )
         try:
             stdout, stderr = await asyncio.wait_for(
@@ -230,18 +240,42 @@ class PandocWordToPdfEngine(ConversionEngine):
         started = time.monotonic()
         if on_progress:
             await on_progress(0.2, "正在用 Pandoc 提取文档内容")
+        pandoc = pypandoc.get_pandoc_path()
+        command = [
+            pandoc,
+            str(input_path.resolve()),  # noqa: ASYNC240
+            "--from=docx",
+            "--to=html5",
+            "--output",
+            str(html_path.resolve()),
+            "--standalone",
+            "--embed-resources",
+            "--mathml",
+        ]
         try:
-            await asyncio.wait_for(
-                asyncio.to_thread(
-                    pypandoc.convert_file,
-                    str(input_path),
-                    "html5",
-                    format="docx",
-                    outputfile=str(html_path),
-                    extra_args=["--standalone", "--embed-resources", "--mathml"],
-                ),
-                timeout=self.settings.word_conversion_timeout,
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                creationflags=_windows_creation_flags(new_process_group=True),
             )
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=self.settings.word_conversion_timeout,
+                )
+            except TimeoutError as exc:
+                await _terminate_process(process)
+                raise ConversionError("Pandoc 提取 Word 内容超时") from exc
+            except asyncio.CancelledError:
+                await _terminate_process(process)
+                raise
+            if process.returncode != 0:
+                diagnostic = (stdout + stderr)[-65_536:].decode(errors="replace").strip()
+                raise ConversionError(
+                    f"Pandoc 提取 Word 内容失败（返回 {process.returncode}）",
+                    detail={"diagnostic": diagnostic},
+                )
             if on_progress:
                 await on_progress(0.7, "正在用 Edge 生成 PDF")
             await self.pandoc_engine._render_html_to_pdf(html_path, output_path)  # noqa: SLF001

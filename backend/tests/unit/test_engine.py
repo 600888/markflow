@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import subprocess
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -417,11 +419,13 @@ class TestPandocEngine:
             patch(
                 "asyncio.create_subprocess_exec",
                 return_value=EarlyExitProcess(),
-            ),
+            ) as create_process,
         ):
             await engine._render_html_to_pdf(html_path, output_path)  # noqa: SLF001
 
         assert output_path.read_bytes().startswith(b"%PDF-")
+        if os.name == "nt":
+            assert create_process.call_args.kwargs["creationflags"] & subprocess.CREATE_NO_WINDOW
 
     @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
     async def test_convert_can_skip_mermaid_preprocessing(

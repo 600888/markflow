@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import re
 import shutil
+import subprocess
 import tempfile
 import time
 from collections.abc import Awaitable, Callable
@@ -619,6 +621,9 @@ class PandocEngine(ConversionEngine):
             dir=html_path.parent,
         ) as profile_dir:
             profile_path = Path(profile_dir).resolve()
+            creationflags = 0
+            if os.name == "nt":
+                creationflags = subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
             process = await asyncio.create_subprocess_exec(
                 edge,
                 "--headless=new",
@@ -633,6 +638,7 @@ class PandocEngine(ConversionEngine):
                 html_path.resolve().as_uri(),
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
+                creationflags=creationflags,
             )
             try:
                 _, stderr = await asyncio.wait_for(
