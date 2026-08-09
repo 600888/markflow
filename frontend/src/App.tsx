@@ -45,7 +45,9 @@ export default function App() {
 
         <div
           className={
-            activeTab === "convert" ? "flex-1 flex overflow-hidden" : "hidden"
+            activeTab === "convert"
+              ? "relative flex-1 flex overflow-hidden"
+              : "hidden"
           }
           aria-hidden={activeTab !== "convert"}
         >

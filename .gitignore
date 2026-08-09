@@ -231,3 +231,6 @@ temp/
 # Tauri build artifacts
 src-tauri/target/
 src-tauri/binaries/
+
+.reasonix/
+reasonix.toml

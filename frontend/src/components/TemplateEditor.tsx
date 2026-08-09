@@ -1992,7 +1992,7 @@ export function TemplateEditor() {
         </div>
       )}
       {open && (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-background text-foreground">
+        <div className="absolute inset-0 z-[100] flex flex-col bg-background text-foreground">
           <header className="flex h-14 shrink-0 items-center border-b border-border bg-card px-4">
             <button
               type="button"
