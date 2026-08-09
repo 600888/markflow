@@ -156,7 +156,6 @@ export async function submitWordToPdf(
     outputFileName: string;
     quality: WordPdfQuality;
     exportBookmarks: boolean;
-    embedStandardFonts: boolean;
   },
 ): Promise<{ task_id: string; status: string; message: string }> {
   const body = new FormData();
@@ -165,7 +164,6 @@ export async function submitWordToPdf(
   body.set("output_file_name", options.outputFileName.trim());
   body.set("quality", options.quality);
   body.set("export_bookmarks", String(options.exportBookmarks));
-  body.set("embed_standard_fonts", String(options.embedStandardFonts));
   return api().post("word-to-pdf/convert", { body, timeout: 60_000 }).json();
 }
 

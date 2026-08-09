@@ -74,7 +74,6 @@ function ModuleCard({
   const installModule = useStore((s) => s.installModule);
   const uninstallModule = useStore((s) => s.uninstallModule);
   const isMermaid = id === "mermaid";
-  const isLibreOffice = id === "libreoffice";
 
   const badgeConfig: Record<string, { label: string; className: string }> = {
     installed: {
@@ -111,9 +110,7 @@ function ModuleCard({
           className={`w-11 h-11 rounded-lg flex items-center justify-center text-lg shrink-0 ${
             isMermaid
               ? "bg-indigo-100 text-indigo-600"
-              : isLibreOffice
-                ? "bg-blue-100 text-blue-600"
-                : "bg-green-100 text-green-600"
+              : "bg-green-100 text-green-600"
           }`}
         >
           {isMermaid ? (
@@ -132,8 +129,6 @@ function ModuleCard({
               <path d="M7 11h10v2H7z" />
               <path d="M7 15h10v2H7z" />
             </svg>
-          ) : isLibreOffice ? (
-            <span className="text-sm font-bold tracking-tight">PDF</span>
           ) : (
             <svg
               width="22"

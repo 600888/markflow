@@ -73,22 +73,16 @@ class WordToPdfEngineStatusResponse(BaseModel):
     supported_inputs: list[str] = Field(default_factory=list)
     diagnostic: str = ""
     fidelity: Literal["native", "compatible", "reflow"] = "compatible"
-    managed: bool = False
-    installer_found: bool = False
-    can_install: bool = False
 
 
 class WordToPdfStatusResponse(BaseModel):
     available: bool = False
-    engine: str = "libreoffice"
+    engine: str = "microsoft-word"
     version: str = ""
     executable: str = ""
     supported_inputs: list[str] = Field(default_factory=lambda: ["docx", "doc"])
     diagnostic: str = ""
-    managed: bool = False
-    installer_found: bool = False
-    can_install: bool = False
-    default_engine: str = "libreoffice"
+    default_engine: str = "microsoft-word"
     engines: list[WordToPdfEngineStatusResponse] = Field(default_factory=list)
 
 

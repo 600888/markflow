@@ -24,16 +24,6 @@ class AppSettings(BaseSettings):
     # Word 转 PDF
     microsoft_word_path: Path | None = None
     wps_path: Path | None = None
-    libreoffice_path: Path | None = None
-    libreoffice_download_url: str = (
-        "https://download.documentfoundation.org/libreoffice/stable/26.2.5/"
-        "win/x86_64/LibreOffice_26.2.5_Win_x86-64.msi"
-    )
-    libreoffice_checksum_url: str = (
-        "https://download.documentfoundation.org/libreoffice/stable/26.2.5/"
-        "win/x86_64/LibreOffice_26.2.5_Win_x86-64.msi.sha256"
-    )
-    libreoffice_install_timeout: int = 600
     word_conversion_timeout: int = 180
 
     # 文件

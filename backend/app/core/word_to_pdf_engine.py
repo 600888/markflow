@@ -1,10 +1,9 @@
-"""基于 LibreOffice Writer 的 Word 转 PDF 引擎。"""
+"""Word 转 PDF 多引擎实现。"""
 
 from __future__ import annotations
 
 import asyncio
 import base64
-import json
 import os
 import shutil
 import subprocess
@@ -18,8 +17,11 @@ import pypandoc
 from app.core.browser_check import edge_manager
 from app.core.engine import PandocEngine
 from app.core.interfaces import ConversionEngine, ProgressCallback
-from app.core.libreoffice_check import LibreOfficeManager
-from app.core.office_suite_check import NativeOfficeManager, word_manager, wps_manager
+from app.core.office_suite_check import (
+    NativeOfficeManager,
+    word_manager,
+    wps_manager,
+)
 from app.core.pandoc_check import pandoc_manager
 from app.models import ConversionResult, OutputFormat
 from app.utils.config import AppSettings
@@ -29,188 +31,30 @@ from app.utils.exceptions import (
     WordEngineUnavailableError,
 )
 
-QUALITY_PRESETS: dict[str, dict[str, int | bool]] = {
-    "screen": {
-        "Quality": 75,
-        "ReduceImageResolution": True,
-        "MaxImageResolution": 150,
-    },
-    "standard": {
-        "Quality": 90,
-        "ReduceImageResolution": True,
-        "MaxImageResolution": 300,
-    },
-    "print": {
-        "Quality": 100,
-        "ReduceImageResolution": False,
-    },
-}
 
-
-class LibreOfficeWordToPdfEngine(ConversionEngine):
-    """在独立用户 profile 中调用 soffice 完成转换。"""
-
-    def __init__(
-        self,
-        settings: AppSettings | None = None,
-        manager: LibreOfficeManager | None = None,
-    ) -> None:
-        self.settings = settings or AppSettings()
-        self.manager = manager or LibreOfficeManager(self.settings)
-
-    async def convert(  # noqa: PLR0913
-        self,
-        input_path: Path,
-        output_format: OutputFormat,
-        extra_args: list[str] | None = None,
-        template_slug: str | None = None,
-        *,
-        convert_images: bool = True,
-        convert_mermaid: bool = True,
-        options: dict | None = None,
-        on_progress: ProgressCallback | None = None,
-    ) -> ConversionResult:
-        """把一个工作目录中的 Word 文件转换成已校验的 PDF。"""
-        del extra_args, template_slug, convert_images, convert_mermaid
-        if output_format != OutputFormat.PDF:
-            raise UnsupportedFormatError("Word 转换管线仅支持 PDF 输出")
-        executable = self.manager.find_executable()
-        if executable is None or not self.manager.get_version():
-            raise WordEngineUnavailableError(
-                "未检测到 LibreOffice，请安装 LibreOffice 后重试。"
-            )
-        if input_path.suffix.lower() not in {".docx", ".doc"}:
-            raise UnsupportedFormatError("仅支持 .docx 和 .doc 文件")
-
-        if on_progress:
-            await on_progress(0.15, "正在准备转换环境")
-        work_dir = input_path.parent
-        output_dir = work_dir / "lo-output"
-        profile_dir = work_dir / "lo-profile"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        profile_dir.mkdir(parents=True, exist_ok=True)
-        expected_output = output_dir / f"{input_path.stem}.pdf"
-        expected_output.unlink(missing_ok=True)
-
-        filter_spec = self._build_filter_spec(options or {})
-        command = [
-            str(executable),
-            f"-env:UserInstallation={profile_dir.resolve().as_uri()}",
-            "--headless",
-            "--nologo",
-            "--nodefault",
-            "--nolockcheck",
-            "--nofirststartwizard",
-            "--norestore",
-            "--convert-to",
-            filter_spec,
-            "--outdir",
-            str(output_dir.resolve()),
-            str(input_path.resolve()),  # noqa: ASYNC240
-        ]
-        creationflags = 0
-        if os.name == "nt":
-            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
-
-        if on_progress:
-            await on_progress(0.25, "正在启动 PDF 转换引擎")
-        started = time.monotonic()
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            creationflags=creationflags,
+async def _terminate_process(process: asyncio.subprocess.Process) -> None:
+    """终止转换进程；Windows 下优先回收完整子进程树。"""
+    if process.returncode is not None:
+        return
+    taskkill = shutil.which("taskkill") if os.name == "nt" else None
+    if taskkill:
+        killer = await asyncio.create_subprocess_exec(
+            taskkill,
+            "/PID",
+            str(process.pid),
+            "/T",
+            "/F",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         try:
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=self.settings.word_conversion_timeout,
-            )
-        except TimeoutError as exc:
-            await self._terminate_process(process)
-            raise ConversionError("Word 转 PDF 超时，请简化文档或稍后重试") from exc
-        except asyncio.CancelledError:
-            await self._terminate_process(process)
-            raise
-
-        diagnostic = (stdout + stderr)[-65_536:].decode(errors="replace").strip()
-        if process.returncode != 0:
-            raise ConversionError(
-                f"Word 转 PDF 失败（LibreOffice 返回 {process.returncode}）",
-                detail={"diagnostic": diagnostic},
-            )
-        if on_progress:
-            await on_progress(0.8, "正在校验 PDF 输出")
-        if not expected_output.is_file() or expected_output.stat().st_size == 0:
-            raise ConversionError(
-                "LibreOffice 未生成 PDF，文档可能已损坏或受密码保护",
-                detail={"diagnostic": diagnostic},
-            )
-        with expected_output.open("rb") as stream:
-            if stream.read(5) != b"%PDF-":
-                raise ConversionError("生成的 PDF 文件无效")
-
-        duration_ms = round((time.monotonic() - started) * 1000)
-        return ConversionResult(
-            task_id=uuid4(),
-            output_path=expected_output,
-            output_format=OutputFormat.PDF,
-            duration_ms=duration_ms,
-            file_size=expected_output.stat().st_size,
-        )
-
-    async def validate_format(self, output_format: OutputFormat) -> bool:
-        """仅在 LibreOffice 可用时接受 PDF 输出。"""
-        return output_format == OutputFormat.PDF and self.manager.is_available()
-
-    @staticmethod
-    async def _terminate_process(process: asyncio.subprocess.Process) -> None:
-        """终止转换进程；Windows 下优先回收完整子进程树。"""
-        if process.returncode is not None:
-            return
-        taskkill = shutil.which("taskkill") if os.name == "nt" else None
-        if taskkill:
-            killer = await asyncio.create_subprocess_exec(
-                taskkill,
-                "/PID",
-                str(process.pid),
-                "/T",
-                "/F",
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            try:
-                await asyncio.wait_for(killer.wait(), timeout=10)
-            except TimeoutError:
-                killer.kill()
-                await killer.wait()
-        if process.returncode is None:
-            process.kill()
-        await process.wait()
-
-    @staticmethod
-    def _build_filter_spec(options: dict) -> str:
-        quality = str(options.get("quality", "standard"))
-        preset = QUALITY_PRESETS.get(quality)
-        if preset is None:
-            raise ConversionError(f"不支持的 PDF 质量选项: {quality}")
-
-        properties: dict[str, dict[str, str]] = {}
-        for name, value in preset.items():
-            value_type = "boolean" if isinstance(value, bool) else "long"
-            serialized = str(value).lower() if isinstance(value, bool) else str(value)
-            properties[name] = {"type": value_type, "value": serialized}
-        properties["ExportBookmarks"] = {
-            "type": "boolean",
-            "value": str(bool(options.get("export_bookmarks", True))).lower(),
-        }
-        properties["EmbedStandardFonts"] = {
-            "type": "boolean",
-            "value": str(bool(options.get("embed_standard_fonts", True))).lower(),
-        }
-        properties["UseTaggedPDF"] = {"type": "boolean", "value": "true"}
-        payload = json.dumps(properties, ensure_ascii=False, separators=(",", ":"))
-        return f"pdf:writer_pdf_Export:{payload}"
+            await asyncio.wait_for(killer.wait(), timeout=10)
+        except TimeoutError:
+            killer.kill()
+            await killer.wait()
+    if process.returncode is None:
+        process.kill()
+    await process.wait()
 
 
 class NativeOfficeWordToPdfEngine(ConversionEngine):
@@ -283,10 +127,10 @@ class NativeOfficeWordToPdfEngine(ConversionEngine):
                 timeout=self.settings.word_conversion_timeout,
             )
         except TimeoutError as exc:
-            await LibreOfficeWordToPdfEngine._terminate_process(process)  # noqa: SLF001
+            await _terminate_process(process)
             raise ConversionError(f"{self.manager.name} 导出 PDF 超时") from exc
         except asyncio.CancelledError:
-            await LibreOfficeWordToPdfEngine._terminate_process(process)  # noqa: SLF001
+            await _terminate_process(process)
             raise
 
         diagnostic = (stdout + stderr)[-65_536:].decode(errors="replace").strip()
@@ -418,22 +262,19 @@ class PandocWordToPdfEngine(ConversionEngine):
 class WordToPdfEngineRegistry(ConversionEngine):
     """集中提供引擎状态，并按任务选项把转换分派给具体实现。"""
 
-    ENGINE_ORDER = ("pandoc", "wps", "microsoft-word", "libreoffice")
+    ENGINE_ORDER = ("pandoc", "wps", "microsoft-word")
     PREFERRED_ENGINE = "microsoft-word"
 
     def __init__(
         self,
         settings: AppSettings,
-        libreoffice_manager: LibreOfficeManager,
         pandoc_engine: PandocEngine,
     ) -> None:
         self.settings = settings
-        self.libreoffice_manager = libreoffice_manager
         self.engines: dict[str, ConversionEngine] = {
             "pandoc": PandocWordToPdfEngine(settings, pandoc_engine),
             "wps": NativeOfficeWordToPdfEngine(settings, wps_manager),
             "microsoft-word": NativeOfficeWordToPdfEngine(settings, word_manager),
-            "libreoffice": LibreOfficeWordToPdfEngine(settings, libreoffice_manager),
         }
 
     def get_info(self, *, refresh: bool = False) -> dict[str, Any]:
@@ -450,18 +291,12 @@ class WordToPdfEngineRegistry(ConversionEngine):
             "executable": default["executable"],
             "supported_inputs": default["supported_inputs"],
             "diagnostic": default["diagnostic"],
-            "managed": bool(default.get("managed", False)),
-            "installer_found": bool(default.get("installer_found", False)),
-            "can_install": bool(default.get("can_install", False)),
             "default_engine": default["id"],
             "engines": engines,
         }
 
     def get_engine_info(self, engine_id: str, *, refresh: bool = False) -> dict[str, Any]:
         """返回指定引擎状态。"""
-        if engine_id == "libreoffice":
-            info = self.libreoffice_manager.get_info(refresh=refresh)
-            return {"id": "libreoffice", "name": "LibreOffice", "fidelity": "compatible", **info}
         if engine_id == "wps":
             return wps_manager.get_info(refresh=refresh)
         if engine_id == "microsoft-word":

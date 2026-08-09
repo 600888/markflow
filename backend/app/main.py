@@ -14,7 +14,6 @@ from loguru import logger
 from app.api.errors import register_error_handlers
 from app.api.router import init, router
 from app.core.engine import PandocEngine
-from app.core.libreoffice_check import LibreOfficeManager
 from app.core.template_manager import TemplateManager
 from app.core.word_to_pdf_engine import WordToPdfEngineRegistry
 from app.db import ConversionRepository, CustomTemplateRepository, Database
@@ -82,8 +81,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
             cleanup["directories"],
         )
     engine = PandocEngine(settings, template_manager=template_mgr)
-    libreoffice_manager = LibreOfficeManager(settings)
-    word_engine = WordToPdfEngineRegistry(settings, libreoffice_manager, engine)
+    word_engine = WordToPdfEngineRegistry(settings, engine)
     conv_svc = ConversionService(
         engine=engine,
         repository=repository,
@@ -106,7 +104,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
         log_svc=log_svc,
         repository=repository,
         artifact_storage=artifact_storage,
-        libreoffice_manager=libreoffice_manager,
         word_to_pdf_registry=word_engine,
     )
 
@@ -122,12 +119,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
         logger.info(f"Pandoc 已就绪, 版本: {info.get('version', 'unknown')}")
     else:
         logger.warning("Pandoc 未安装，转换功能暂不可用。请在设置中安装 Pandoc 模块。")
-
-    libreoffice_info = libreoffice_manager.get_info()
-    if libreoffice_info["available"]:
-        logger.info("LibreOffice 已就绪, 版本: {}", libreoffice_info["version"])
-    else:
-        logger.warning("LibreOffice 未安装，Word 转 PDF 功能暂不可用。")
 
     yield
 

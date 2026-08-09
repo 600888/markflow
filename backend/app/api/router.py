@@ -41,7 +41,6 @@ from app.api.schemas import (
     WordToPdfStatusResponse,
 )
 from app.core.browser_check import edge_manager
-from app.core.libreoffice_check import LibreOfficeManager
 from app.core.pandoc_check import pandoc_manager
 from app.core.template_manager import TemplateManager
 from app.core.word_to_pdf_engine import WordToPdfEngineRegistry
@@ -68,7 +67,6 @@ _template_gen: TemplateGenerator | None = None
 _log_svc: LogService | None = None
 _repository: ConversionRepository | None = None
 _artifact_storage: ArtifactStorage | None = None
-_libreoffice_manager: LibreOfficeManager | None = None
 _word_to_pdf_registry: WordToPdfEngineRegistry | None = None
 
 
@@ -79,19 +77,17 @@ def init(
     log_svc: LogService | None = None,
     repository: ConversionRepository | None = None,
     artifact_storage: ArtifactStorage | None = None,
-    libreoffice_manager: LibreOfficeManager | None = None,
     word_to_pdf_registry: WordToPdfEngineRegistry | None = None,
 ) -> None:
     """初始化全局服务实例"""
     global _conv_service, _template_mgr, _template_gen, _log_svc
-    global _repository, _artifact_storage, _libreoffice_manager, _word_to_pdf_registry
+    global _repository, _artifact_storage, _word_to_pdf_registry
     _conv_service = svc
     _template_mgr = mgr
     _template_gen = gen
     _log_svc = log_svc
     _repository = repository
     _artifact_storage = artifact_storage
-    _libreoffice_manager = libreoffice_manager
     _word_to_pdf_registry = word_to_pdf_registry
 
 
@@ -105,12 +101,6 @@ def get_artifact_storage() -> ArtifactStorage:
     if _artifact_storage is None:
         raise RuntimeError("ArtifactStorage 未初始化")
     return _artifact_storage
-
-
-def get_libreoffice_manager() -> LibreOfficeManager:
-    if _libreoffice_manager is None:
-        raise RuntimeError("LibreOfficeManager 未初始化")
-    return _libreoffice_manager
 
 
 def get_word_to_pdf_registry() -> WordToPdfEngineRegistry:
@@ -388,7 +378,6 @@ async def convert_word_to_pdf(
     engine: Annotated[str, Form()] = "",
     quality: Annotated[str, Form()] = "standard",
     export_bookmarks: Annotated[bool, Form()] = True,  # noqa: FBT002
-    embed_standard_fonts: Annotated[bool, Form()] = True,  # noqa: FBT002
     svc: Annotated[ConversionService, Depends(get_svc)] = None,
     registry: Annotated[WordToPdfEngineRegistry, Depends(get_word_to_pdf_registry)] = None,
 ) -> ConvertResponse:
@@ -411,7 +400,6 @@ async def convert_word_to_pdf(
     options = {
         "quality": quality,
         "export_bookmarks": export_bookmarks,
-        "embed_standard_fonts": embed_standard_fonts,
         "engine": selected_engine,
         "engine_version": engine_info["version"],
     }
@@ -816,59 +804,6 @@ async def _uninstall_pandoc_flow():
         yield {"event": "error", "data": json.dumps({"detail": detail})}
 
 
-async def _install_libreoffice_flow():
-    """Install MarkFlow's private LibreOffice copy and stream its progress."""
-    manager = get_libreoffice_manager()
-    if manager.is_available(refresh=True):
-        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已安装"})}
-        yield {"event": "completed", "data": json.dumps({"success": True})}
-        return
-
-    task = asyncio.create_task(manager.ensure())
-    last_pct = -1
-    last_message = ""
-    while not task.done():
-        progress = manager.get_install_progress()
-        pct = int(progress.get("progress", 0))
-        message = str(progress.get("message", "安装中..."))
-        if pct != last_pct or message != last_message:
-            last_pct, last_message = pct, message
-            yield {
-                "event": "progress",
-                "data": json.dumps({"progress": pct, "message": message}),
-            }
-        await asyncio.sleep(0.5)
-
-    if task.result():
-        yield {
-            "event": "progress",
-            "data": json.dumps({"progress": 100, "message": "LibreOffice 安装完成"}),
-        }
-        yield {"event": "completed", "data": json.dumps({"success": True})}
-    else:
-        detail = str(manager.get_install_progress().get("message", "LibreOffice 安装失败"))
-        yield {"event": "error", "data": json.dumps({"detail": detail})}
-
-
-async def _uninstall_libreoffice_flow():
-    """Remove only the LibreOffice copy managed by MarkFlow."""
-    manager = get_libreoffice_manager()
-    yield {
-        "event": "progress",
-        "data": json.dumps({"progress": 20, "message": "正在卸载 LibreOffice 模块..."}),
-    }
-    success = await asyncio.to_thread(manager.remove)
-    if success:
-        yield {
-            "event": "progress",
-            "data": json.dumps({"progress": 100, "message": "LibreOffice 模块已卸载"}),
-        }
-        yield {"event": "completed", "data": json.dumps({"success": True})}
-    else:
-        detail = str(manager.get_install_progress().get("message", "LibreOffice 卸载失败"))
-        yield {"event": "error", "data": json.dumps({"detail": detail})}
-
-
 @router.get("/modules/{module_id}/progress")
 async def stream_module_progress(
     module_id: str,
@@ -887,10 +822,6 @@ async def stream_module_progress(
                 yield evt
         elif module_id == "pandoc":
             flow = _install_pandoc_flow if action == "install" else _uninstall_pandoc_flow
-            async for evt in flow():
-                yield evt
-        elif module_id == "libreoffice":
-            flow = _install_libreoffice_flow if action == "install" else _uninstall_libreoffice_flow
             async for evt in flow():
                 yield evt
         else:

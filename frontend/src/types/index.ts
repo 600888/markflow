@@ -38,11 +38,7 @@ export interface TaskStatus {
 
 export type WordPdfQuality = "screen" | "standard" | "print";
 
-export type WordToPdfEngineId =
-  | "pandoc"
-  | "wps"
-  | "microsoft-word"
-  | "libreoffice";
+export type WordToPdfEngineId = "pandoc" | "wps" | "microsoft-word";
 
 export interface WordToPdfEngineStatus {
   id: WordToPdfEngineId;
@@ -53,9 +49,6 @@ export interface WordToPdfEngineStatus {
   supported_inputs: string[];
   diagnostic: string;
   fidelity: "native" | "compatible" | "reflow";
-  managed: boolean;
-  installer_found: boolean;
-  can_install: boolean;
 }
 
 export interface WordToPdfStatus {
@@ -65,9 +58,6 @@ export interface WordToPdfStatus {
   executable: string;
   supported_inputs: string[];
   diagnostic: string;
-  managed: boolean;
-  installer_found: boolean;
-  can_install: boolean;
   default_engine: WordToPdfEngineId;
   engines: WordToPdfEngineStatus[];
 }

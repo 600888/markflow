@@ -12,7 +12,6 @@ import type {
 import {
   fetchMermaidStatus,
   fetchPandocStatus,
-  fetchWordToPdfStatus,
   setBaseUrl,
 } from "../services/api";
 import { initializeBackend, checkBackendReady } from "../services/tauri";
@@ -257,14 +256,6 @@ export const useStore = create<AppState>((set) => ({
       progress: 0,
     },
     {
-      id: "libreoffice",
-      name: "LibreOffice PDF 引擎",
-      description: "Word 转 PDF 本地引擎，首次安装需从官方源下载约 350 MB",
-      status: "not_installed",
-      progress: 0,
-      removable: true,
-    },
-    {
       id: "mermaid",
       name: "Mermaid 图表渲染",
       description: "使用系统 Edge 渲染流程图/时序图/甘特图",
@@ -275,12 +266,10 @@ export const useStore = create<AppState>((set) => ({
   ],
   refreshModulesStatus: async () => {
     try {
-      const [mermaidStatus, pandocStatus, libreOfficeStatus] =
-        await Promise.all([
-          fetchMermaidStatus(),
-          fetchPandocStatus(),
-          fetchWordToPdfStatus(),
-        ]);
+      const [mermaidStatus, pandocStatus] = await Promise.all([
+        fetchMermaidStatus(),
+        fetchPandocStatus(),
+      ]);
       const mermaidInstalled = mermaidStatus.mermaid_available;
       const pandocInstalled = pandocStatus.available;
       set((s) => ({
@@ -295,25 +284,6 @@ export const useStore = create<AppState>((set) => ({
             return {
               ...m,
               status: pandocInstalled ? "installed" : "not_installed",
-            };
-          }
-          if (m.id === "libreoffice") {
-            const libreOfficeEngine = libreOfficeStatus.engines.find(
-              (engine) => engine.id === "libreoffice",
-            );
-            return {
-              ...m,
-              status: libreOfficeEngine?.available
-                ? "installed"
-                : "not_installed",
-              removable: Boolean(libreOfficeEngine?.managed),
-              message: libreOfficeEngine?.available
-                ? `版本 ${libreOfficeEngine.version}${
-                    libreOfficeEngine.managed
-                      ? " · MarkFlow 托管"
-                      : " · 系统安装"
-                  }`
-                : libreOfficeEngine?.diagnostic || "未检测到 LibreOffice",
             };
           }
           return m;
@@ -359,11 +329,8 @@ export const useStore = create<AppState>((set) => ({
 
     if (id === "mermaid") {
       useStore.getState().refreshMermaidStatus();
-    } else if (succeeded && (id === "pandoc" || id === "libreoffice")) {
+    } else if (succeeded && id === "pandoc") {
       useStore.getState().refreshModulesStatus();
-      if (id === "libreoffice") {
-        window.dispatchEvent(new Event("markflow:libreoffice-changed"));
-      }
     }
   },
   uninstallModule: async (id) => {
@@ -384,11 +351,8 @@ export const useStore = create<AppState>((set) => ({
 
     if (id === "mermaid") {
       useStore.getState().refreshMermaidStatus();
-    } else if (succeeded && (id === "pandoc" || id === "libreoffice")) {
+    } else if (succeeded && id === "pandoc") {
       useStore.getState().refreshModulesStatus();
-      if (id === "libreoffice") {
-        window.dispatchEvent(new Event("markflow:libreoffice-changed"));
-      }
     }
   },
 }));

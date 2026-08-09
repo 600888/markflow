@@ -39,7 +39,6 @@ const ENGINE_HINTS: Record<WordToPdfEngineId, string> = {
   pandoc: "内容重排，适合结构化文档",
   wps: "WPS 原生导出，优先保持 WPS 版式",
   "microsoft-word": "Word 原生导出，优先保持 Office 版式",
-  libreoffice: "开源兼容导出，跨平台可用",
 };
 
 function formatBytes(bytes: number): string {
@@ -74,7 +73,6 @@ export function WordToPdfPage() {
   const [selectedEngine, setSelectedEngine] =
     useState<WordToPdfEngineId>("microsoft-word");
   const [exportBookmarks, setExportBookmarks] = useState(true);
-  const [embedStandardFonts, setEmbedStandardFonts] = useState(true);
   const [outputFileName, setOutputFileName] = useState("");
   const [engineStatus, setEngineStatus] = useState<WordToPdfStatus | null>(
     null,
@@ -102,28 +100,22 @@ export function WordToPdfPage() {
     } catch {
       setEngineStatus({
         available: false,
-        engine: "libreoffice",
+        engine: "microsoft-word",
         version: "",
         executable: "",
         supported_inputs: ["docx", "doc"],
         diagnostic: "无法连接后端服务",
-        managed: false,
-        installer_found: false,
-        can_install: false,
-        default_engine: "libreoffice",
+        default_engine: "microsoft-word",
         engines: [
           {
-            id: "libreoffice",
-            name: "LibreOffice",
+            id: "microsoft-word",
+            name: "Microsoft Word",
             available: false,
             version: "",
             executable: "",
             supported_inputs: ["docx", "doc"],
             diagnostic: "无法连接后端服务",
-            fidelity: "compatible",
-            managed: false,
-            installer_found: false,
-            can_install: false,
+            fidelity: "native",
           },
         ],
       });
@@ -151,19 +143,6 @@ export function WordToPdfPage() {
     setPreviewUrl(nextUrl);
     setPdfBlob(blob);
   }, []);
-
-  useEffect(() => {
-    const refreshAfterModuleChange = () => void refreshEngineStatus();
-    window.addEventListener(
-      "markflow:libreoffice-changed",
-      refreshAfterModuleChange,
-    );
-    return () =>
-      window.removeEventListener(
-        "markflow:libreoffice-changed",
-        refreshAfterModuleChange,
-      );
-  }, [refreshEngineStatus]);
 
   const resetResult = useCallback(() => {
     eventSourceRef.current?.close();
@@ -239,7 +218,6 @@ export function WordToPdfPage() {
         outputFileName,
         quality,
         exportBookmarks,
-        embedStandardFonts,
       });
       setStatus("running");
       eventSourceRef.current = streamProgress(
@@ -466,16 +444,6 @@ export function WordToPdfPage() {
                 <Switch
                   checked={exportBookmarks}
                   onCheckedChange={setExportBookmarks}
-                />
-              </OptionRow>
-              <OptionRow
-                label="嵌入标准字体"
-                description="缺失字体仍可能被替换"
-                bordered
-              >
-                <Switch
-                  checked={embedStandardFonts}
-                  onCheckedChange={setEmbedStandardFonts}
                 />
               </OptionRow>
             </div>

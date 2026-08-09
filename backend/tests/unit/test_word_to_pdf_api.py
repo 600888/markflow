@@ -38,35 +38,35 @@ class FakeEngine(ConversionEngine):
 
 
 class FakeRegistry:
-    engines = {"libreoffice": object()}
+    engines = {"microsoft-word": object()}
 
     def get_info(self, *, refresh=False):
         return {
             "available": True,
-            "engine": "libreoffice",
-            "default_engine": "libreoffice",
-            "version": "26.2.0",
-            "executable": "soffice.com",
+            "engine": "microsoft-word",
+            "default_engine": "microsoft-word",
+            "version": "16",
+            "executable": "WINWORD.EXE",
             "supported_inputs": ["docx", "doc"],
             "diagnostic": "ready",
-            "engines": [self.get_engine_info("libreoffice", refresh=refresh)],
+            "engines": [self.get_engine_info("microsoft-word", refresh=refresh)],
         }
 
     def get_engine_info(self, engine_id, *, refresh=False):
-        assert engine_id == "libreoffice"
+        assert engine_id == "microsoft-word"
         return {
-            "id": "libreoffice",
-            "name": "LibreOffice",
+            "id": "microsoft-word",
+            "name": "Microsoft Word",
             "available": True,
-            "version": "26.2.0",
-            "executable": "soffice.com",
+            "version": "16",
+            "executable": "WINWORD.EXE",
             "supported_inputs": ["docx", "doc"],
             "diagnostic": "ready",
-            "fidelity": "compatible",
+            "fidelity": "native",
         }
 
     def resolve_engine_id(self, engine_id="", *, refresh=False):
-        return engine_id or "libreoffice"
+        return engine_id or "microsoft-word"
 
 
 def test_word_to_pdf_status_and_submit(tmp_path) -> None:
@@ -108,5 +108,5 @@ def test_word_to_pdf_status_and_submit(tmp_path) -> None:
     assert job is not None
     assert job.pipeline == ConversionPipeline.WORD_TO_PDF.value
     assert job.source_file_name == "产品说明.docx"
-    assert job.options_json["engine_version"] == "26.2.0"
+    assert job.options_json["engine_version"] == "16"
     database.close()
