@@ -198,10 +198,10 @@ class TemplateSaveResponse(BaseModel):
 
 
 class TemplateDetailResponse(TemplateSaveRequest):
-    """可编辑模板详情。"""
+    """可用作编辑或复制来源的模板详情。"""
 
-    id: str
-    updated_at: datetime
+    id: str | None = None
+    updated_at: datetime | None = None
 
 
 class TemplateRevisionItem(BaseModel):

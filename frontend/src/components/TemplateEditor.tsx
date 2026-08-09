@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Code2,
   FileText,
+  Copy,
   Heading,
   History,
   LayoutTemplate,
@@ -800,6 +801,9 @@ export function TemplateEditor() {
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [startMode, setStartMode] = useState<"recommended" | "copy">(
+    "recommended",
+  );
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [editingRevision, setEditingRevision] = useState<number | undefined>();
   const [slugManual, setSlugManual] = useState(false);
@@ -863,6 +867,37 @@ export function TemplateEditor() {
   }, []);
 
   const customTemplates = templates.filter((template) => template.is_custom);
+
+  const uniqueCopySlug = (sourceSlug: string) => {
+    const base = `${sourceSlug}-copy`;
+    if (!templates.some((template) => template.slug === base)) return base;
+    let suffix = 2;
+    while (
+      templates.some((template) => template.slug === `${base}-${suffix}`)
+    ) {
+      suffix += 1;
+    }
+    return `${base}-${suffix}`;
+  };
+
+  const applyTemplateToForm = (
+    template: TemplateGenerateRequest,
+    identity: { name: string; slug: string },
+  ) => {
+    const base = cloneInitial();
+    setForm({
+      name: identity.name,
+      slug: identity.slug,
+      description: template.description ?? "",
+      targetFormats: template.target_formats ?? ["docx"],
+      styles: Object.fromEntries(
+        Object.entries(base.styles).map(([key, defaults]) => [
+          key,
+          { ...defaults, ...(template.styles[key] ?? {}) },
+        ]),
+      ) as unknown as TemplateStyles,
+    });
+  };
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -954,6 +989,7 @@ export function TemplateEditor() {
     setEditingRevision(undefined);
     setForm(loadDraft());
     setSlugManual(false);
+    setStartMode("recommended");
     setStep(0);
     setMaxVisited(0);
     setErrors({});
@@ -964,18 +1000,9 @@ export function TemplateEditor() {
     setLoadingTemplate(true);
     try {
       const template = await fetchTemplate(slug);
-      const base = cloneInitial();
-      setForm({
+      applyTemplateToForm(template, {
         name: template.name,
         slug: template.slug,
-        description: template.description ?? "",
-        targetFormats: template.target_formats ?? ["docx"],
-        styles: Object.fromEntries(
-          Object.entries(base.styles).map(([key, defaults]) => [
-            key,
-            { ...defaults, ...(template.styles[key] ?? {}) },
-          ]),
-        ) as unknown as TemplateStyles,
       });
       setEditingSlug(slug);
       setEditingRevision(template.revision);
@@ -984,6 +1011,27 @@ export function TemplateEditor() {
       setMaxVisited(3);
       setErrors({});
       setOpen(true);
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "读取模板失败", "error");
+    } finally {
+      setLoadingTemplate(false);
+    }
+  };
+
+  const handleCopyTemplate = async (slug: string) => {
+    if (!slug) return;
+    setLoadingTemplate(true);
+    try {
+      const template = await fetchTemplate(slug);
+      applyTemplateToForm(template, {
+        name: `${template.name} 副本`,
+        slug: uniqueCopySlug(template.slug),
+      });
+      setEditingSlug(null);
+      setEditingRevision(undefined);
+      setSlugManual(true);
+      setErrors({});
+      toast(`已复制模板“${template.name}”，请确认名称和标识`, "success");
     } catch (error: unknown) {
       toast(error instanceof Error ? error.message : "读取模板失败", "error");
     } finally {
@@ -1153,10 +1201,35 @@ export function TemplateEditor() {
         <div className="grid gap-3 md:grid-cols-3">
           <button
             type="button"
-            className="rounded-lg border border-primary bg-accent p-4 text-left"
+            onClick={() => {
+              setStartMode("recommended");
+              setForm((previous) => ({
+                ...cloneInitial(),
+                name: previous.name,
+                slug: previous.slug,
+                description: previous.description,
+              }));
+            }}
+            className={cn(
+              "rounded-lg border p-4 text-left transition-colors",
+              startMode === "recommended"
+                ? "border-primary bg-accent"
+                : "border-border bg-card hover:border-primary/50",
+            )}
           >
-            <LayoutTemplate size={18} className="mb-3 text-primary" />
-            <span className="block text-xs font-semibold text-primary">
+            <LayoutTemplate
+              size={18}
+              className={cn(
+                "mb-3",
+                startMode === "recommended" && "text-primary",
+              )}
+            />
+            <span
+              className={cn(
+                "block text-xs font-semibold",
+                startMode === "recommended" && "text-primary",
+              )}
+            >
               推荐样式
             </span>
             <span className="mt-1 block text-[10px] text-muted-foreground">
@@ -1165,14 +1238,28 @@ export function TemplateEditor() {
           </button>
           <button
             type="button"
-            disabled
-            className="rounded-lg border border-border bg-card p-4 text-left opacity-50"
-            title="后续版本提供"
+            onClick={() => setStartMode("copy")}
+            className={cn(
+              "rounded-lg border p-4 text-left transition-colors",
+              startMode === "copy"
+                ? "border-primary bg-accent"
+                : "border-border bg-card hover:border-primary/50",
+            )}
           >
-            <FileText size={18} className="mb-3" />
-            <span className="block text-xs font-semibold">复制已有模板</span>
+            <Copy
+              size={18}
+              className={cn("mb-3", startMode === "copy" && "text-primary")}
+            />
+            <span
+              className={cn(
+                "block text-xs font-semibold",
+                startMode === "copy" && "text-primary",
+              )}
+            >
+              复制已有模板
+            </span>
             <span className="mt-1 block text-[10px] text-muted-foreground">
-              后续版本提供
+              从内置或自定义模板快速创建
             </span>
           </button>
           <button
@@ -1188,6 +1275,35 @@ export function TemplateEditor() {
             </span>
           </button>
         </div>
+        {startMode === "copy" && (
+          <div className="mt-3 rounded-lg border border-border bg-card p-4">
+            <Field
+              label="选择要复制的模板"
+              hint="复制后会生成独立的新模板，修改不会影响来源模板。"
+            >
+              <select
+                className={inputClass}
+                defaultValue=""
+                disabled={loadingTemplate}
+                onChange={(event) => {
+                  const slug = event.target.value;
+                  event.target.value = "";
+                  void handleCopyTemplate(slug);
+                }}
+              >
+                <option value="">
+                  {loadingTemplate ? "正在读取模板…" : "请选择模板…"}
+                </option>
+                {templates.map((template) => (
+                  <option key={template.slug} value={template.slug}>
+                    {template.name}
+                    {template.is_custom ? "（自定义）" : "（内置）"}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        )}
       </section>
     </div>
   );

@@ -230,15 +230,15 @@ async def update_template(
 
 
 @router.get("/templates/{slug}", response_model=TemplateDetailResponse)
-async def get_custom_template(
+async def get_template_detail(
     slug: str,
     mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
 ) -> TemplateDetailResponse:
     if not isinstance(mgr, TemplateService):
         raise TypeError("TemplateService 未初始化")
-    data = mgr.get_custom_template(slug)
+    data = mgr.get_template_snapshot(slug)
     if data is None:
-        raise HTTPException(status_code=404, detail=f"自定义模版 '{slug}' 不存在")
+        raise HTTPException(status_code=404, detail=f"模版 '{slug}' 不存在")
     return TemplateDetailResponse.model_validate(data)
 
 

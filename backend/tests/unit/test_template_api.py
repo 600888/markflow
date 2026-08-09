@@ -110,3 +110,38 @@ def test_update_rejects_mismatched_slug(tmp_path: Path) -> None:
     response = client.put("/templates/another-slug", json=_payload())
 
     assert response.status_code == 400
+
+
+def test_builtin_template_detail_can_be_used_as_copy_source(tmp_path: Path) -> None:
+    builtin_dir = tmp_path / "builtins" / "academic"
+    builtin_dir.mkdir(parents=True)
+    (builtin_dir / "template.yaml").write_text(
+        """
+name: 学术论文
+slug: academic
+version: 1.0.0
+description: 内置模板
+author: MarkFlow
+target_formats: [docx]
+styles:
+  heading1:
+    font: 黑体
+    size: 三号
+    bold: true
+  body:
+    font: 宋体
+    size: 小四
+    line_spacing: 1.5
+""".strip(),
+        encoding="utf-8",
+    )
+    client = _client(tmp_path)
+
+    response = client.get("/templates/academic")
+
+    assert response.status_code == 200
+    detail = response.json()
+    assert detail["id"] is None
+    assert detail["revision"] is None
+    assert detail["styles"]["heading1"]["font"] == "黑体"
+    assert detail["styles"]["body"]["line_spacing"] == 1.5
