@@ -34,6 +34,7 @@ class ConversionJobEntity(Base):
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    pipeline: Mapped[str] = mapped_column(String(32), nullable=False, default="markdown")
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     source_file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     output_format: Mapped[str] = mapped_column(String(16), nullable=False)

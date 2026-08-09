@@ -10,6 +10,9 @@ import type {
   TemplateRevisionDetail,
   TemplateRevisionItem,
   LogListResponse,
+  WordPdfQuality,
+  WordToPdfEngineId,
+  WordToPdfStatus,
 } from "../types";
 
 let _api: typeof ky | null = null;
@@ -142,6 +145,30 @@ export async function fetchTaskStatus(taskId: string): Promise<TaskStatus> {
   return api().get(`tasks/${taskId}`).json();
 }
 
+export async function fetchWordToPdfStatus(): Promise<WordToPdfStatus> {
+  return api().get("word-to-pdf/status").json();
+}
+
+export async function submitWordToPdf(
+  file: File,
+  options: {
+    engine: WordToPdfEngineId;
+    outputFileName: string;
+    quality: WordPdfQuality;
+    exportBookmarks: boolean;
+    embedStandardFonts: boolean;
+  },
+): Promise<{ task_id: string; status: string; message: string }> {
+  const body = new FormData();
+  body.set("file", file, file.name);
+  body.set("engine", options.engine);
+  body.set("output_file_name", options.outputFileName.trim());
+  body.set("quality", options.quality);
+  body.set("export_bookmarks", String(options.exportBookmarks));
+  body.set("embed_standard_fonts", String(options.embedStandardFonts));
+  return api().post("word-to-pdf/convert", { body, timeout: 60_000 }).json();
+}
+
 export function streamProgress(
   taskId: string,
   onProgress: (pct: number, status: string) => void,
@@ -159,11 +186,18 @@ export function streamProgress(
     onComplete();
     es.close();
   });
-  es.addEventListener("error", () => {
+  es.addEventListener("error", (event) => {
     es.close();
-    if (!hadProgress) {
-      onError("SSE 连接错误");
+    if (event instanceof MessageEvent && event.data) {
+      try {
+        const data = JSON.parse(event.data) as { detail?: string };
+        onError(data.detail || "转换失败");
+        return;
+      } catch {
+        // 继续使用通用错误信息
+      }
     }
+    onError(hadProgress ? "转换中断，请稍后重试" : "无法连接转换服务");
   });
   return es;
 }
@@ -267,7 +301,7 @@ export async function clearLogs(): Promise<void> {
 export function streamModuleProgress(
   moduleId: string,
   action: "install" | "uninstall",
-  onProgress: (pct: number) => void,
+  onProgress: (pct: number, message: string) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const es = new EventSource(
@@ -275,14 +309,23 @@ export function streamModuleProgress(
     );
     es.addEventListener("progress", (e) => {
       const data = JSON.parse(e.data) as { progress: number; message: string };
-      onProgress(data.progress);
+      onProgress(data.progress, data.message);
     });
     es.addEventListener("completed", () => {
       es.close();
       resolve();
     });
-    es.addEventListener("error", () => {
+    es.addEventListener("error", (event) => {
       es.close();
+      if (event instanceof MessageEvent && event.data) {
+        try {
+          const data = JSON.parse(event.data) as { detail?: string };
+          reject(new Error(data.detail || "模块操作失败"));
+          return;
+        } catch {
+          // Fall through to the generic error.
+        }
+      }
       reject(new Error("模块操作失败"));
     });
   });

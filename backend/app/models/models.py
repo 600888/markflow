@@ -23,6 +23,13 @@ class OutputFormat(StrEnum):
     RTF = "rtf"
 
 
+class ConversionPipeline(StrEnum):
+    """转换任务使用的处理管线。"""
+
+    MARKDOWN = "markdown"
+    WORD_TO_PDF = "word_to_pdf"
+
+
 class ConversionStatus(StrEnum):
     """任务状态"""
 
@@ -38,6 +45,7 @@ class ConversionTask(BaseModel):
 
     task_id: UUID = Field(default_factory=uuid4)
     input_path: Path
+    pipeline: ConversionPipeline = ConversionPipeline.MARKDOWN
     output_format: OutputFormat
     output_file_name: str | None = None
     template_slug: str | None = None
@@ -49,6 +57,7 @@ class ConversionTask(BaseModel):
     completed_at: datetime | None = None
     error: str | None = None
     extra_args: list[str] = Field(default_factory=list)
+    options: dict = Field(default_factory=dict)
     output_path: Path | None = None
 
 

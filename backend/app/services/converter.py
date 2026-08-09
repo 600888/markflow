@@ -8,7 +8,13 @@ from uuid import UUID, uuid4
 
 from app.core.interfaces import ConversionEngine
 from app.db.repository import ConversionRepository
-from app.models import ConversionResult, ConversionStatus, ConversionTask, OutputFormat
+from app.models import (
+    ConversionPipeline,
+    ConversionResult,
+    ConversionStatus,
+    ConversionTask,
+    OutputFormat,
+)
 from app.services.artifact_storage import ArtifactStorage
 from app.services.log import log
 from app.utils.exceptions import FileTooLargeError
@@ -19,20 +25,33 @@ PROGRESS_PERSIST_STEP = 0.05
 class ConversionService:
     """转换用例编排"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         engine: ConversionEngine,
         repository: ConversionRepository,
         artifact_storage: ArtifactStorage,
         max_file_size: int = 50 * 1024 * 1024,
         max_concurrent: int = 4,
+        word_engine: ConversionEngine | None = None,
+        max_concurrent_word: int = 2,
     ) -> None:
         self._engine = engine
         self._repository = repository
         self._artifact_storage = artifact_storage
         self._max_file_size = max_file_size
         self._semaphore = asyncio.Semaphore(max_concurrent)
+        self._word_semaphore = asyncio.Semaphore(max_concurrent_word)
+        self._engines: dict[ConversionPipeline, ConversionEngine] = {
+            ConversionPipeline.MARKDOWN: engine,
+        }
+        if word_engine is not None:
+            self._engines[ConversionPipeline.WORD_TO_PDF] = word_engine
         self._tasks: dict[UUID, ConversionTask] = {}
+
+    @property
+    def max_file_size(self) -> int:
+        """单个源文件允许的最大字节数。"""
+        return self._max_file_size
 
     async def submit(  # noqa: PLR0913
         self,
@@ -43,6 +62,7 @@ class ConversionService:
         template_slug: str | None = None,
         options: dict | None = None,
         template_snapshot: dict | None = None,
+        pipeline: ConversionPipeline = ConversionPipeline.MARKDOWN,
         *,
         output_file_name: str | None = None,
         convert_images: bool = True,
@@ -63,12 +83,14 @@ class ConversionService:
         task = ConversionTask(
             task_id=task_id,
             input_path=input_path,
+            pipeline=pipeline,
             output_format=output_format,
             output_file_name=output_file_name,
             template_slug=template_slug,
             convert_images=convert_images,
             convert_mermaid=convert_mermaid,
             extra_args=extra_args or [],
+            options=options or {},
         )
         try:
             self._repository.create_job(
@@ -109,8 +131,21 @@ class ConversionService:
             log.debug(f"任务 {task_id}: {pct * 100:.0f}% - {msg}")
 
         try:
-            async with self._semaphore:
-                result = await self._engine.convert(
+            engine = self._engines.get(task.pipeline)
+            if engine is None:
+                raise RuntimeError(f"转换引擎不可用: {task.pipeline.value}")  # noqa: TRY301
+            semaphore = (
+                self._word_semaphore
+                if task.pipeline == ConversionPipeline.WORD_TO_PDF
+                else self._semaphore
+            )
+            async with semaphore:
+                pipeline_options = (
+                    {"options": task.options}
+                    if task.pipeline == ConversionPipeline.WORD_TO_PDF
+                    else {}
+                )
+                result = await engine.convert(
                     input_path=working_path,
                     output_format=task.output_format,
                     extra_args=task.extra_args,
@@ -118,6 +153,7 @@ class ConversionService:
                     convert_images=task.convert_images,
                     convert_mermaid=task.convert_mermaid,
                     on_progress=_on_progress,
+                    **pipeline_options,
                 )
 
             result.task_id = task_id

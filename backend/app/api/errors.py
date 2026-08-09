@@ -8,8 +8,10 @@ from fastapi.responses import JSONResponse
 from app.utils.exceptions import (
     ConversionError,
     FileTooLargeError,
+    InvalidWordFileError,
     MarkflowError,
     UnsupportedFormatError,
+    WordEngineUnavailableError,
 )
 
 
@@ -37,6 +39,20 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=500,
             content={"detail": exc.message},
         )
+
+    @app.exception_handler(InvalidWordFileError)
+    async def handle_invalid_word_file(
+        request: Request,
+        exc: InvalidWordFileError,
+    ) -> JSONResponse:
+        return JSONResponse(status_code=400, content={"detail": exc.message})
+
+    @app.exception_handler(WordEngineUnavailableError)
+    async def handle_word_engine_unavailable(
+        request: Request,
+        exc: WordEngineUnavailableError,
+    ) -> JSONResponse:
+        return JSONResponse(status_code=503, content={"detail": exc.message})
 
     @app.exception_handler(MarkflowError)
     async def handle_markflow_error(request: Request, exc: MarkflowError) -> JSONResponse:

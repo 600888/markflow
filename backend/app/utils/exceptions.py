@@ -28,3 +28,11 @@ class FileTooLargeError(MarkflowError):
 
 class PandocNotFoundError(MarkflowError):
     """Pandoc 未安装或不可用"""
+
+
+class InvalidWordFileError(MarkflowError):
+    """Word 文件结构或格式无效。"""
+
+
+class WordEngineUnavailableError(MarkflowError):
+    """Word 转 PDF 引擎未安装或不可用。"""

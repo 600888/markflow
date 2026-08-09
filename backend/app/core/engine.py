@@ -364,9 +364,11 @@ class PandocEngine(ConversionEngine):
         *,
         convert_images: bool = True,
         convert_mermaid: bool = True,
+        options: dict | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> ConversionResult:
         """执行 Pandoc 转换"""
+        del options
         # 运行时检查 Pandoc 是否可用
         if not self._pandoc_available:
             self._pandoc_available = self._check_pandoc()

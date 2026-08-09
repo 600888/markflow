@@ -10,7 +10,7 @@ from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from app.db.models import ConversionArtifactEntity, ConversionJobEntity
-from app.models import ConversionStatus, ConversionTask, OutputFormat
+from app.models import ConversionPipeline, ConversionStatus, ConversionTask, OutputFormat
 
 
 class ConversionRepository:
@@ -32,6 +32,7 @@ class ConversionRepository:
         now = datetime.now(UTC)
         entity = ConversionJobEntity(
             id=str(task.task_id),
+            pipeline=task.pipeline.value,
             status=task.status.value,
             source_file_name=source_file_name,
             output_format=task.output_format.value,
@@ -130,6 +131,7 @@ class ConversionRepository:
         return ConversionTask(
             task_id=UUID(job.id),
             input_path=Path(source.relative_path) if source else Path(),
+            pipeline=ConversionPipeline(job.pipeline),
             output_format=OutputFormat(job.output_format),
             template_slug=job.template_slug,
             status=ConversionStatus(job.status)
@@ -139,6 +141,7 @@ class ConversionRepository:
             created_at=job.created_at,
             completed_at=job.completed_at,
             error=job.error_message,
+            options=job.options_json,
             output_path=Path(output.relative_path) if output else None,
         )
 

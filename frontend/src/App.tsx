@@ -18,6 +18,7 @@ import {
   type MainTab,
 } from "./components/MainNavigationTabs";
 import { HistoryPage } from "./components/HistoryPage";
+import { WordToPdfPage } from "./components/WordToPdfPage";
 
 export default function App() {
   const setBackendOnline = useStore((s) => s.setBackendOnline);
@@ -42,24 +43,37 @@ export default function App() {
         <Titlebar />
         <MainNavigationTabs activeTab={activeTab} onChange={setActiveTab} />
 
-        {activeTab === "convert" ? (
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-[440px] flex-shrink-0 border-r border-border flex flex-col gap-6 px-5 py-6 overflow-auto bg-card">
-              <Dropzone />
-              <FormatSelector />
-              <TemplateSelector />
-              <AdvancedOptions />
-              <OutputFileName />
-              <ConvertSection />
-            </div>
-
-            <div className="flex-1 overflow-hidden">
-              <PreviewPanel />
-            </div>
+        <div
+          className={
+            activeTab === "convert" ? "flex-1 flex overflow-hidden" : "hidden"
+          }
+          aria-hidden={activeTab !== "convert"}
+        >
+          <div className="w-[440px] flex-shrink-0 border-r border-border flex flex-col gap-6 px-5 py-6 overflow-auto bg-card">
+            <Dropzone />
+            <FormatSelector />
+            <TemplateSelector />
+            <AdvancedOptions />
+            <OutputFileName />
+            <ConvertSection />
           </div>
-        ) : (
+
+          <div className="flex-1 overflow-hidden">
+            <PreviewPanel />
+          </div>
+        </div>
+        <div
+          className={activeTab === "word-to-pdf" ? "contents" : "hidden"}
+          aria-hidden={activeTab !== "word-to-pdf"}
+        >
+          <WordToPdfPage />
+        </div>
+        <div
+          className={activeTab === "history" ? "contents" : "hidden"}
+          aria-hidden={activeTab !== "history"}
+        >
           <HistoryPage />
-        )}
+        </div>
 
         <StatusBar />
 

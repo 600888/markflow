@@ -64,6 +64,34 @@ class TaskStatusResponse(BaseModel):
     progress: float
 
 
+class WordToPdfEngineStatusResponse(BaseModel):
+    id: str
+    name: str
+    available: bool = False
+    version: str = ""
+    executable: str = ""
+    supported_inputs: list[str] = Field(default_factory=list)
+    diagnostic: str = ""
+    fidelity: Literal["native", "compatible", "reflow"] = "compatible"
+    managed: bool = False
+    installer_found: bool = False
+    can_install: bool = False
+
+
+class WordToPdfStatusResponse(BaseModel):
+    available: bool = False
+    engine: str = "libreoffice"
+    version: str = ""
+    executable: str = ""
+    supported_inputs: list[str] = Field(default_factory=lambda: ["docx", "doc"])
+    diagnostic: str = ""
+    managed: bool = False
+    installer_found: bool = False
+    can_install: bool = False
+    default_engine: str = "libreoffice"
+    engines: list[WordToPdfEngineStatusResponse] = Field(default_factory=list)
+
+
 # ========== 历史记录 ==========
 class HistoryArtifactResponse(BaseModel):
     kind: str
@@ -76,6 +104,7 @@ class HistoryArtifactResponse(BaseModel):
 class HistoryItemResponse(BaseModel):
     task_id: str
     status: str
+    pipeline: str = "markdown"
     source_file_name: str
     output_format: str
     template_slug: str | None

@@ -12,6 +12,7 @@ import type {
 import {
   fetchMermaidStatus,
   fetchPandocStatus,
+  fetchWordToPdfStatus,
   setBaseUrl,
 } from "../services/api";
 import { initializeBackend, checkBackendReady } from "../services/tauri";
@@ -113,6 +114,7 @@ interface AppState {
     id: string,
     status: ModuleInfo["status"],
     progress?: number,
+    message?: string,
   ) => void;
   refreshModulesStatus: () => Promise<void>;
   installModule: (id: string) => Promise<void>;
@@ -255,6 +257,14 @@ export const useStore = create<AppState>((set) => ({
       progress: 0,
     },
     {
+      id: "libreoffice",
+      name: "LibreOffice PDF 引擎",
+      description: "Word 转 PDF 本地引擎，首次安装需从官方源下载约 350 MB",
+      status: "not_installed",
+      progress: 0,
+      removable: true,
+    },
+    {
       id: "mermaid",
       name: "Mermaid 图表渲染",
       description: "使用系统 Edge 渲染流程图/时序图/甘特图",
@@ -265,10 +275,12 @@ export const useStore = create<AppState>((set) => ({
   ],
   refreshModulesStatus: async () => {
     try {
-      const [mermaidStatus, pandocStatus] = await Promise.all([
-        fetchMermaidStatus(),
-        fetchPandocStatus(),
-      ]);
+      const [mermaidStatus, pandocStatus, libreOfficeStatus] =
+        await Promise.all([
+          fetchMermaidStatus(),
+          fetchPandocStatus(),
+          fetchWordToPdfStatus(),
+        ]);
       const mermaidInstalled = mermaidStatus.mermaid_available;
       const pandocInstalled = pandocStatus.available;
       set((s) => ({
@@ -285,6 +297,25 @@ export const useStore = create<AppState>((set) => ({
               status: pandocInstalled ? "installed" : "not_installed",
             };
           }
+          if (m.id === "libreoffice") {
+            const libreOfficeEngine = libreOfficeStatus.engines.find(
+              (engine) => engine.id === "libreoffice",
+            );
+            return {
+              ...m,
+              status: libreOfficeEngine?.available
+                ? "installed"
+                : "not_installed",
+              removable: Boolean(libreOfficeEngine?.managed),
+              message: libreOfficeEngine?.available
+                ? `版本 ${libreOfficeEngine.version}${
+                    libreOfficeEngine.managed
+                      ? " · MarkFlow 托管"
+                      : " · 系统安装"
+                  }`
+                : libreOfficeEngine?.diagnostic || "未检测到 LibreOffice",
+            };
+          }
           return m;
         }),
       }));
@@ -292,50 +323,72 @@ export const useStore = create<AppState>((set) => ({
       // 后端不可达时保持现有状态
     }
   },
-  setModuleStatus: (id, status, progress) =>
+  setModuleStatus: (id, status, progress, message) =>
     set((s) => ({
       modules: s.modules.map((m) =>
-        m.id === id ? { ...m, status, progress: progress ?? m.progress } : m,
+        m.id === id
+          ? {
+              ...m,
+              status,
+              progress: progress ?? m.progress,
+              message: message ?? m.message,
+            }
+          : m,
       ),
     })),
   installModule: async (id) => {
     const { setModuleStatus } = useStore.getState();
     setModuleStatus(id, "installing", 0);
+    let succeeded = false;
 
     try {
       const { streamModuleProgress } = await import("../services/api");
-      await streamModuleProgress(id, "install", (pct) => {
-        setModuleStatus(id, "installing", pct);
+      await streamModuleProgress(id, "install", (pct, message) => {
+        setModuleStatus(id, "installing", pct, message);
       });
-      setModuleStatus(id, "installed", 100);
-    } catch {
-      setModuleStatus(id, "not_installed", 0);
+      setModuleStatus(id, "installed", 100, "安装完成");
+      succeeded = true;
+    } catch (error) {
+      setModuleStatus(
+        id,
+        "not_installed",
+        0,
+        error instanceof Error ? error.message : "安装失败",
+      );
     }
 
     if (id === "mermaid") {
       useStore.getState().refreshMermaidStatus();
-    } else if (id === "pandoc") {
+    } else if (succeeded && (id === "pandoc" || id === "libreoffice")) {
       useStore.getState().refreshModulesStatus();
+      if (id === "libreoffice") {
+        window.dispatchEvent(new Event("markflow:libreoffice-changed"));
+      }
     }
   },
   uninstallModule: async (id) => {
     const { setModuleStatus } = useStore.getState();
     setModuleStatus(id, "uninstalling", 0);
+    let succeeded = false;
 
     try {
       const { streamModuleProgress } = await import("../services/api");
-      await streamModuleProgress(id, "uninstall", (pct) => {
-        setModuleStatus(id, "uninstalling", pct);
+      await streamModuleProgress(id, "uninstall", (pct, message) => {
+        setModuleStatus(id, "uninstalling", pct, message);
       });
       setModuleStatus(id, "not_installed", 0);
+      succeeded = true;
     } catch {
       setModuleStatus(id, "installed", 0);
     }
 
     if (id === "mermaid") {
       useStore.getState().refreshMermaidStatus();
-    } else if (id === "pandoc") {
+    } else if (succeeded && (id === "pandoc" || id === "libreoffice")) {
       useStore.getState().refreshModulesStatus();
+      if (id === "libreoffice") {
+        window.dispatchEvent(new Event("markflow:libreoffice-changed"));
+      }
     }
   },
 }));

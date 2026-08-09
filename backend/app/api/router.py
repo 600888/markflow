@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from sse_starlette.sse import EventSourceResponse
 
@@ -38,12 +38,15 @@ from app.api.schemas import (
     TemplateRevisionListResponse,
     TemplateSaveRequest,
     TemplateSaveResponse,
+    WordToPdfStatusResponse,
 )
 from app.core.browser_check import edge_manager
+from app.core.libreoffice_check import LibreOfficeManager
 from app.core.pandoc_check import pandoc_manager
 from app.core.template_manager import TemplateManager
+from app.core.word_to_pdf_engine import WordToPdfEngineRegistry
 from app.db.repository import ConversionRepository
-from app.models.models import ConversionStatus, OutputFormat
+from app.models.models import ConversionPipeline, ConversionStatus, OutputFormat
 from app.services.artifact_storage import ArtifactStorage
 from app.services.converter import ConversionService
 from app.services.log_service import LogService
@@ -53,6 +56,8 @@ from app.services.template_service import (
     TemplateNotFoundError,
     TemplateService,
 )
+from app.services.word_file_validator import WordFileValidator
+from app.utils.exceptions import FileTooLargeError, WordEngineUnavailableError
 
 router = APIRouter()
 
@@ -63,6 +68,8 @@ _template_gen: TemplateGenerator | None = None
 _log_svc: LogService | None = None
 _repository: ConversionRepository | None = None
 _artifact_storage: ArtifactStorage | None = None
+_libreoffice_manager: LibreOfficeManager | None = None
+_word_to_pdf_registry: WordToPdfEngineRegistry | None = None
 
 
 def init(
@@ -72,15 +79,20 @@ def init(
     log_svc: LogService | None = None,
     repository: ConversionRepository | None = None,
     artifact_storage: ArtifactStorage | None = None,
+    libreoffice_manager: LibreOfficeManager | None = None,
+    word_to_pdf_registry: WordToPdfEngineRegistry | None = None,
 ) -> None:
     """初始化全局服务实例"""
-    global _conv_service, _template_mgr, _template_gen, _log_svc, _repository, _artifact_storage
+    global _conv_service, _template_mgr, _template_gen, _log_svc
+    global _repository, _artifact_storage, _libreoffice_manager, _word_to_pdf_registry
     _conv_service = svc
     _template_mgr = mgr
     _template_gen = gen
     _log_svc = log_svc
     _repository = repository
     _artifact_storage = artifact_storage
+    _libreoffice_manager = libreoffice_manager
+    _word_to_pdf_registry = word_to_pdf_registry
 
 
 def get_repository() -> ConversionRepository:
@@ -93,6 +105,18 @@ def get_artifact_storage() -> ArtifactStorage:
     if _artifact_storage is None:
         raise RuntimeError("ArtifactStorage 未初始化")
     return _artifact_storage
+
+
+def get_libreoffice_manager() -> LibreOfficeManager:
+    if _libreoffice_manager is None:
+        raise RuntimeError("LibreOfficeManager 未初始化")
+    return _libreoffice_manager
+
+
+def get_word_to_pdf_registry() -> WordToPdfEngineRegistry:
+    if _word_to_pdf_registry is None:
+        raise RuntimeError("WordToPdfEngineRegistry 未初始化")
+    return _word_to_pdf_registry
 
 
 def get_log_svc() -> LogService:
@@ -349,7 +373,67 @@ async def delete_template(
     return Response(status_code=204)
 
 
-# ========== 文件转换 ==========
+# ========== Word 转 PDF ==========
+@router.get("/word-to-pdf/status", response_model=WordToPdfStatusResponse)
+async def word_to_pdf_status(
+    registry: Annotated[WordToPdfEngineRegistry, Depends(get_word_to_pdf_registry)],
+) -> WordToPdfStatusResponse:
+    return WordToPdfStatusResponse(**registry.get_info(refresh=True))
+
+
+@router.post("/word-to-pdf/convert", response_model=ConvertResponse)
+async def convert_word_to_pdf(
+    file: Annotated[UploadFile, File()],
+    output_file_name: Annotated[str, Form(max_length=255)] = "",
+    engine: Annotated[str, Form()] = "",
+    quality: Annotated[str, Form()] = "standard",
+    export_bookmarks: Annotated[bool, Form()] = True,  # noqa: FBT002
+    embed_standard_fonts: Annotated[bool, Form()] = True,  # noqa: FBT002
+    svc: Annotated[ConversionService, Depends(get_svc)] = None,
+    registry: Annotated[WordToPdfEngineRegistry, Depends(get_word_to_pdf_registry)] = None,
+) -> ConvertResponse:
+    if quality not in {"screen", "standard", "print"}:
+        raise HTTPException(status_code=400, detail=f"不支持的 PDF 质量选项: {quality}")
+    selected_engine = registry.resolve_engine_id(engine, refresh=True)
+    if selected_engine not in registry.engines:
+        raise HTTPException(status_code=400, detail=f"不支持的导出引擎: {selected_engine}")
+    engine_info = registry.get_engine_info(selected_engine, refresh=True)
+    if not engine_info["available"]:
+        raise WordEngineUnavailableError(str(engine_info["diagnostic"]))
+
+    filename = Path(file.filename or "document.docx").name
+    try:
+        content = await _read_upload_limited(file, svc.max_file_size)
+    finally:
+        await file.close()
+    WordFileValidator().validate(content, filename)
+
+    options = {
+        "quality": quality,
+        "export_bookmarks": export_bookmarks,
+        "embed_standard_fonts": embed_standard_fonts,
+        "engine": selected_engine,
+        "engine_version": engine_info["version"],
+    }
+    task = await svc.submit(
+        content,
+        filename,
+        OutputFormat.PDF,
+        options=options,
+        pipeline=ConversionPipeline.WORD_TO_PDF,
+        output_file_name=output_file_name.strip() or None,
+        convert_images=False,
+        convert_mermaid=False,
+    )
+    asyncio.create_task(_run_convert(svc, task.task_id))
+    return ConvertResponse(
+        task_id=str(task.task_id),
+        status=task.status.value,
+        message="任务已提交",
+    )
+
+
+# ========== Markdown 文件转换 ==========
 @router.post("/convert", response_model=ConvertResponse)
 async def convert(
     req: ConvertRequest,
@@ -732,6 +816,59 @@ async def _uninstall_pandoc_flow():
         yield {"event": "error", "data": json.dumps({"detail": detail})}
 
 
+async def _install_libreoffice_flow():
+    """Install MarkFlow's private LibreOffice copy and stream its progress."""
+    manager = get_libreoffice_manager()
+    if manager.is_available(refresh=True):
+        yield {"event": "progress", "data": json.dumps({"progress": 100, "message": "已安装"})}
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+        return
+
+    task = asyncio.create_task(manager.ensure())
+    last_pct = -1
+    last_message = ""
+    while not task.done():
+        progress = manager.get_install_progress()
+        pct = int(progress.get("progress", 0))
+        message = str(progress.get("message", "安装中..."))
+        if pct != last_pct or message != last_message:
+            last_pct, last_message = pct, message
+            yield {
+                "event": "progress",
+                "data": json.dumps({"progress": pct, "message": message}),
+            }
+        await asyncio.sleep(0.5)
+
+    if task.result():
+        yield {
+            "event": "progress",
+            "data": json.dumps({"progress": 100, "message": "LibreOffice 安装完成"}),
+        }
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+    else:
+        detail = str(manager.get_install_progress().get("message", "LibreOffice 安装失败"))
+        yield {"event": "error", "data": json.dumps({"detail": detail})}
+
+
+async def _uninstall_libreoffice_flow():
+    """Remove only the LibreOffice copy managed by MarkFlow."""
+    manager = get_libreoffice_manager()
+    yield {
+        "event": "progress",
+        "data": json.dumps({"progress": 20, "message": "正在卸载 LibreOffice 模块..."}),
+    }
+    success = await asyncio.to_thread(manager.remove)
+    if success:
+        yield {
+            "event": "progress",
+            "data": json.dumps({"progress": 100, "message": "LibreOffice 模块已卸载"}),
+        }
+        yield {"event": "completed", "data": json.dumps({"success": True})}
+    else:
+        detail = str(manager.get_install_progress().get("message", "LibreOffice 卸载失败"))
+        yield {"event": "error", "data": json.dumps({"detail": detail})}
+
+
 @router.get("/modules/{module_id}/progress")
 async def stream_module_progress(
     module_id: str,
@@ -750,6 +887,10 @@ async def stream_module_progress(
                 yield evt
         elif module_id == "pandoc":
             flow = _install_pandoc_flow if action == "install" else _uninstall_pandoc_flow
+            async for evt in flow():
+                yield evt
+        elif module_id == "libreoffice":
+            flow = _install_libreoffice_flow if action == "install" else _uninstall_libreoffice_flow
             async for evt in flow():
                 yield evt
         else:
@@ -778,6 +919,18 @@ def _parse_metadata(raw: str | None) -> dict[str, str]:
     if not isinstance(data, dict):
         return {}
     return {str(key): str(value) for key, value in data.items()}
+
+
+async def _read_upload_limited(file: UploadFile, max_size: int) -> bytes:
+    """流式读取上传文件，并在解析过程中执行大小上限。"""
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(1024 * 1024):
+        total += len(chunk)
+        if total > max_size:
+            raise FileTooLargeError(f"文件大小超过上限 {max_size} bytes")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _extract_markdown_title(content: bytes) -> str:
@@ -824,6 +977,7 @@ def _history_item(job, *, include_template_snapshot: bool = False) -> HistoryIte
     return HistoryItemResponse(
         task_id=job.id,
         status=job.status,
+        pipeline=job.pipeline,
         source_file_name=job.source_file_name,
         output_format=job.output_format,
         template_slug=job.template_slug,

@@ -25,6 +25,7 @@ class ConversionEngine(ABC):
         *,
         convert_images: bool = True,
         convert_mermaid: bool = True,
+        options: dict | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> ConversionResult:
         """
@@ -35,6 +36,7 @@ class ConversionEngine(ABC):
             output_format: 目标输出格式
             extra_args: 额外的 Pandoc 参数
             template_slug: 模版标识，用于 --reference-doc
+            options: 当前转换管线的结构化选项
             on_progress: 进度回调
 
         """

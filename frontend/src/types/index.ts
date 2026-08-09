@@ -36,6 +36,42 @@ export interface TaskStatus {
   progress: number;
 }
 
+export type WordPdfQuality = "screen" | "standard" | "print";
+
+export type WordToPdfEngineId =
+  | "pandoc"
+  | "wps"
+  | "microsoft-word"
+  | "libreoffice";
+
+export interface WordToPdfEngineStatus {
+  id: WordToPdfEngineId;
+  name: string;
+  available: boolean;
+  version: string;
+  executable: string;
+  supported_inputs: string[];
+  diagnostic: string;
+  fidelity: "native" | "compatible" | "reflow";
+  managed: boolean;
+  installer_found: boolean;
+  can_install: boolean;
+}
+
+export interface WordToPdfStatus {
+  available: boolean;
+  engine: WordToPdfEngineId;
+  version: string;
+  executable: string;
+  supported_inputs: string[];
+  diagnostic: string;
+  managed: boolean;
+  installer_found: boolean;
+  can_install: boolean;
+  default_engine: WordToPdfEngineId;
+  engines: WordToPdfEngineStatus[];
+}
+
 export interface HealthCheck {
   status: string;
   version: string;
@@ -145,6 +181,8 @@ export interface ModuleInfo {
   status: "installed" | "not_installed" | "installing" | "uninstalling";
   progress: number;
   builtin?: boolean;
+  removable?: boolean;
+  message?: string;
 }
 
 // ===== Pandoc 状态 =====

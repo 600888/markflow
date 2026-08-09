@@ -272,6 +272,41 @@
             },
             {
               "type": "frame",
+              "id": "wordPdfTabMain",
+              "name": "Word to PDF Tab Inactive",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "wordPdfIconMain",
+                  "name": "Word to PDF Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file-type-2",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                },
+                {
+                  "type": "text",
+                  "id": "wordPdfLabelMain",
+                  "name": "Word to PDF Label",
+                  "fill": "$foregroundMuted",
+                  "content": "Word 转 PDF",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "I4CNp",
               "name": "History Tab Inactive",
               "height": "fill_container",
@@ -1706,6 +1741,41 @@
                   "name": "Document Conversion Label Inactive",
                   "fill": "$foregroundMuted",
                   "content": "文档转换",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wordPdfTabHistory",
+              "name": "Word to PDF Tab Inactive",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [
+                0,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "wordPdfIconHistory",
+                  "name": "Word to PDF Icon Inactive",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file-type-2",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                },
+                {
+                  "type": "text",
+                  "id": "wordPdfLabelHistory",
+                  "name": "Word to PDF Label Inactive",
+                  "fill": "$foregroundMuted",
+                  "content": "Word 转 PDF",
                   "fontFamily": "Geist",
                   "fontSize": 13,
                   "fontWeight": "500"
@@ -3531,6 +3601,1180 @@
         { "type": "text", "id": "crTHT", "x": 1010, "y": 632, "content": "格式                         用途", "fill": "#374151FF", "fontFamily": "Inter", "fontSize": 9, "fontWeight": "700" },
         { "type": "rectangle", "id": "crTB", "x": 993, "y": 652, "width": 320, "height": 52, "fill": "#FFFFFFFF", "stroke": "#D1D5DBFF", "strokeWidth": 1 },
         { "type": "text", "id": "crTBT", "x": 1010, "y": 664, "content": "DOCX                       正式文档\nPDF                           分发阅读", "fill": "#4B5563FF", "fontFamily": "Inter", "fontSize": 9, "lineHeight": 1.7 }
+      ]
+    }
+    ,
+    {
+      "type": "frame",
+      "id": "wordPdfWindow",
+      "x": 1600,
+      "y": 1100,
+      "name": "MarkFlow - Word to PDF",
+      "clip": true,
+      "width": 1400,
+      "height": 900,
+      "fill": "$surface",
+      "cornerRadius": 8,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "wordPdfTitlebar",
+          "name": "Titlebar",
+          "width": "fill_container",
+          "height": 40,
+          "fill": "$surfaceSecondary",
+          "stroke": "$border",
+          "strokeWidth": { "bottom": 1 },
+          "gap": 8,
+          "padding": [0, 16],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "wordPdfLogo",
+              "name": "Logo",
+              "width": 20,
+              "height": 20,
+              "fill": "$accent",
+              "cornerRadius": 4
+            },
+            {
+              "type": "text",
+              "id": "wordPdfLogoText",
+              "name": "Logo Text",
+              "fill": "#FFFFFFFF",
+              "content": "M",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "wordPdfAppTitle",
+              "name": "App Title",
+              "fill": "$foregroundMuted",
+              "content": "MarkFlow v0.1",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "rectangle",
+              "id": "wordPdfTitleSpacer",
+              "name": "Titlebar Spacer",
+              "opacity": 0,
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "wordPdfThemeButton",
+              "name": "Theme Button",
+              "width": 28,
+              "height": 28,
+              "cornerRadius": 4,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "wordPdfThemeIcon",
+                  "name": "Theme Icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "sun",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wordPdfLogButton",
+              "name": "Log Button",
+              "width": 28,
+              "height": 28,
+              "cornerRadius": 4,
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "wordPdfLogIcon",
+                  "name": "Log Icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "clipboard-list",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wordPdfWindowControls",
+              "name": "Window Controls",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wordPdfMinimize",
+                  "name": "Minimize",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wordPdfMinimizeText",
+                      "name": "Minimize Icon",
+                      "fill": "$foregroundMuted",
+                      "content": "─",
+                      "fontFamily": "Inter",
+                      "fontSize": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wordPdfMaximize",
+                  "name": "Maximize",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wordPdfMaximizeText",
+                      "name": "Maximize Icon",
+                      "fill": "$foregroundMuted",
+                      "content": "□",
+                      "fontFamily": "Inter",
+                      "fontSize": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wordPdfClose",
+                  "name": "Close",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 4,
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wordPdfCloseText",
+                      "name": "Close Icon",
+                      "fill": "$foregroundMuted",
+                      "content": "✕",
+                      "fontFamily": "Inter",
+                      "fontSize": 12
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wordPdfNavigation",
+          "name": "Main Navigation Tabs",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$surface",
+          "stroke": "$border",
+          "strokeWidth": { "bottom": 1 },
+          "gap": 8,
+          "padding": [0, 20],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "wordPdfDocumentTab",
+              "name": "Document Conversion Tab Inactive",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [0, 14],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "wordPdfDocumentTabIcon",
+                  "name": "Document Conversion Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file-output",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                },
+                {
+                  "type": "text",
+                  "id": "wordPdfDocumentTabLabel",
+                  "name": "Document Conversion Label",
+                  "fill": "$foregroundMuted",
+                  "content": "文档转换",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wordPdfActiveTab",
+              "name": "Word to PDF Tab Active",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [0, 14],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "wordPdfActiveTabIcon",
+                  "name": "Word to PDF Icon Active",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file-type-2",
+                  "library": "lucide",
+                  "fill": "$accent"
+                },
+                {
+                  "type": "text",
+                  "id": "wordPdfActiveTabLabel",
+                  "name": "Word to PDF Label Active",
+                  "fill": "$accent",
+                  "content": "Word 转 PDF",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "rectangle",
+                  "id": "wordPdfActiveIndicator",
+                  "name": "Word to PDF Active Indicator",
+                  "layoutPosition": "absolute",
+                  "x": 0,
+                  "y": 45,
+                  "width": 124,
+                  "height": 3,
+                  "fill": "$accent",
+                  "cornerRadius": [2, 2, 0, 0]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wordPdfHistoryTab",
+              "name": "History Tab Inactive",
+              "height": "fill_container",
+              "gap": 8,
+              "padding": [0, 14],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "wordPdfHistoryTabIcon",
+                  "name": "History Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "history",
+                  "library": "lucide",
+                  "fill": "$foregroundMuted"
+                },
+                {
+                  "type": "text",
+                  "id": "wordPdfHistoryTabLabel",
+                  "name": "History Label",
+                  "fill": "$foregroundMuted",
+                  "content": "历史记录",
+                  "fontFamily": "Geist",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wordPdfMainContent",
+          "name": "Word to PDF Main Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "wordPdfLeftPanel",
+              "name": "Conversion Settings Panel",
+              "width": 440,
+              "height": "fill_container",
+              "fill": "$surface",
+              "stroke": "$border",
+              "strokeWidth": { "right": 1 },
+              "layout": "vertical",
+              "gap": 18,
+              "padding": [22, 20],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wordPdfPageHeading",
+                  "name": "Page Heading",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wordPdfHeadingRow",
+                      "name": "Heading Row",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wordPdfPageTitle",
+                          "name": "Page Title",
+                          "fill": "$foreground",
+                          "content": "Word 转 PDF",
+                          "fontFamily": "Geist",
+                          "fontSize": 20,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wordPdfLocalBadge",
+                          "name": "Local Conversion Badge",
+                          "height": 22,
+                          "fill": "#F3E8FFFF",
+                          "cornerRadius": 11,
+                          "gap": 5,
+                          "padding": [0, 9],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "wordPdfShieldIcon",
+                              "name": "Shield Icon",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "shield-check",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wordPdfLocalText",
+                              "name": "Local Conversion Text",
+                              "fill": "$accent",
+                              "content": "本地转换",
+                              "fontFamily": "Geist",
+                              "fontSize": 10,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "wordPdfPageSubtitle",
+                      "name": "Page Subtitle",
+                      "fill": "$foregroundMuted",
+                      "content": "保留原文档排版，将 .docx / .doc 文件转换为 PDF",
+                      "fontFamily": "Geist",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wordPdfUploadSection",
+                  "name": "Upload Section",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wordPdfUploadLabel",
+                      "name": "Upload Label",
+                      "fill": "$foregroundMuted",
+                      "content": "WORD 文件",
+                      "fontFamily": "Geist",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.8
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wordPdfDropzone",
+                      "name": "Word File Dropzone Selected",
+                      "width": "fill_container",
+                      "height": 126,
+                      "fill": "#F3E8FFFF",
+                      "cornerRadius": 8,
+                      "stroke": "$accent",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 7,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wordPdfFileIconBox",
+                          "name": "Word File Icon Box",
+                          "width": 38,
+                          "height": 38,
+                          "fill": "$surface",
+                          "cornerRadius": 8,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "wordPdfFileIcon",
+                              "name": "Word File Icon",
+                              "width": 21,
+                              "height": 21,
+                              "icon": "file-text",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfSelectedFileName",
+                          "name": "Selected File Name",
+                          "fill": "$foreground",
+                          "content": "产品需求说明书.docx",
+                          "fontFamily": "Geist",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfSelectedFileMeta",
+                          "name": "Selected File Metadata",
+                          "fill": "$foregroundMuted",
+                          "content": "2.4 MB  ·  18 页  ·  点击替换文件",
+                          "fontFamily": "Geist",
+                          "fontSize": 11
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wordPdfOptionsSection",
+                  "name": "PDF Options Section",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wordPdfOptionsLabel",
+                      "name": "Options Label",
+                      "fill": "$foregroundMuted",
+                      "content": "转换选项",
+                      "fontFamily": "Geist",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.8
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wordPdfOptionsCard",
+                      "name": "Conversion Options Card",
+                      "width": "fill_container",
+                      "fill": "$surfaceSecondary",
+                      "cornerRadius": 8,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wordPdfQualityRow",
+                          "name": "Output Quality Row",
+                          "width": "fill_container",
+                          "height": 48,
+                          "padding": [0, 14],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wordPdfQualityLabel",
+                              "name": "Output Quality Label",
+                              "fill": "$foreground",
+                              "content": "输出质量",
+                              "fontFamily": "Geist",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wordPdfQualitySelect",
+                              "name": "Output Quality Select",
+                              "width": 128,
+                              "height": 30,
+                              "fill": "$surface",
+                              "cornerRadius": 6,
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "padding": [0, 10],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wordPdfQualityValue",
+                                  "name": "Output Quality Value",
+                                  "fill": "$foreground",
+                                  "content": "标准（推荐）",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 11
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "wordPdfQualityChevron",
+                                  "name": "Select Chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$foregroundMuted"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wordPdfBookmarkRow",
+                          "name": "Bookmark Row",
+                          "width": "fill_container",
+                          "height": 48,
+                          "stroke": "$border",
+                          "strokeWidth": { "top": 1 },
+                          "padding": [0, 14],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wordPdfBookmarkTextGroup",
+                              "name": "Bookmark Text Group",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wordPdfBookmarkLabel",
+                                  "name": "Bookmark Label",
+                                  "fill": "$foreground",
+                                  "content": "生成书签",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "wordPdfBookmarkHint",
+                                  "name": "Bookmark Hint",
+                                  "fill": "$foregroundMuted",
+                                  "content": "根据 Word 标题层级创建",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 10
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wordPdfBookmarkToggle",
+                              "name": "Bookmark Toggle On",
+                              "width": 34,
+                              "height": 20,
+                              "fill": "$accent",
+                              "cornerRadius": 10,
+                              "padding": [2, 2, 2, 16],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "wordPdfBookmarkToggleKnob",
+                                  "name": "Toggle Knob",
+                                  "width": 16,
+                                  "height": 16,
+                                  "fill": "#FFFFFFFF"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wordPdfFontRow",
+                          "name": "Embed Font Row",
+                          "width": "fill_container",
+                          "height": 48,
+                          "stroke": "$border",
+                          "strokeWidth": { "top": 1 },
+                          "padding": [0, 14],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wordPdfFontTextGroup",
+                              "name": "Font Text Group",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wordPdfFontLabel",
+                                  "name": "Embed Font Label",
+                                  "fill": "$foreground",
+                                  "content": "嵌入字体",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "wordPdfFontHint",
+                                  "name": "Embed Font Hint",
+                                  "fill": "$foregroundMuted",
+                                  "content": "确保跨设备显示一致",
+                                  "fontFamily": "Geist",
+                                  "fontSize": 10
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wordPdfFontToggle",
+                              "name": "Embed Font Toggle On",
+                              "width": 34,
+                              "height": 20,
+                              "fill": "$accent",
+                              "cornerRadius": 10,
+                              "padding": [2, 2, 2, 16],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "wordPdfFontToggleKnob",
+                                  "name": "Toggle Knob",
+                                  "width": 16,
+                                  "height": 16,
+                                  "fill": "#FFFFFFFF"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wordPdfOutputSection",
+                  "name": "Output Section",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wordPdfOutputLabel",
+                      "name": "Output Label",
+                      "fill": "$foregroundMuted",
+                      "content": "输出文件",
+                      "fontFamily": "Geist",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.8
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wordPdfOutputInput",
+                      "name": "Output File Name Input",
+                      "width": "fill_container",
+                      "height": 36,
+                      "fill": "$surface",
+                      "cornerRadius": 6,
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "padding": [0, 11],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wordPdfOutputName",
+                          "name": "Output File Name",
+                          "fill": "$foreground",
+                          "content": "产品需求说明书.pdf",
+                          "fontFamily": "Geist",
+                          "fontSize": 12
+                        },
+                        {
+                          "type": "icon",
+                          "id": "wordPdfOutputFolderIcon",
+                          "name": "Choose Output Folder Icon",
+                          "width": 15,
+                          "height": 15,
+                          "icon": "folder-open",
+                          "library": "lucide",
+                          "fill": "$foregroundMuted"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wordPdfConvertButton",
+                  "name": "Convert to PDF Button",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "$accent",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "wordPdfConvertButtonIcon",
+                      "name": "Convert Icon",
+                      "width": 17,
+                      "height": 17,
+                      "icon": "file-down",
+                      "library": "lucide",
+                      "fill": "#FFFFFFFF"
+                    },
+                    {
+                      "type": "text",
+                      "id": "wordPdfConvertButtonText",
+                      "name": "Convert Button Text",
+                      "fill": "#FFFFFFFF",
+                      "content": "转换为 PDF",
+                      "fontFamily": "Geist",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wordPdfPreviewPanel",
+              "name": "PDF Preview Panel",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$surfaceSecondary",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wordPdfPreviewToolbar",
+                  "name": "Preview Toolbar",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "stroke": "$border",
+                  "strokeWidth": { "bottom": 1 },
+                  "padding": [0, 18],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wordPdfPreviewTitleGroup",
+                      "name": "Preview Title Group",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "wordPdfPreviewTitleIcon",
+                          "name": "Preview Title Icon",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "scan-eye",
+                          "library": "lucide",
+                          "fill": "$accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfPreviewTitle",
+                          "name": "Preview Title",
+                          "fill": "$foreground",
+                          "content": "PDF 预览",
+                          "fontFamily": "Geist",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfPreviewPageCount",
+                          "name": "Preview Page Count",
+                          "fill": "$foregroundMuted",
+                          "content": "第 1 页 / 共 18 页",
+                          "fontFamily": "Geist",
+                          "fontSize": 11
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wordPdfPreviewActions",
+                      "name": "Preview Actions",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wordPdfZoomOut",
+                          "name": "Zoom Out",
+                          "width": 30,
+                          "height": 30,
+                          "fill": "$surface",
+                          "cornerRadius": 5,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "wordPdfZoomOutIcon",
+                              "name": "Zoom Out Icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "minus",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfZoomValue",
+                          "name": "Zoom Value",
+                          "fill": "$foregroundMuted",
+                          "content": "80%",
+                          "fontFamily": "Geist",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wordPdfZoomIn",
+                          "name": "Zoom In",
+                          "width": 30,
+                          "height": 30,
+                          "fill": "$surface",
+                          "cornerRadius": 5,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "wordPdfZoomInIcon",
+                              "name": "Zoom In Icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "plus",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wordPdfFullScreen",
+                          "name": "Full Screen Preview",
+                          "width": 30,
+                          "height": 30,
+                          "fill": "$surface",
+                          "cornerRadius": 5,
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "wordPdfFullScreenIcon",
+                              "name": "Full Screen Icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "maximize-2",
+                              "library": "lucide",
+                              "fill": "$foregroundMuted"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wordPdfPreviewCanvas",
+                  "name": "Preview Canvas",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "#E9E9EEFF",
+                  "padding": [26, 32],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wordPdfPaper",
+                      "name": "PDF Page 1",
+                      "width": 480,
+                      "height": 678,
+                      "fill": "#FFFFFFFF",
+                      "cornerRadius": 3,
+                      "stroke": "#D9D9E1FF",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [55, 58],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wordPdfPaperCompany",
+                          "name": "Document Company",
+                          "fill": "#7C3AEDFF",
+                          "content": "MARKFLOW · PRODUCT",
+                          "fontFamily": "Inter",
+                          "fontSize": 9,
+                          "fontWeight": "700",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfPaperTitle",
+                          "name": "Document Title",
+                          "fill": "#171717FF",
+                          "content": "产品需求说明书",
+                          "fontFamily": "Microsoft YaHei",
+                          "fontSize": 28,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfPaperSubtitle",
+                          "name": "Document Subtitle",
+                          "fill": "#6B7280FF",
+                          "content": "MarkFlow 文档转换模块 · Version 2.0",
+                          "fontFamily": "Microsoft YaHei",
+                          "fontSize": 11
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "wordPdfPaperDivider",
+                          "name": "Document Divider",
+                          "width": "fill_container",
+                          "height": 2,
+                          "fill": "#7C3AEDFF"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wordPdfPaperMeta",
+                          "name": "Document Metadata",
+                          "width": "fill_container",
+                          "height": 76,
+                          "fill": "#F7F5FCFF",
+                          "cornerRadius": 6,
+                          "layout": "vertical",
+                          "gap": 7,
+                          "padding": [13, 16],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wordPdfPaperMetaOwner",
+                              "name": "Document Owner",
+                              "fill": "#374151FF",
+                              "content": "文档负责人     产品设计组",
+                              "fontFamily": "Microsoft YaHei",
+                              "fontSize": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "wordPdfPaperMetaDate",
+                              "name": "Document Date",
+                              "fill": "#374151FF",
+                              "content": "更新日期        2026 年 8 月 9 日",
+                              "fontFamily": "Microsoft YaHei",
+                              "fontSize": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "wordPdfPaperMetaStatus",
+                              "name": "Document Status",
+                              "fill": "#374151FF",
+                              "content": "文档状态        已确认",
+                              "fontFamily": "Microsoft YaHei",
+                              "fontSize": 10
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfPaperSectionTitle",
+                          "name": "Document Section Title",
+                          "fill": "#171717FF",
+                          "content": "1. 项目概述",
+                          "fontFamily": "Microsoft YaHei",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfPaperBody",
+                          "name": "Document Body",
+                          "fill": "#4B5563FF",
+                          "content": "MarkFlow 是一款面向内容创作者与技术团队的桌面文档工具。\n本模块负责将 Word 文档稳定转换为便于分发和归档的 PDF 文件。",
+                          "fontFamily": "Microsoft YaHei",
+                          "fontSize": 10,
+                          "lineHeight": 1.8
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wordPdfPaperFeatureList",
+                          "name": "Document Feature List",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 10,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wordPdfPaperFeature1",
+                              "name": "Feature 1",
+                              "fill": "#374151FF",
+                              "content": "01   保留标题、表格、图片与分页布局",
+                              "fontFamily": "Microsoft YaHei",
+                              "fontSize": 10,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wordPdfPaperFeature2",
+                              "name": "Feature 2",
+                              "fill": "#374151FF",
+                              "content": "02   支持生成目录书签并嵌入字体",
+                              "fontFamily": "Microsoft YaHei",
+                              "fontSize": 10,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wordPdfPaperFeature3",
+                              "name": "Feature 3",
+                              "fill": "#374151FF",
+                              "content": "03   文件仅在本机处理，保障内容安全",
+                              "fontFamily": "Microsoft YaHei",
+                              "fontSize": 10,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "wordPdfPaperBottomSpacer",
+                          "name": "Paper Bottom Spacer",
+                          "opacity": 0,
+                          "width": "fill_container",
+                          "height": "fill_container"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wordPdfPaperFooter",
+                          "name": "Document Footer",
+                          "fill": "#9CA3AFFF",
+                          "content": "MarkFlow Confidential                                                    1",
+                          "fontFamily": "Inter",
+                          "fontSize": 8
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wordPdfStatusbar",
+          "name": "Statusbar",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$surfaceSecondary",
+          "stroke": "$border",
+          "strokeWidth": { "top": 1 },
+          "gap": 8,
+          "padding": [0, 12],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "wordPdfStatusDot",
+              "name": "Status Dot",
+              "fill": "$success",
+              "width": 7,
+              "height": 7
+            },
+            {
+              "type": "text",
+              "id": "wordPdfStatusText",
+              "name": "Status Text",
+              "fill": "$foregroundMuted",
+              "content": "服务已连接  ·  PDF 转换引擎已就绪",
+              "fontFamily": "Geist",
+              "fontSize": 11
+            }
+          ]
+        }
       ]
     }
   ],

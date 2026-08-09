@@ -1,4 +1,5 @@
 from app.models.models import (
+    ConversionPipeline,
     ConversionResult,
     ConversionStatus,
     ConversionTask,
@@ -6,6 +7,7 @@ from app.models.models import (
 )
 
 __all__ = [
+    "ConversionPipeline",
     "ConversionResult",
     "ConversionStatus",
     "ConversionTask",

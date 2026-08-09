@@ -59,6 +59,8 @@ function ModuleCard({
   status,
   progress,
   builtin,
+  removable,
+  message,
 }: {
   id: string;
   name: string;
@@ -66,10 +68,13 @@ function ModuleCard({
   status: string;
   progress: number;
   builtin?: boolean;
+  removable?: boolean;
+  message?: string;
 }) {
   const installModule = useStore((s) => s.installModule);
   const uninstallModule = useStore((s) => s.uninstallModule);
   const isMermaid = id === "mermaid";
+  const isLibreOffice = id === "libreoffice";
 
   const badgeConfig: Record<string, { label: string; className: string }> = {
     installed: {
@@ -106,7 +111,9 @@ function ModuleCard({
           className={`w-11 h-11 rounded-lg flex items-center justify-center text-lg shrink-0 ${
             isMermaid
               ? "bg-indigo-100 text-indigo-600"
-              : "bg-green-100 text-green-600"
+              : isLibreOffice
+                ? "bg-blue-100 text-blue-600"
+                : "bg-green-100 text-green-600"
           }`}
         >
           {isMermaid ? (
@@ -125,6 +132,8 @@ function ModuleCard({
               <path d="M7 11h10v2H7z" />
               <path d="M7 15h10v2H7z" />
             </svg>
+          ) : isLibreOffice ? (
+            <span className="text-sm font-bold tracking-tight">PDF</span>
           ) : (
             <svg
               width="22"
@@ -153,6 +162,13 @@ function ModuleCard({
             </span>
           </div>
           <p className="text-xs text-muted-foreground">{description}</p>
+          {message && (
+            <p
+              className={`text-xs mt-2 ${isBusy ? "text-primary" : "text-muted-foreground"}`}
+            >
+              {message}
+            </p>
+          )}
         </div>
       </div>
 
@@ -176,6 +192,10 @@ function ModuleCard({
         {builtin ? (
           <span className="px-5 py-2 text-sm font-medium rounded-lg bg-muted text-muted-foreground cursor-default">
             {"\u5185\u7F6E"}
+          </span>
+        ) : status === "installed" && removable === false ? (
+          <span className="px-5 py-2 text-sm font-medium rounded-lg bg-muted text-muted-foreground cursor-default">
+            系统提供
           </span>
         ) : status === "installed" ? (
           <button

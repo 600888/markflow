@@ -1,7 +1,7 @@
-import { FileOutput, History } from "lucide-react";
+import { FileOutput, FileType2, History } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export type MainTab = "convert" | "history";
+export type MainTab = "convert" | "word-to-pdf" | "history";
 
 interface MainNavigationTabsProps {
   activeTab: MainTab;
@@ -14,6 +14,7 @@ const tabs: Array<{
   icon: typeof FileOutput;
 }> = [
   { id: "convert", label: "文档转换", icon: FileOutput },
+  { id: "word-to-pdf", label: "Word 转 PDF", icon: FileType2 },
   { id: "history", label: "历史记录", icon: History },
 ];
 
@@ -35,7 +36,7 @@ export function MainNavigationTabs({
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "relative h-full inline-flex items-center justify-center gap-2 px-3.5 text-[13px] transition-colors",
+              "relative h-full inline-flex items-center justify-center gap-2 px-3.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
               active
                 ? "font-semibold text-primary"
                 : "font-medium text-muted-foreground hover:text-foreground",

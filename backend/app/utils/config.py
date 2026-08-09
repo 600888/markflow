@@ -21,6 +21,21 @@ class AppSettings(BaseSettings):
     pandoc_path: str | None = None
     pandoc_timeout: int = 300
 
+    # Word 转 PDF
+    microsoft_word_path: Path | None = None
+    wps_path: Path | None = None
+    libreoffice_path: Path | None = None
+    libreoffice_download_url: str = (
+        "https://download.documentfoundation.org/libreoffice/stable/26.2.5/"
+        "win/x86_64/LibreOffice_26.2.5_Win_x86-64.msi"
+    )
+    libreoffice_checksum_url: str = (
+        "https://download.documentfoundation.org/libreoffice/stable/26.2.5/"
+        "win/x86_64/LibreOffice_26.2.5_Win_x86-64.msi.sha256"
+    )
+    libreoffice_install_timeout: int = 600
+    word_conversion_timeout: int = 180
+
     # 文件
     max_file_size: int = 50 * 1024 * 1024
     temp_dir: Path = Path("temp")
@@ -29,6 +44,7 @@ class AppSettings(BaseSettings):
 
     # 并发
     max_concurrent_tasks: int = 4
+    max_concurrent_word_tasks: int = 2
 
     # 日志
     log_level: str = "INFO"
