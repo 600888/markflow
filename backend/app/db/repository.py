@@ -25,6 +25,8 @@ class ConversionRepository:
         source_file_name: str,
         options: dict,
         source_artifact: dict,
+        *,
+        template_snapshot: dict | None = None,
     ) -> None:
         """创建任务及其源文件索引。"""
         now = datetime.now(UTC)
@@ -34,6 +36,8 @@ class ConversionRepository:
             source_file_name=source_file_name,
             output_format=task.output_format.value,
             template_slug=task.template_slug,
+            template_revision=(template_snapshot or {}).get("revision"),
+            template_snapshot_json=template_snapshot,
             options_json=options,
             progress=task.progress,
             created_at=task.created_at,

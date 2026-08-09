@@ -15,6 +15,7 @@ import {
   setBaseUrl,
 } from "../services/api";
 import { initializeBackend, checkBackendReady } from "../services/tauri";
+import { orderTemplates } from "../lib/template-order";
 
 const DEV_BACKEND_URL = "http://127.0.0.1:62581";
 
@@ -22,7 +23,9 @@ interface AppState {
   // 文件
   file: File | null;
   fileName: string;
+  outputFileName: string;
   setFile: (file: File | null) => void;
+  setOutputFileName: (name: string) => void;
   clearFile: () => void;
 
   // Markdown 内容（可编辑区域）
@@ -119,11 +122,15 @@ interface AppState {
 export const useStore = create<AppState>((set) => ({
   file: null,
   fileName: "",
-  setFile: (file) => set({ file, fileName: file?.name ?? "" }),
+  outputFileName: "",
+  setFile: (file) =>
+    set({ file, fileName: file?.name ?? "", outputFileName: "" }),
+  setOutputFileName: (outputFileName) => set({ outputFileName }),
   clearFile: () =>
     set({
       file: null,
       fileName: "",
+      outputFileName: "",
       status: "",
       progress: 0,
       markdownContent: "",
@@ -137,7 +144,7 @@ export const useStore = create<AppState>((set) => ({
   template: "academic",
   setTemplate: (template) => set({ template }),
   templates: [],
-  setTemplates: (templates) => set({ templates }),
+  setTemplates: (templates) => set({ templates: orderTemplates(templates) }),
 
   titlePage: true,
   setTitlePage: (titlePage) => set({ titlePage }),

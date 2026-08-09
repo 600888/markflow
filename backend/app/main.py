@@ -15,14 +15,16 @@ from app.api.errors import register_error_handlers
 from app.api.router import init, router
 from app.core.engine import PandocEngine
 from app.core.template_manager import TemplateManager
-from app.db import ConversionRepository, Database
+from app.db import ConversionRepository, CustomTemplateRepository, Database
 from app.services.artifact_storage import ArtifactStorage
 from app.services.converter import ConversionService
 from app.services.log_service import LogService, install_loguru_sink
+from app.services.template_artifact_store import TemplateArtifactStore
 from app.services.template_generator import TemplateGenerator
+from app.services.template_service import TemplateService
 from app.utils.config import AppSettings
 from app.utils.logger import Log
-from config.paths import LOG_DIR
+from config.paths import LOG_DIR, TEMPLATES_DIR
 
 
 def _parse_cli_args() -> argparse.Namespace:
@@ -56,10 +58,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
     if interrupted:
         logger.warning("已将 {} 个未完成任务标记为中断", interrupted)
 
-    engine = PandocEngine(settings)
     artifact_storage = ArtifactStorage(settings.data_dir)
-    template_mgr = TemplateManager()
     template_gen = TemplateGenerator()
+    template_mgr = TemplateService(
+        builtin_manager=TemplateManager(),
+        repository=CustomTemplateRepository(database.session_factory),
+        artifact_store=TemplateArtifactStore(settings.data_dir),
+        generator=template_gen,
+    )
+    imported, failed = template_mgr.import_legacy_templates(
+        [TEMPLATES_DIR / "custom", settings.data_dir / "templates" / "custom"]
+    )
+    if imported or failed:
+        logger.info("旧自定义模板迁移完成：导入 {} 个，失败 {} 个", imported, failed)
+    cleanup = template_mgr.cleanup_orphan_artifacts()
+    if any(cleanup.values()):
+        logger.info(
+            "模板派生文件清理完成：临时文件 {}，孤儿文件 {}，空目录 {}",
+            cleanup["temporary_files"],
+            cleanup["orphan_files"],
+            cleanup["directories"],
+        )
+    engine = PandocEngine(settings, template_manager=template_mgr)
     conv_svc = ConversionService(
         engine=engine,
         repository=repository,

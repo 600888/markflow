@@ -32,6 +32,7 @@ from app.core.mermaid_renderer import render_diagrams
 from app.core.template_manager import TemplateManager
 from app.models import ConversionResult, OutputFormat
 from app.models.templates import ConversionOptions
+from app.services.template_service import TemplateService
 from app.utils.config import AppSettings
 from app.utils.exceptions import ConversionError, PandocNotFoundError, UnsupportedFormatError
 
@@ -330,9 +331,13 @@ class PandocEngine(ConversionEngine):
         OutputFormat.RTF: "rtf",
     }
 
-    def __init__(self, settings: AppSettings | None = None) -> None:
+    def __init__(
+        self,
+        settings: AppSettings | None = None,
+        template_manager: TemplateService | TemplateManager | None = None,
+    ) -> None:
         self.settings = settings or AppSettings()
-        self._template_mgr = TemplateManager()
+        self._template_mgr = template_manager or TemplateManager()
         # 不再在 __init__ 中强校验 Pandoc，改为在 convert() 时检查
         self._pandoc_available = self._check_pandoc()
         if not self._pandoc_available:
@@ -397,7 +402,9 @@ class PandocEngine(ConversionEngine):
         args = list(extra_args or [])
 
         # 组装模版参数
-        if template_slug:
+        # API 层已经按完整 ConversionOptions 组装过参数时，不再重复追加 reference/filter。
+        # 直接调用引擎且未提供模板参数时，仍保留原有的自动解析行为。
+        if template_slug and "--reference-doc" not in args:
             template_args = self._template_mgr.build_extra_args(
                 ConversionOptions(template_slug=template_slug),
             )

@@ -48,8 +48,6 @@ const FALLBACK: TemplateInfo[] = [
   },
 ];
 
-const TEMPLATE_ORDER = ["minimal", "academic", "report", "test_report"];
-
 export function TemplateSelector() {
   const template = useStore((s) => s.template);
   const setTemplate = useStore((s) => s.setTemplate);
@@ -59,11 +57,7 @@ export function TemplateSelector() {
   useEffect(() => {
     fetchTemplates()
       .then((d) => {
-        const sorted = [...d.templates].sort(
-          (a, b) =>
-            TEMPLATE_ORDER.indexOf(a.slug) - TEMPLATE_ORDER.indexOf(b.slug),
-        );
-        setTemplates(sorted);
+        setTemplates(d.templates);
       })
       .catch(() => setTemplates(FALLBACK));
   }, [setTemplates]);

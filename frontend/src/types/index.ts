@@ -1,4 +1,5 @@
 export interface TemplateInfo {
+  id?: string;
   slug: string;
   name: string;
   version: string;
@@ -8,6 +9,8 @@ export interface TemplateInfo {
   has_reference_doc: boolean;
   has_lua_filters: boolean;
   is_custom?: boolean;
+  revision?: number;
+  updated_at?: string;
 }
 
 export type OutputFormat =
@@ -51,6 +54,7 @@ export interface StyleConfig {
   font?: string;
   size?: string;
   bold?: boolean;
+  italic?: boolean;
   color?: string;
   alignment?: string;
   space_before?: string;
@@ -82,19 +86,39 @@ export interface TableStyleConfig {
 }
 
 export interface TemplateGenerateRequest {
+  id?: string;
   name: string;
   slug: string;
   description?: string;
   author?: string;
   target_formats?: string[];
   version?: string;
+  revision?: number;
+  updated_at?: string;
   styles: Record<string, StyleConfig | TableStyleConfig>;
 }
 
 export interface TemplateGenerateResponse {
+  id: string;
   slug: string;
   name: string;
-  path: string;
+  revision: number;
+  updated_at: string;
+  path?: string;
+}
+
+export interface TemplateRevisionItem {
+  template_id: string;
+  slug: string;
+  revision: number;
+  operation: "created" | "updated" | "restored" | "deleted" | "migrated";
+  name: string;
+  artifact_sha256?: string;
+  created_at: string;
+}
+
+export interface TemplateRevisionDetail extends TemplateRevisionItem {
+  definition: TemplateGenerateRequest;
 }
 
 // ===== 日志 =====

@@ -42,11 +42,23 @@ class ArtifactStorage:
         shutil.copy2(source_path, working_path)
         return working_path
 
-    def persist_output(self, task_id: UUID, generated_path: Path) -> Path:
+    def persist_output(
+        self,
+        task_id: UUID,
+        generated_path: Path,
+        output_file_name: str | None = None,
+    ) -> Path:
         """把转换结果复制到稳定的输出目录。"""
         output_dir = self._task_dir(task_id) / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = (output_dir / generated_path.name).resolve()
+        target_name = generated_path.name
+        if output_file_name and output_file_name.strip():
+            safe_name = _safe_filename(output_file_name.strip())
+            known_suffixes = {".docx", ".pdf", ".html", ".epub", ".tex", ".md", ".odt", ".rtf"}
+            safe_path = Path(safe_name)
+            base_name = safe_path.stem if safe_path.suffix.lower() in known_suffixes else safe_name
+            target_name = f"{base_name}{generated_path.suffix}"
+        output_path = (output_dir / target_name).resolve()
         self._ensure_contained(output_path)
         shutil.copy2(generated_path, output_path)
         return output_path

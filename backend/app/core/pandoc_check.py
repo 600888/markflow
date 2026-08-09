@@ -76,9 +76,11 @@ class PandocManager:
 
     def _load_status(self) -> None:
         """从持久化文件恢复安装状态"""
-        if self._status_file is None or not self._status_file.exists():
+        if self._status_file is None:
             return
         try:
+            if not self._status_file.exists():
+                return
             text = self._status_file.read_text(encoding="utf-8")
             for line in text.splitlines():
                 if line.startswith("version="):

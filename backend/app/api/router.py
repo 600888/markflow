@@ -28,13 +28,16 @@ from app.api.schemas import (
     MermaidRenderRequest,
     MermaidStatusResponse,
     PandocStatusResponse,
-    SlugRequest,
     TaskIdRequest,
     TaskStatusResponse,
-    TemplateGenerateRequest,
-    TemplateGenerateResponse,
+    TemplateDetailResponse,
     TemplateItem,
     TemplateListResponse,
+    TemplateRevisionDetailResponse,
+    TemplateRevisionItem,
+    TemplateRevisionListResponse,
+    TemplateSaveRequest,
+    TemplateSaveResponse,
 )
 from app.core.browser_check import edge_manager
 from app.core.pandoc_check import pandoc_manager
@@ -45,12 +48,17 @@ from app.services.artifact_storage import ArtifactStorage
 from app.services.converter import ConversionService
 from app.services.log_service import LogService
 from app.services.template_generator import TemplateGenerator
+from app.services.template_service import (
+    TemplateConflictError,
+    TemplateNotFoundError,
+    TemplateService,
+)
 
 router = APIRouter()
 
 # ---- 单例（由 main.py 注入） ----
 _conv_service: ConversionService | None = None
-_template_mgr: TemplateManager | None = None
+_template_mgr: TemplateService | TemplateManager | None = None
 _template_gen: TemplateGenerator | None = None
 _log_svc: LogService | None = None
 _repository: ConversionRepository | None = None
@@ -59,7 +67,7 @@ _artifact_storage: ArtifactStorage | None = None
 
 def init(
     svc: ConversionService,
-    mgr: TemplateManager,
+    mgr: TemplateService | TemplateManager,
     gen: TemplateGenerator,
     log_svc: LogService | None = None,
     repository: ConversionRepository | None = None,
@@ -99,7 +107,7 @@ def get_svc() -> ConversionService:
     return _conv_service
 
 
-def get_mgr() -> TemplateManager:
+def get_mgr() -> TemplateService | TemplateManager:
     if _template_mgr is None:
         raise RuntimeError("TemplateManager 未初始化")
     return _template_mgr
@@ -150,65 +158,195 @@ async def render_mermaid_png(req: MermaidRenderRequest) -> Response:
 
 # ========== 模版列表 ==========
 @router.get("/templates", response_model=TemplateListResponse)
-async def list_templates(mgr: Annotated[TemplateManager, Depends(get_mgr)]) -> TemplateListResponse:
+async def list_templates(
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateListResponse:
     items = [TemplateItem(**t.model_dump()) for t in mgr.list_templates()]
     return TemplateListResponse(templates=items)
 
 
-# ========== 自定义模版生成 ==========
-@router.post("/templates/generate", response_model=TemplateGenerateResponse)
-async def generate_template(
-    req: TemplateGenerateRequest,
-    gen: Annotated[TemplateGenerator, Depends(get_gen)],
-    mgr: Annotated[TemplateManager, Depends(get_mgr)],
-) -> TemplateGenerateResponse:
-    # 检查 slug 是否已存在（内置或自定义）
-    existing = mgr.get_template(req.slug)
-    if existing is not None:
-        raise HTTPException(status_code=409, detail=f"模版 slug '{req.slug}' 已存在")
+def _template_styles(req: TemplateSaveRequest) -> dict:
+    """将 Pydantic 样式模型转为模版生成器使用的普通字典。"""
+    return {key: style.model_dump(exclude_none=True) for key, style in req.styles.items()}
 
-    # 将 Pydantic models 转为普通 dict（TemplateGenerator 的 styles_config 需要）
-    styles_dict: dict = {}
-    for key, sc in req.styles.items():
-        styles_dict[key] = sc.model_dump(exclude_none=True)
 
-    gen.save_custom_template(
-        name=req.name,
-        slug=req.slug,
-        styles_config=styles_dict,
-        description=req.description,
-        author=req.author,
-        target_formats=req.target_formats,
-        version=req.version,
-    )
+def _template_definition(req: TemplateSaveRequest) -> dict:
+    return {
+        "name": req.name,
+        "slug": req.slug,
+        "styles": _template_styles(req),
+        "description": req.description,
+        "author": req.author,
+        "target_formats": req.target_formats,
+        "version": req.version,
+    }
 
-    return TemplateGenerateResponse(
-        slug=req.slug,
-        name=req.name,
-        path=f"custom/{req.slug}",
+
+def _template_response(entity) -> TemplateSaveResponse:
+    return TemplateSaveResponse(
+        id=entity.id,
+        slug=entity.slug,
+        name=entity.name,
+        revision=entity.revision,
+        updated_at=entity.updated_at,
     )
 
 
-@router.get("/templates/custom", response_model=TemplateListResponse)
-async def list_custom_templates(
-    gen: Annotated[TemplateGenerator, Depends(get_gen)],
-) -> TemplateListResponse:
-    items = gen.list_custom_templates()
-    return TemplateListResponse(templates=[TemplateItem(**t) for t in items])
+# ========== 自定义模版资源 ==========
+@router.post("/templates", response_model=TemplateSaveResponse, status_code=201)
+async def create_template(
+    req: TemplateSaveRequest,
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateSaveResponse:
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    try:
+        return _template_response(mgr.create_custom_template(_template_definition(req)))
+    except TemplateConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/templates/delete")
-async def delete_template(
-    req: SlugRequest,
-    gen: Annotated[TemplateGenerator, Depends(get_gen)],
-) -> dict:
-    slug = req.slug
-    # 仅允许删除自定义模版
-    custom_gen = gen.list_custom_templates()
-    if not any(t["slug"] == slug for t in custom_gen):
+@router.put("/templates/{slug}", response_model=TemplateSaveResponse)
+async def update_template(
+    slug: str,
+    req: TemplateSaveRequest,
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateSaveResponse:
+    if slug != req.slug:
+        raise HTTPException(status_code=400, detail="路径 slug 与请求内容不一致")
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    try:
+        entity = mgr.update_custom_template(
+            slug,
+            _template_definition(req),
+            expected_revision=req.revision,
+        )
+        return _template_response(entity)
+    except TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TemplateConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/templates/{slug}", response_model=TemplateDetailResponse)
+async def get_custom_template(
+    slug: str,
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateDetailResponse:
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    data = mgr.get_custom_template(slug)
+    if data is None:
         raise HTTPException(status_code=404, detail=f"自定义模版 '{slug}' 不存在")
-    gen.delete_custom_template(slug)
-    return {"detail": f"模版 '{slug}' 已删除"}
+    return TemplateDetailResponse.model_validate(data)
+
+
+def _revision_item(revision) -> TemplateRevisionItem:
+    return TemplateRevisionItem(
+        template_id=revision.template_id,
+        slug=revision.slug,
+        revision=revision.revision,
+        operation=revision.operation,
+        name=str(revision.definition_json.get("name", revision.slug)),
+        artifact_sha256=revision.artifact_sha256,
+        created_at=revision.created_at,
+    )
+
+
+@router.get(
+    "/templates/{template_id}/revisions",
+    response_model=TemplateRevisionListResponse,
+)
+async def list_template_revisions(
+    template_id: str,
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateRevisionListResponse:
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    revisions = mgr.list_revisions(template_id)
+    if not revisions:
+        raise HTTPException(status_code=404, detail="模板修订历史不存在")
+    return TemplateRevisionListResponse(revisions=[_revision_item(item) for item in revisions])
+
+
+@router.get(
+    "/template-revisions/deleted",
+    response_model=TemplateRevisionListResponse,
+)
+async def list_deleted_template_histories(
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateRevisionListResponse:
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    return TemplateRevisionListResponse(
+        revisions=[_revision_item(item) for item in mgr.list_deleted_template_histories()]
+    )
+
+
+@router.get(
+    "/templates/{template_id}/revisions/{revision}",
+    response_model=TemplateRevisionDetailResponse,
+)
+async def get_template_revision(
+    template_id: str,
+    revision: int,
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateRevisionDetailResponse:
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    item = mgr.get_revision(template_id, revision)
+    if item is None:
+        raise HTTPException(status_code=404, detail="模板修订不存在")
+    summary = _revision_item(item)
+    return TemplateRevisionDetailResponse(
+        **summary.model_dump(),
+        definition=item.definition_json,
+    )
+
+
+@router.post(
+    "/templates/{template_id}/revisions/{revision}/restore",
+    response_model=TemplateSaveResponse,
+)
+async def restore_template_revision(
+    template_id: str,
+    revision: int,
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> TemplateSaveResponse:
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    try:
+        return _template_response(mgr.restore_revision(template_id, revision))
+    except TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TemplateConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/templates/preview")
+async def preview_template(
+    req: TemplateSaveRequest,
+    gen: Annotated[TemplateGenerator, Depends(get_gen)],
+) -> Response:
+    content = gen.generate_reference(_template_styles(req))
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{req.slug}-preview.docx"'},
+    )
+
+
+@router.delete("/templates/{slug}", status_code=204)
+async def delete_template(
+    slug: str,
+    mgr: Annotated[TemplateService | TemplateManager, Depends(get_mgr)],
+) -> Response:
+    if not isinstance(mgr, TemplateService):
+        raise TypeError("TemplateService 未初始化")
+    if not mgr.delete_custom_template(slug):
+        raise HTTPException(status_code=404, detail=f"自定义模版 '{slug}' 不存在")
+    return Response(status_code=204)
 
 
 # ========== 文件转换 ==========
@@ -216,7 +354,7 @@ async def delete_template(
 async def convert(
     req: ConvertRequest,
     svc: Annotated[ConversionService | None, Depends(get_svc)] = None,
-    mgr: Annotated[TemplateManager | None, Depends(get_mgr)] = None,
+    mgr: Annotated[TemplateService | TemplateManager | None, Depends(get_mgr)] = None,
 ) -> ConvertResponse:
     # 解析输出格式
     try:
@@ -249,6 +387,13 @@ async def convert(
         metadata=parsed_metadata,
     )
     extra_args = mgr.build_extra_args(options)
+    options_snapshot = options.model_dump(mode="json")
+    template_info = mgr.get_template(req.template_slug)
+    if template_info is not None and template_info.revision is not None:
+        options_snapshot["template_revision"] = template_info.revision
+    template_snapshot = (
+        mgr.get_template_snapshot(req.template_slug) if isinstance(mgr, TemplateService) else None
+    )
     log.info(
         f"模版={req.template_slug}, title_page={options.title_page}, "
         f"page_header={options.page_header!r}, toc={options.toc}, "
@@ -264,7 +409,9 @@ async def convert(
         fmt,
         extra_args,
         req.template_slug,
-        options=options.model_dump(mode="json"),
+        options=options_snapshot,
+        template_snapshot=template_snapshot,
+        output_file_name=req.output_file_name.strip() or None,
         convert_images=options.convert_images,
         convert_mermaid=options.convert_mermaid,
     )
@@ -392,7 +539,7 @@ async def get_history(
     job = repository.get_job(task_id)
     if job is None or job.status != ConversionStatus.COMPLETED.value:
         raise HTTPException(status_code=404, detail="历史记录不存在")
-    return _history_item(job)
+    return _history_item(job, include_template_snapshot=True)
 
 
 @router.get("/history/{task_id}/{kind}")
@@ -658,7 +805,7 @@ def _extract_markdown_title(content: bytes) -> str:
     return ""
 
 
-def _history_item(job) -> HistoryItemResponse:
+def _history_item(job, *, include_template_snapshot: bool = False) -> HistoryItemResponse:
     artifacts = {artifact.kind: artifact for artifact in job.artifacts}
     source = artifacts.get("source")
     output = artifacts.get("output")
@@ -680,6 +827,8 @@ def _history_item(job) -> HistoryItemResponse:
         source_file_name=job.source_file_name,
         output_format=job.output_format,
         template_slug=job.template_slug,
+        template_revision=job.template_revision,
+        template_snapshot=(job.template_snapshot_json if include_template_snapshot else None),
         options=job.options_json,
         progress=job.progress,
         error_message=job.error_message,

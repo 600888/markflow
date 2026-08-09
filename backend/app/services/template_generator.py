@@ -49,6 +49,7 @@ STYLE_MAP = {
     "heading2": "Heading 2",
     "heading3": "Heading 3",
     "heading4": "Heading 4",
+    "heading5": "Heading 5",
     "body": "Normal",
     "code": "Code",
 }
@@ -108,6 +109,8 @@ class TemplateGenerator:
             模板目录路径
 
         """
+        if not self._valid_slug(slug):
+            raise ValueError(f"无效的模板 slug: {slug}")
         custom_dir = self._dir / "custom" / slug
         custom_dir.mkdir(parents=True, exist_ok=True)
 
@@ -136,12 +139,32 @@ class TemplateGenerator:
 
     def delete_custom_template(self, slug: str) -> bool:
         """删除自定义模板目录"""
+        if not self._valid_slug(slug):
+            return False
         target = self._dir / "custom" / slug
         if not target.exists() or not target.is_dir():
             return False
 
         rmtree(target)
         return True
+
+    def custom_template_exists(self, slug: str) -> bool:
+        """检查 slug 是否对应一个可编辑的自定义模板。"""
+        if not self._valid_slug(slug):
+            return False
+        target = self._dir / "custom" / slug
+        return target.is_dir() and (target / "template.yaml").is_file()
+
+    def load_custom_template(self, slug: str) -> dict | None:
+        """读取自定义模板的完整可编辑配置。"""
+        if not self.custom_template_exists(slug):
+            return None
+        yaml_path = self._dir / "custom" / slug / "template.yaml"
+        try:
+            data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError):
+            return None
+        return data if isinstance(data, dict) else None
 
     def list_custom_templates(self) -> list[dict]:
         """列出 custom/ 下所有自定义模板"""
@@ -173,6 +196,10 @@ class TemplateGenerator:
                 }
             )
         return results
+
+    @staticmethod
+    def _valid_slug(slug: str) -> bool:
+        return bool(slug) and all(char in "abcdefghijklmnopqrstuvwxyz0123456789_-" for char in slug)
 
     # ---- 内部实现 ----
 

@@ -55,3 +55,15 @@ export async function openOutputDirectory(): Promise<void> {
   const { invoke } = await import("@tauri-apps/api/core");
   await invoke("open_output_directory");
 }
+
+/** 获取桌面系统中已安装的字体族；浏览器开发模式下返回空列表。 */
+export async function getSystemFonts(): Promise<string[]> {
+  if (!isTauri()) return [];
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return await invoke<string[]>("list_system_fonts");
+  } catch {
+    return [];
+  }
+}

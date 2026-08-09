@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from pathlib import Path
+
 from pydantic import BaseModel, Field
 
 
@@ -32,3 +35,17 @@ class TemplateInfo(BaseModel):
     has_reference_doc: bool = False
     has_lua_filters: bool = False
     is_custom: bool = False
+    id: str | None = None
+    revision: int | None = None
+    updated_at: datetime | None = None
+
+
+class ResolvedTemplate(BaseModel):
+    """转换流程使用的统一模板解析结果。"""
+
+    slug: str
+    styles: dict = Field(default_factory=dict)
+    reference_doc: Path | None = None
+    lua_filters: list[Path] = Field(default_factory=list)
+    is_custom: bool = False
+    revision: int | None = None

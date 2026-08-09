@@ -150,6 +150,10 @@ class TemplateManager:
         styles = data.get("styles", {})
         return styles if isinstance(styles, dict) else {}
 
+    def resolve_template_dir(self, slug: str) -> Path | None:
+        """公开解析模板目录，供统一模板服务读取内置资源。"""
+        return self._resolve_template_dir(slug)
+
     def _load_yaml(self, slug: str) -> dict | None:
         """按 slug 加载 template.yaml（内置 > 自定义）"""
         # 先查内置

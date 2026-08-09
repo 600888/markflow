@@ -42,7 +42,9 @@ class ConversionService:
         extra_args: list[str] | None = None,
         template_slug: str | None = None,
         options: dict | None = None,
+        template_snapshot: dict | None = None,
         *,
+        output_file_name: str | None = None,
         convert_images: bool = True,
         convert_mermaid: bool = True,
     ) -> ConversionTask:
@@ -62,13 +64,20 @@ class ConversionService:
             task_id=task_id,
             input_path=input_path,
             output_format=output_format,
+            output_file_name=output_file_name,
             template_slug=template_slug,
             convert_images=convert_images,
             convert_mermaid=convert_mermaid,
             extra_args=extra_args or [],
         )
         try:
-            self._repository.create_job(task, filename, options or {}, source_artifact)
+            self._repository.create_job(
+                task,
+                filename,
+                options or {},
+                source_artifact,
+                template_snapshot=template_snapshot,
+            )
         except Exception:
             self._artifact_storage.delete_task(task_id)
             raise
@@ -115,6 +124,7 @@ class ConversionService:
             result.output_path = self._artifact_storage.persist_output(
                 task_id,
                 result.output_path,
+                task.output_file_name,
             )
             task.status = ConversionStatus.COMPLETED
             task.progress = 1.0

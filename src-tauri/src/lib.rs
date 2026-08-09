@@ -35,6 +35,53 @@ fn open_output_directory() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn list_system_fonts() -> Result<Vec<String>, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let script = r#"
+$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+$paths = @(
+  'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts',
+  'Registry::HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
+)
+$faces = foreach ($path in $paths) {
+  if (Test-Path $path) { (Get-Item $path).GetValueNames() }
+}
+$faces |
+  ForEach-Object {
+    $_ -replace '\s+\((TrueType|OpenType)\)$', '' `
+       -replace '\s+(Regular|Roman|Bold Italic|Bold Oblique|SemiBold Italic|SemiBold|Semibold|DemiBold|Medium Italic|Medium|Light Italic|Light|ExtraLight|Thin|Bold|Italic|Oblique)$', ''
+  } |
+  Where-Object { $_ -and $_.Trim() } |
+  ForEach-Object { $_.Trim() } |
+  Sort-Object -Unique
+"#;
+        let output = std::process::Command::new("powershell.exe")
+            .args([
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                script,
+            ])
+            .output()
+            .map_err(|error| error.to_string())?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        return Ok(String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+            .map(str::to_owned)
+            .collect());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    Ok(Vec::new())
+}
+
+#[tauri::command]
 async fn open_temp_file(file_name: String, bytes: Vec<u8>) -> Result<(), String> {
     let safe_name = std::path::Path::new(&file_name)
         .file_name()
@@ -111,6 +158,7 @@ pub fn run() {
             backend::is_backend_ready,
             open_output_directory,
             open_temp_file,
+            list_system_fonts,
         ])
         .build(tauri::generate_context!())
         .expect("启动 MarkFlow 失败");

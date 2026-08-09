@@ -44,6 +44,7 @@ class ConversionOptionsRequest(BaseModel):
 
 class ConvertRequest(BaseModel):
     file_name: str = Field(default="document.md", min_length=1, max_length=255)
+    output_file_name: str = Field(default="", max_length=255)
     content: str = Field(..., min_length=1)
     output_format: str = "docx"
     template_slug: str = "academic"
@@ -78,6 +79,8 @@ class HistoryItemResponse(BaseModel):
     source_file_name: str
     output_format: str
     template_slug: str | None
+    template_revision: int | None = None
+    template_snapshot: dict | None = None
     options: dict
     progress: float
     error_message: str | None
@@ -102,10 +105,6 @@ class TaskIdRequest(BaseModel):
     task_id: str
 
 
-class SlugRequest(BaseModel):
-    slug: str
-
-
 # ========== 错误 ==========
 class ErrorResponse(BaseModel):
     detail: str = Field(..., examples=["文件过大 / 格式不支持 / 任务不存在"])
@@ -113,6 +112,7 @@ class ErrorResponse(BaseModel):
 
 # ========== 模版列表 ==========
 class TemplateItem(BaseModel):
+    id: str | None = None
     slug: str
     name: str
     version: str
@@ -122,6 +122,8 @@ class TemplateItem(BaseModel):
     has_reference_doc: bool
     has_lua_filters: bool
     is_custom: bool = False
+    revision: int | None = None
+    updated_at: datetime | None = None
 
 
 class TemplateListResponse(BaseModel):
@@ -168,8 +170,8 @@ class TableStyleConfig(BaseModel):
     caption_bold: bool | None = None
 
 
-class TemplateGenerateRequest(BaseModel):
-    """模版生成请求"""
+class TemplateSaveRequest(BaseModel):
+    """自定义模版创建或更新请求"""
 
     name: str = Field(..., description="模版显示名称")
     slug: str = Field(..., description="模版唯一标识符", pattern=r"^[a-z0-9_-]+$")
@@ -177,17 +179,49 @@ class TemplateGenerateRequest(BaseModel):
     author: str = "MarkFlow"
     target_formats: list[str] = Field(default_factory=lambda: ["docx"])
     version: str = "1.0.0"
+    revision: int | None = Field(default=None, ge=1)
     styles: dict[str, StyleConfig | TableStyleConfig] = Field(
-        ..., description="样式配置，key 为 heading1/heading2/heading3/heading4/body/code/table"
+        ...,
+        description="样式配置，key 为 heading1/heading2/heading3/heading4/heading5/body/code/table",
     )
 
 
-class TemplateGenerateResponse(BaseModel):
-    """模版生成响应"""
+class TemplateSaveResponse(BaseModel):
+    """自定义模版保存响应"""
 
+    id: str
     slug: str
     name: str
-    path: str
+    revision: int
+    updated_at: datetime
+    path: str | None = Field(default=None, deprecated=True)
+
+
+class TemplateDetailResponse(TemplateSaveRequest):
+    """可编辑模板详情。"""
+
+    id: str
+    updated_at: datetime
+
+
+class TemplateRevisionItem(BaseModel):
+    """模板修订摘要。"""
+
+    template_id: str
+    slug: str
+    revision: int
+    operation: str
+    name: str
+    artifact_sha256: str | None
+    created_at: datetime
+
+
+class TemplateRevisionListResponse(BaseModel):
+    revisions: list[TemplateRevisionItem]
+
+
+class TemplateRevisionDetailResponse(TemplateRevisionItem):
+    definition: dict
 
 
 # ========== 日志 ==========

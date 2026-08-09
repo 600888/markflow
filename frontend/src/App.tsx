@@ -6,6 +6,7 @@ import { Dropzone } from "./components/Dropzone";
 import { FormatSelector } from "./components/FormatSelector";
 import { TemplateSelector } from "./components/TemplateSelector";
 import { AdvancedOptions } from "./components/AdvancedOptions";
+import { OutputFileName } from "./components/OutputFileName";
 import { ConvertSection } from "./components/ConvertSection";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { StatusBar } from "./components/StatusBar";
@@ -48,6 +49,7 @@ export default function App() {
               <FormatSelector />
               <TemplateSelector />
               <AdvancedOptions />
+              <OutputFileName />
               <ConvertSection />
             </div>
 

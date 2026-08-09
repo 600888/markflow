@@ -39,6 +39,7 @@ class ConversionTask(BaseModel):
     task_id: UUID = Field(default_factory=uuid4)
     input_path: Path
     output_format: OutputFormat
+    output_file_name: str | None = None
     template_slug: str | None = None
     convert_images: bool = True
     convert_mermaid: bool = True

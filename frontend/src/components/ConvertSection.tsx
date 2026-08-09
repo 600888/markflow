@@ -21,6 +21,7 @@ export function ConvertSection() {
   const file = useStore((s) => s.file);
   const markdownContent = useStore((s) => s.markdownContent);
   const fileName = useStore((s) => s.fileName);
+  const outputFileName = useStore((s) => s.outputFileName);
   const format = useStore((s) => s.format);
   const template = useStore((s) => s.template);
   const toc = useStore((s) => s.toc);
@@ -74,6 +75,7 @@ export function ConvertSection() {
         keepSeparator,
         convertImages,
         convertMermaid,
+        outputFileName,
       );
       setTaskId(task_id);
       setProgress("running", 0.05);
@@ -127,7 +129,10 @@ export function ConvertSection() {
 
       const blob = new Blob(chunks);
       setDownloadProgress(100);
-      const fallbackName = getOutputFileName(fileName || "document.md", format);
+      const fallbackName = getOutputFileName(
+        outputFileName.trim() || fileName || "document.md",
+        format,
+      );
       await saveBlob(blob, getResponseFileName(r, fallbackName));
       toast("文件保存成功", "success");
     } catch (e: unknown) {

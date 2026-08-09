@@ -7,6 +7,8 @@ import type {
   TaskStatus,
   TemplateGenerateRequest,
   TemplateGenerateResponse,
+  TemplateRevisionDetail,
+  TemplateRevisionItem,
   LogListResponse,
 } from "../types";
 
@@ -74,6 +76,7 @@ export async function submitConvert(
   keepSeparator: boolean = true,
   convertImages: boolean = true,
   convertMermaid: boolean = true,
+  outputFileName: string = "",
 ): Promise<{ task_id: string; status: string; message: string }> {
   return submitConvertFromContent(
     await file.text(),
@@ -89,6 +92,7 @@ export async function submitConvert(
     keepSeparator,
     convertImages,
     convertMermaid,
+    outputFileName,
   );
 }
 
@@ -107,11 +111,13 @@ export async function submitConvertFromContent(
   keepSeparator: boolean = true,
   convertImages: boolean = true,
   convertMermaid: boolean = true,
+  outputFileName: string = "",
 ): Promise<{ task_id: string; status: string; message: string }> {
   return api()
     .post("convert", {
       json: {
         file_name: fileName || "document.md",
+        output_file_name: outputFileName.trim(),
         content,
         output_format: outputFormat,
         template_slug: templateSlug || "academic",
@@ -168,20 +174,71 @@ export function getDownloadUrl(taskId: string): string {
 
 // ==== 自定义模板生成 ====
 
-export async function generateTemplate(
+export async function createTemplate(
   req: TemplateGenerateRequest,
 ): Promise<TemplateGenerateResponse> {
-  return api().post("templates/generate", { json: req }).json();
+  return api().post("templates", { json: req }).json();
 }
 
-export async function fetchCustomTemplates(): Promise<{
-  templates: TemplateInfo[];
-}> {
-  return api().get("templates/custom").json();
+export async function fetchTemplate(
+  slug: string,
+): Promise<TemplateGenerateRequest> {
+  return api()
+    .get(`templates/${encodeURIComponent(slug)}`)
+    .json();
+}
+
+export async function updateTemplate(
+  slug: string,
+  req: TemplateGenerateRequest,
+): Promise<TemplateGenerateResponse> {
+  return api()
+    .put(`templates/${encodeURIComponent(slug)}`, { json: req })
+    .json();
+}
+
+export async function previewTemplate(
+  req: TemplateGenerateRequest,
+): Promise<Blob> {
+  return api().post("templates/preview", { json: req }).blob();
 }
 
 export async function deleteTemplate(slug: string): Promise<void> {
-  await api().post("templates/delete", { json: { slug } });
+  await api().delete(`templates/${encodeURIComponent(slug)}`);
+}
+
+export async function fetchTemplateRevisions(
+  templateId: string,
+): Promise<{ revisions: TemplateRevisionItem[] }> {
+  return api()
+    .get(`templates/${encodeURIComponent(templateId)}/revisions`)
+    .json();
+}
+
+export async function fetchDeletedTemplateRevisions(): Promise<{
+  revisions: TemplateRevisionItem[];
+}> {
+  return api().get("template-revisions/deleted").json();
+}
+
+export async function fetchTemplateRevision(
+  templateId: string,
+  revision: number,
+): Promise<TemplateRevisionDetail> {
+  return api()
+    .get(`templates/${encodeURIComponent(templateId)}/revisions/${revision}`)
+    .json();
+}
+
+export async function restoreTemplateRevision(
+  templateId: string,
+  revision: number,
+): Promise<TemplateGenerateResponse> {
+  return api()
+    .post(
+      `templates/${encodeURIComponent(templateId)}/revisions/${revision}/restore`,
+    )
+    .json();
 }
 
 // ==== 日志 ====

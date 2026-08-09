@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.api.router import _history_item
 from app.core.interfaces import ConversionEngine
 from app.db import ConversionRepository, Database
 from app.models import ConversionResult, ConversionStatus, ConversionTask, OutputFormat
@@ -57,7 +58,19 @@ async def test_conversion_history_lifecycle(tmp_path):
         output_format=OutputFormat.DOCX,
         template_slug="academic",
     )
-    repository.create_job(task, "report.md", {"toc": True}, source_artifact)
+    template_snapshot = {
+        "id": "template-id",
+        "slug": "academic",
+        "revision": 3,
+        "styles": {"body": {"font": "Arial"}},
+    }
+    repository.create_job(
+        task,
+        "report.md",
+        {"toc": True},
+        source_artifact,
+        template_snapshot=template_snapshot,
+    )
 
     repository.mark_running(task_id)
     repository.update_progress(task_id, 0.5)
@@ -73,6 +86,11 @@ async def test_conversion_history_lifecycle(tmp_path):
     assert persisted is not None
     assert persisted.status == ConversionStatus.COMPLETED.value
     assert persisted.options_json == {"toc": True}
+    assert persisted.template_revision == 3
+    assert persisted.template_snapshot_json == template_snapshot
+    history_detail = _history_item(persisted, include_template_snapshot=True)
+    assert history_detail.template_revision == 3
+    assert history_detail.template_snapshot == template_snapshot
     assert {artifact.kind for artifact in persisted.artifacts} == {"source", "output"}
 
     jobs, total, output_bytes = repository.list_history(search="report")
@@ -142,4 +160,28 @@ async def test_conversion_service_survives_service_restart(tmp_path):
     assert restored.input_path.read_bytes() == b"# hello"
     assert restored.output_path is not None
     assert restored.output_path.read_bytes() == b"generated"
+    database.close()
+
+
+@pytest.mark.asyncio
+async def test_conversion_service_uses_custom_output_file_name(tmp_path):
+    database = Database(tmp_path)
+    database.initialize()
+    repository = ConversionRepository(database.session_factory)
+    storage = ArtifactStorage(tmp_path)
+    service = ConversionService(FakeEngine(), repository, storage)
+
+    task = await service.submit(
+        b"# hello",
+        "source.md",
+        OutputFormat.DOCX,
+        output_file_name="季度报告.pdf",
+    )
+    result = await service.execute(task.task_id)
+
+    assert result.output_path.name == "季度报告.docx"
+    persisted = repository.get_job(task.task_id)
+    assert persisted is not None
+    output = next(item for item in persisted.artifacts if item.kind == "output")
+    assert output.file_name == "季度报告.docx"
     database.close()
