@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  RefreshCw,
   Save,
   Table2,
   Trash2,
@@ -822,24 +823,29 @@ export function TemplateEditor() {
     null,
   );
   const [fontOptions, setFontOptions] = useState<string[]>(WORD_FONT_OPTIONS);
+  const [refreshingFonts, setRefreshingFonts] = useState(false);
   const setTemplates = useStore((state) => state.setTemplates);
   const setTemplate = useStore((state) => state.setTemplate);
   const templates = useStore((state) => state.templates);
 
-  useEffect(() => {
-    let cancelled = false;
-    void getSystemFonts().then((installedFonts) => {
-      if (cancelled || installedFonts.length === 0) return;
+  /** 手动重新检测系统中已安装的字体并更新所有字体下拉选项（失败时保留默认列表） */
+  const refreshFonts = async () => {
+    if (refreshingFonts) return;
+    setRefreshingFonts(true);
+    try {
+      const installedFonts = await getSystemFonts();
+      if (installedFonts.length === 0) return;
       const merged = Array.from(
         new Set([...installedFonts, ...WORD_FONT_OPTIONS]),
       );
       merged.sort((left, right) => left.localeCompare(right, "zh-CN"));
       setFontOptions(merged);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    } catch {
+      // 检测失败时保持当前列表（默认字体列表）
+    } finally {
+      setRefreshingFonts(false);
+    }
+  };
 
   useEffect(() => {
     if (!open || editingSlug) return;
@@ -1475,11 +1481,29 @@ export function TemplateEditor() {
       )}
       {typographyTab === "global" && (
         <section className="rounded-lg border border-border bg-card p-5">
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold">全局字体替换</h3>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              快速将标题或正文使用的字体统一替换。
-            </p>
+          <div className="mb-4 flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold">全局字体替换</h3>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                快速将标题或正文使用的字体统一替换。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={refreshFonts}
+              disabled={refreshingFonts}
+              title="重新检测系统中已安装的字体，并更新所有字体下拉选项"
+              className={cn(
+                "flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                refreshingFonts && "cursor-wait opacity-60",
+              )}
+            >
+              <RefreshCw
+                size={11}
+                className={cn(refreshingFonts && "animate-spin")}
+              />
+              {refreshingFonts ? "检测中…" : "刷新系统字体"}
+            </button>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <FontSelectField
@@ -2030,14 +2054,6 @@ export function TemplateEditor() {
                   <FileText size={14} className="mr-1.5" />
                 )}
                 导出预览
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setOpen(false)}
-                aria-label="关闭"
-              >
-                <X size={16} />
               </Button>
               <Button
                 size="sm"

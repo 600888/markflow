@@ -1,5 +1,8 @@
 use tauri::Manager;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 mod backend;
 
 fn output_directory() -> Result<std::path::PathBuf, String> {
@@ -56,14 +59,18 @@ $faces |
   ForEach-Object { $_.Trim() } |
   Sort-Object -Unique
 "#;
-        let output = std::process::Command::new("powershell.exe")
-            .args([
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                script,
-            ])
+        // 必须使用 CREATE_NO_WINDOW，否则 GUI 程序 spawn console 子进程时会弹出黑框
+        let mut command = std::process::Command::new("powershell.exe");
+        command.args([
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            script,
+        ]);
+        #[cfg(target_os = "windows")]
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        let output = command
             .output()
             .map_err(|error| error.to_string())?;
         if !output.status.success() {
