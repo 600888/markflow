@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Download,
@@ -80,19 +80,35 @@ export function HistoryPage() {
   const [search, setSearch] = useState("");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("7");
 
-  const refresh = useCallback(async () => {
-    try {
-      setRecords(await listHistory());
-    } catch {
-      toast("读取历史记录失败", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // 打包模式下后端 sidecar 需要 1~3 秒才就绪，而 HistoryPage 挂载时
+  // 就会立即查询；首次失败时指数退避重试（最长约 16 秒），
+  // 避免每次启动都弹出"读取历史记录失败"。
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+    let attempts = 0;
+    const load = async (): Promise<void> => {
+      try {
+        const records = await listHistory();
+        if (cancelled) return;
+        setRecords(records);
+        setLoading(false);
+      } catch {
+        attempts += 1;
+        if (cancelled) return;
+        if (attempts <= 5) {
+          const delay = Math.min(1000 * 2 ** (attempts - 1), 5000);
+          setTimeout(() => void load(), delay);
+          return;
+        }
+        setLoading(false);
+        toast("读取历史记录失败", "error");
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredRecords = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();

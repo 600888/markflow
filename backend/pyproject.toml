@@ -1,6 +1,6 @@
 [project]
 name = "markflow-backend"
-version = "3.1.0"
+version = "3.2.0"
 description = "Markdown to Word/PDF/HTML conversion service"
 requires-python = ">=3.11"
 

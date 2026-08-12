@@ -596,8 +596,14 @@ async def list_history(
         limit=limit,
         offset=offset,
     )
+    # 跳过文件索引不完整的旧记录，避免单条脏数据导致整个列表 500
+    items = [
+        item
+        for job in jobs
+        if (item := _history_item(job)) is not None
+    ]
     return HistoryListResponse(
-        items=[_history_item(job) for job in jobs],
+        items=items,
         total=total,
         output_bytes=output_bytes,
     )
@@ -611,7 +617,10 @@ async def get_history(
     job = repository.get_job(task_id)
     if job is None or job.status != ConversionStatus.COMPLETED.value:
         raise HTTPException(status_code=404, detail="历史记录不存在")
-    return _history_item(job, include_template_snapshot=True)
+    item = _history_item(job, include_template_snapshot=True)
+    if item is None:
+        raise HTTPException(status_code=500, detail="历史记录文件索引不完整")
+    return item
 
 
 @router.get("/history/{task_id}/{kind}")
@@ -889,12 +898,17 @@ def _extract_markdown_title(content: bytes) -> str:
     return ""
 
 
-def _history_item(job, *, include_template_snapshot: bool = False) -> HistoryItemResponse:
+def _history_item(
+    job,
+    *,
+    include_template_snapshot: bool = False,
+) -> HistoryItemResponse | None:
     artifacts = {artifact.kind: artifact for artifact in job.artifacts}
     source = artifacts.get("source")
     output = artifacts.get("output")
     if source is None or output is None:
-        raise HTTPException(status_code=500, detail=f"历史记录 {job.id} 的文件索引不完整")
+        # 文件索引不完整的旧记录：返回 None，由调用方跳过或报错
+        return None
 
     def artifact_response(artifact) -> HistoryArtifactResponse:
         return HistoryArtifactResponse(
