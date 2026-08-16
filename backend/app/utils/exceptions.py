@@ -36,3 +36,7 @@ class InvalidWordFileError(MarkflowError):
 
 class WordEngineUnavailableError(MarkflowError):
     """Word 转 PDF 引擎未安装或不可用。"""
+
+
+class ToMarkdownUnavailableError(MarkflowError):
+    """Word/PDF 转 Markdown 引擎未安装或不可用。"""

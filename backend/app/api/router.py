@@ -6,6 +6,7 @@ import asyncio
 import json
 import re
 import tempfile
+import zipfile
 from pathlib import Path
 from typing import Annotated
 from uuid import UUID
@@ -38,11 +39,13 @@ from app.api.schemas import (
     TemplateRevisionListResponse,
     TemplateSaveRequest,
     TemplateSaveResponse,
+    ToMarkdownStatusResponse,
     WordToPdfStatusResponse,
 )
 from app.core.browser_check import edge_manager
 from app.core.pandoc_check import pandoc_manager
 from app.core.template_manager import TemplateManager
+from app.core.to_markdown_engine import ToMarkdownEngineRegistry
 from app.core.word_to_pdf_engine import WordToPdfEngineRegistry
 from app.db.repository import ConversionRepository
 from app.models.models import ConversionPipeline, ConversionStatus, OutputFormat
@@ -56,7 +59,12 @@ from app.services.template_service import (
     TemplateService,
 )
 from app.services.word_file_validator import WordFileValidator
-from app.utils.exceptions import FileTooLargeError, WordEngineUnavailableError
+from app.utils.encoding import recover_filename
+from app.utils.exceptions import (
+    FileTooLargeError,
+    ToMarkdownUnavailableError,
+    WordEngineUnavailableError,
+)
 
 router = APIRouter()
 
@@ -68,6 +76,7 @@ _log_svc: LogService | None = None
 _repository: ConversionRepository | None = None
 _artifact_storage: ArtifactStorage | None = None
 _word_to_pdf_registry: WordToPdfEngineRegistry | None = None
+_to_markdown_registry: ToMarkdownEngineRegistry | None = None
 
 
 def init(
@@ -78,10 +87,11 @@ def init(
     repository: ConversionRepository | None = None,
     artifact_storage: ArtifactStorage | None = None,
     word_to_pdf_registry: WordToPdfEngineRegistry | None = None,
+    to_markdown_registry: ToMarkdownEngineRegistry | None = None,
 ) -> None:
     """初始化全局服务实例"""
     global _conv_service, _template_mgr, _template_gen, _log_svc
-    global _repository, _artifact_storage, _word_to_pdf_registry
+    global _repository, _artifact_storage, _word_to_pdf_registry, _to_markdown_registry
     _conv_service = svc
     _template_mgr = mgr
     _template_gen = gen
@@ -89,6 +99,7 @@ def init(
     _repository = repository
     _artifact_storage = artifact_storage
     _word_to_pdf_registry = word_to_pdf_registry
+    _to_markdown_registry = to_markdown_registry
 
 
 def get_repository() -> ConversionRepository:
@@ -107,6 +118,12 @@ def get_word_to_pdf_registry() -> WordToPdfEngineRegistry:
     if _word_to_pdf_registry is None:
         raise RuntimeError("WordToPdfEngineRegistry 未初始化")
     return _word_to_pdf_registry
+
+
+def get_to_markdown_registry() -> ToMarkdownEngineRegistry:
+    if _to_markdown_registry is None:
+        raise RuntimeError("ToMarkdownEngineRegistry 未初始化")
+    return _to_markdown_registry
 
 
 def get_log_svc() -> LogService:
@@ -390,7 +407,7 @@ async def convert_word_to_pdf(
     if not engine_info["available"]:
         raise WordEngineUnavailableError(str(engine_info["diagnostic"]))
 
-    filename = Path(file.filename or "document.docx").name
+    filename = Path(recover_filename(file.filename or "document.docx")).name
     try:
         content = await _read_upload_limited(file, svc.max_file_size)
     finally:
@@ -409,7 +426,7 @@ async def convert_word_to_pdf(
         OutputFormat.PDF,
         options=options,
         pipeline=ConversionPipeline.WORD_TO_PDF,
-        output_file_name=output_file_name.strip() or None,
+        output_file_name=recover_filename(output_file_name.strip()) or None,
         convert_images=False,
         convert_mermaid=False,
     )
@@ -419,6 +436,75 @@ async def convert_word_to_pdf(
         status=task.status.value,
         message="任务已提交",
     )
+
+
+# ========== Word/PDF 转 Markdown ==========
+@router.get("/to-markdown/status", response_model=ToMarkdownStatusResponse)
+async def to_markdown_status(
+    registry: Annotated[ToMarkdownEngineRegistry, Depends(get_to_markdown_registry)],
+) -> ToMarkdownStatusResponse:
+    return ToMarkdownStatusResponse(**registry.get_info(refresh=True))
+
+
+@router.post("/to-markdown/convert", response_model=ConvertResponse)
+async def convert_to_markdown(
+    file: Annotated[UploadFile, File()],
+    output_file_name: Annotated[str, Form(max_length=255)] = "",
+    engine: Annotated[str, Form()] = "",
+    extract_tables: Annotated[bool, Form()] = True,  # noqa: FBT002
+    extract_images: Annotated[bool, Form()] = True,  # noqa: FBT002
+    extract_formulas: Annotated[bool, Form()] = True,  # noqa: FBT002
+    svc: Annotated[ConversionService, Depends(get_svc)] = None,
+    registry: Annotated[ToMarkdownEngineRegistry, Depends(get_to_markdown_registry)] = None,
+) -> ConvertResponse:
+    filename = Path(recover_filename(file.filename or "document.docx")).name
+    suffix = Path(filename).suffix.lower()
+    if suffix not in {".docx", ".doc", ".pdf"}:
+        raise HTTPException(status_code=400, detail=f"不支持的源文件格式: {suffix or '无扩展名'}")
+    try:
+        content = await _read_upload_limited(file, svc.max_file_size)
+    finally:
+        await file.close()
+
+    selected_engine = registry.resolve_engine_id(engine, refresh=True)
+    engine_info = registry.get_engine_info(selected_engine, refresh=True)
+    if not engine_info["available"]:
+        raise ToMarkdownUnavailableError(str(engine_info["diagnostic"]))
+
+    options = {
+        "engine": selected_engine,
+        "engine_version": engine_info["version"],
+        "extract_tables": extract_tables,
+        "extract_images": extract_images,
+        "extract_formulas": extract_formulas,
+    }
+    task = await svc.submit(
+        content,
+        filename,
+        OutputFormat.MARKDOWN,
+        options=options,
+        pipeline=ConversionPipeline.TO_MARKDOWN,
+        output_file_name=recover_filename(output_file_name.strip()) or None,
+        convert_images=False,
+        convert_mermaid=False,
+    )
+    asyncio.create_task(_run_convert(svc, task.task_id))
+    return ConvertResponse(
+        task_id=str(task.task_id),
+        status=task.status.value,
+        message="任务已提交",
+    )
+
+
+def _read_markdown_artifact(path: Path) -> str:
+    """读取 Markdown 产物文本；zip 包内查找 .md 文件。"""
+    if path.suffix.lower() == ".zip":
+        with zipfile.ZipFile(path) as archive:
+            candidates = [name for name in archive.namelist() if name.lower().endswith(".md")]
+            if not candidates:
+                raise HTTPException(status_code=500, detail="压缩包内缺少 Markdown 文件")
+            return archive.read(candidates[0]).decode("utf-8", errors="replace")
+    return path.read_text(encoding="utf-8", errors="replace")
 
 
 # ========== Markdown 文件转换 ==========
@@ -573,11 +659,34 @@ async def download_result(
         OutputFormat.PDF: "application/pdf",
         OutputFormat.HTML: "text/html; charset=utf-8",
         OutputFormat.EPUB: "application/epub+zip",
+        OutputFormat.MARKDOWN: "text/markdown; charset=utf-8",
     }
+    media_type = media_types.get(task.output_format, "application/octet-stream")
+    if task.output_path.suffix.lower() == ".zip":
+        media_type = "application/zip"
     return FileResponse(
         task.output_path,
-        media_type=media_types.get(task.output_format, "application/octet-stream"),
+        media_type=media_type,
         filename=task.output_path.name,
+    )
+
+
+# ========== Markdown 结果文本（预览） ==========
+@router.get("/tasks/{task_id}/markdown")
+async def get_markdown_result(
+    task_id: UUID,
+    svc: Annotated[ConversionService, Depends(get_svc)],
+) -> Response:
+    task = svc.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if task.status != ConversionStatus.COMPLETED or task.output_path is None:
+        raise HTTPException(status_code=400, detail="任务未完成")
+    if not task.output_path.is_file():
+        raise HTTPException(status_code=410, detail="输出文件已丢失")
+    return Response(
+        content=_read_markdown_artifact(task.output_path),
+        media_type="text/markdown; charset=utf-8",
     )
 
 

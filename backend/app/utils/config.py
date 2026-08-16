@@ -35,6 +35,7 @@ class AppSettings(BaseSettings):
     # 并发
     max_concurrent_tasks: int = 4
     max_concurrent_word_tasks: int = 2
+    max_concurrent_to_markdown_tasks: int = 2
 
     # 日志
     log_level: str = "INFO"

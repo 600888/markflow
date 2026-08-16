@@ -28,6 +28,7 @@ class ConversionPipeline(StrEnum):
 
     MARKDOWN = "markdown"
     WORD_TO_PDF = "word_to_pdf"
+    TO_MARKDOWN = "to_markdown"
 
 
 class ConversionStatus(StrEnum):

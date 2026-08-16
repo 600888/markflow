@@ -86,6 +86,26 @@ class WordToPdfStatusResponse(BaseModel):
     engines: list[WordToPdfEngineStatusResponse] = Field(default_factory=list)
 
 
+# ========== 转 Markdown 状态 ==========
+class ToMarkdownEngineStatusResponse(BaseModel):
+    id: str
+    name: str
+    available: bool = False
+    version: str = ""
+    supported_inputs: list[str] = Field(default_factory=list)
+    diagnostic: str = ""
+
+
+class ToMarkdownStatusResponse(BaseModel):
+    available: bool = False
+    engine: str = "markitdown"
+    version: str = ""
+    supported_inputs: list[str] = Field(default_factory=lambda: ["docx", "doc", "pdf"])
+    diagnostic: str = ""
+    default_engine: str = "markitdown"
+    engines: list[ToMarkdownEngineStatusResponse] = Field(default_factory=list)
+
+
 # ========== 历史记录 ==========
 class HistoryArtifactResponse(BaseModel):
     kind: str

@@ -18,6 +18,7 @@ import {
   type MainTab,
 } from "./components/MainNavigationTabs";
 import { HistoryPage } from "./components/HistoryPage";
+import { ToMarkdownPage } from "./components/ToMarkdownPage";
 import { WordToPdfPage } from "./components/WordToPdfPage";
 
 export default function App() {
@@ -63,6 +64,12 @@ export default function App() {
           <div className="flex-1 overflow-hidden">
             <PreviewPanel />
           </div>
+        </div>
+        <div
+          className={activeTab === "to-markdown" ? "contents" : "hidden"}
+          aria-hidden={activeTab !== "to-markdown"}
+        >
+          <ToMarkdownPage />
         </div>
         <div
           className={activeTab === "word-to-pdf" ? "contents" : "hidden"}

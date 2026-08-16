@@ -11,6 +11,8 @@ import type {
   TemplateRevisionItem,
   LogListResponse,
   WordPdfQuality,
+  ToMarkdownEngineId,
+  ToMarkdownStatus,
   WordToPdfEngineId,
   WordToPdfStatus,
 } from "../types";
@@ -165,6 +167,36 @@ export async function submitWordToPdf(
   body.set("quality", options.quality);
   body.set("export_bookmarks", String(options.exportBookmarks));
   return api().post("word-to-pdf/convert", { body, timeout: 60_000 }).json();
+}
+
+// ==== Word/PDF 转 Markdown ====
+
+export async function fetchToMarkdownStatus(): Promise<ToMarkdownStatus> {
+  return api().get("to-markdown/status").json();
+}
+
+export async function submitToMarkdown(
+  file: File,
+  options: {
+    engine: ToMarkdownEngineId;
+    outputFileName: string;
+    extractTables: boolean;
+    extractImages: boolean;
+    extractFormulas: boolean;
+  },
+): Promise<{ task_id: string; status: string; message: string }> {
+  const body = new FormData();
+  body.set("file", file, file.name);
+  body.set("engine", options.engine);
+  body.set("output_file_name", options.outputFileName.trim());
+  body.set("extract_tables", String(options.extractTables));
+  body.set("extract_images", String(options.extractImages));
+  body.set("extract_formulas", String(options.extractFormulas));
+  return api().post("to-markdown/convert", { body, timeout: 60_000 }).json();
+}
+
+export async function fetchMarkdownPreview(taskId: string): Promise<string> {
+  return api().get(`tasks/${taskId}/markdown`).text();
 }
 
 export function streamProgress(

@@ -1,7 +1,7 @@
-import { FileOutput, FileType2, History } from "lucide-react";
+import { FileOutput, FileText, FileType2, History } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export type MainTab = "convert" | "word-to-pdf" | "history";
+export type MainTab = "convert" | "to-markdown" | "word-to-pdf" | "history";
 
 interface MainNavigationTabsProps {
   activeTab: MainTab;
@@ -14,6 +14,7 @@ const tabs: Array<{
   icon: typeof FileOutput;
 }> = [
   { id: "convert", label: "文档转换", icon: FileOutput },
+  { id: "to-markdown", label: "转 Markdown", icon: FileText },
   { id: "word-to-pdf", label: "Word 转 PDF", icon: FileType2 },
   { id: "history", label: "历史记录", icon: History },
 ];

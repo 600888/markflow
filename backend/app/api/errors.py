@@ -10,6 +10,7 @@ from app.utils.exceptions import (
     FileTooLargeError,
     InvalidWordFileError,
     MarkflowError,
+    ToMarkdownUnavailableError,
     UnsupportedFormatError,
     WordEngineUnavailableError,
 )
@@ -51,6 +52,13 @@ def register_error_handlers(app: FastAPI) -> None:
     async def handle_word_engine_unavailable(
         request: Request,
         exc: WordEngineUnavailableError,
+    ) -> JSONResponse:
+        return JSONResponse(status_code=503, content={"detail": exc.message})
+
+    @app.exception_handler(ToMarkdownUnavailableError)
+    async def handle_to_markdown_unavailable(
+        request: Request,
+        exc: ToMarkdownUnavailableError,
     ) -> JSONResponse:
         return JSONResponse(status_code=503, content={"detail": exc.message})
 

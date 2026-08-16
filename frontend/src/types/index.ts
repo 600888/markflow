@@ -40,6 +40,27 @@ export type WordPdfQuality = "screen" | "standard" | "print";
 
 export type WordToPdfEngineId = "pandoc" | "wps" | "microsoft-word";
 
+export type ToMarkdownEngineId = "markitdown" | "word-com" | "pdf-ocr";
+
+export interface ToMarkdownEngineStatus {
+  id: ToMarkdownEngineId;
+  name: string;
+  available: boolean;
+  version: string;
+  supported_inputs: string[];
+  diagnostic: string;
+}
+
+export interface ToMarkdownStatus {
+  available: boolean;
+  engine: ToMarkdownEngineId;
+  version: string;
+  supported_inputs: string[];
+  diagnostic: string;
+  default_engine: ToMarkdownEngineId;
+  engines: ToMarkdownEngineStatus[];
+}
+
 export interface WordToPdfEngineStatus {
   id: WordToPdfEngineId;
   name: string;

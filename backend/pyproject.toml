@@ -17,6 +17,9 @@ dependencies = [
     "loguru>=0.7.3",
     "pyyaml>=6.0",
     "pillow>=10.0.0",
+    "markitdown[pdf,docx]>=0.1.7",
+    "pymupdf>=1.24.0",
+    "rapidocr_onnxruntime>=1.4.4",
     "sqlalchemy>=2.0.36",
     "alembic>=1.14.0",
 ]
@@ -86,6 +89,7 @@ per-file-ignores."tests/**" = [
     "PT011",
     "PGH004",
     "T201",
+    "SLF001",
 ]
 per-file-ignores."**/conftest.py" = ["F401"]
 per-file-ignores."**/logger.py" = [

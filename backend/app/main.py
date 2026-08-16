@@ -15,6 +15,7 @@ from app.api.errors import register_error_handlers
 from app.api.router import init, router
 from app.core.engine import PandocEngine
 from app.core.template_manager import TemplateManager
+from app.core.to_markdown_engine import ToMarkdownEngineRegistry
 from app.core.word_to_pdf_engine import WordToPdfEngineRegistry
 from app.db import ConversionRepository, CustomTemplateRepository, Database
 from app.services.artifact_storage import ArtifactStorage
@@ -82,6 +83,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
         )
     engine = PandocEngine(settings, template_manager=template_mgr)
     word_engine = WordToPdfEngineRegistry(settings, engine)
+    to_markdown_engine = ToMarkdownEngineRegistry(settings)
     conv_svc = ConversionService(
         engine=engine,
         repository=repository,
@@ -90,6 +92,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
         max_concurrent=settings.max_concurrent_tasks,
         word_engine=word_engine,
         max_concurrent_word=settings.max_concurrent_word_tasks,
+        to_markdown_engine=to_markdown_engine,
+        max_concurrent_to_markdown=settings.max_concurrent_to_markdown_tasks,
     )
 
     # 日志服务（内存环形缓冲区 + loguru sink 自动采集）
@@ -105,6 +109,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:  # noqa: ARG001
         repository=repository,
         artifact_storage=artifact_storage,
         word_to_pdf_registry=word_engine,
+        to_markdown_registry=to_markdown_engine,
     )
 
     # ── 启动时检查 Mermaid 和 Pandoc 环境 ──

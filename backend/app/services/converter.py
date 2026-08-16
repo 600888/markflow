@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import zipfile
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from app.core.interfaces import ConversionEngine
@@ -34,6 +36,8 @@ class ConversionService:
         max_concurrent: int = 4,
         word_engine: ConversionEngine | None = None,
         max_concurrent_word: int = 2,
+        to_markdown_engine: ConversionEngine | None = None,
+        max_concurrent_to_markdown: int = 2,
     ) -> None:
         self._engine = engine
         self._repository = repository
@@ -41,11 +45,14 @@ class ConversionService:
         self._max_file_size = max_file_size
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._word_semaphore = asyncio.Semaphore(max_concurrent_word)
+        self._to_markdown_semaphore = asyncio.Semaphore(max_concurrent_to_markdown)
         self._engines: dict[ConversionPipeline, ConversionEngine] = {
             ConversionPipeline.MARKDOWN: engine,
         }
         if word_engine is not None:
             self._engines[ConversionPipeline.WORD_TO_PDF] = word_engine
+        if to_markdown_engine is not None:
+            self._engines[ConversionPipeline.TO_MARKDOWN] = to_markdown_engine
         self._tasks: dict[UUID, ConversionTask] = {}
 
     @property
@@ -134,15 +141,16 @@ class ConversionService:
             engine = self._engines.get(task.pipeline)
             if engine is None:
                 raise RuntimeError(f"转换引擎不可用: {task.pipeline.value}")  # noqa: TRY301
-            semaphore = (
-                self._word_semaphore
-                if task.pipeline == ConversionPipeline.WORD_TO_PDF
-                else self._semaphore
-            )
+            semaphore = self._semaphore
+            if task.pipeline == ConversionPipeline.WORD_TO_PDF:
+                semaphore = self._word_semaphore
+            elif task.pipeline == ConversionPipeline.TO_MARKDOWN:
+                semaphore = self._to_markdown_semaphore
             async with semaphore:
                 pipeline_options = (
                     {"options": task.options}
-                    if task.pipeline == ConversionPipeline.WORD_TO_PDF
+                    if task.pipeline
+                    in (ConversionPipeline.WORD_TO_PDF, ConversionPipeline.TO_MARKDOWN)
                     else {}
                 )
                 result = await engine.convert(
@@ -157,6 +165,8 @@ class ConversionService:
                 )
 
             result.task_id = task_id
+            if task.pipeline == ConversionPipeline.TO_MARKDOWN:
+                result.output_path = self._pack_markdown_output(result.output_path)
             result.output_path = self._artifact_storage.persist_output(
                 task_id,
                 result.output_path,
@@ -208,3 +218,18 @@ class ConversionService:
     def forget_task(self, task_id: UUID | str) -> None:
         """删除历史后同步清理运行时任务缓存。"""
         self._tasks.pop(UUID(str(task_id)), None)
+
+    def _pack_markdown_output(self, md_path: Path) -> Path:
+        """把 Markdown 与其资源目录打包为 zip；无资源时保持单文件。"""
+        assets_dir = md_path.parent / "assets"
+        if not assets_dir.is_dir():
+            return md_path
+        files = [path for path in assets_dir.rglob("*") if path.is_file()]
+        if not files:
+            return md_path
+        zip_path = md_path.with_name(f"{md_path.stem}-markdown.zip")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.write(md_path, md_path.name)
+            for file_path in files:
+                archive.write(file_path, file_path.relative_to(md_path.parent).as_posix())
+        return zip_path
