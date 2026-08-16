@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import re
 import tempfile
@@ -28,6 +29,9 @@ from app.api.schemas import (
     LogListResponse,
     MermaidRenderRequest,
     MermaidStatusResponse,
+    OcrLineResponse,
+    OcrResultResponse,
+    OcrStatusResponse,
     PandocStatusResponse,
     TaskIdRequest,
     TaskStatusResponse,
@@ -42,6 +46,7 @@ from app.api.schemas import (
     ToMarkdownStatusResponse,
     WordToPdfStatusResponse,
 )
+from app.core import image_ocr
 from app.core.browser_check import edge_manager
 from app.core.pandoc_check import pandoc_manager
 from app.core.template_manager import TemplateManager
@@ -505,6 +510,69 @@ def _read_markdown_artifact(path: Path) -> str:
                 raise HTTPException(status_code=500, detail="压缩包内缺少 Markdown 文件")
             return archive.read(candidates[0]).decode("utf-8", errors="replace")
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+# ========== 图片 OCR ==========
+@router.get("/ocr/status", response_model=OcrStatusResponse)
+async def ocr_status() -> OcrStatusResponse:
+    available = image_ocr.ocr_available()
+    version = ""
+    if available:
+        try:
+            import rapidocr_onnxruntime
+
+            version = str(getattr(rapidocr_onnxruntime, "__version__", ""))
+        except ImportError:
+            version = ""
+    return OcrStatusResponse(
+        available=available,
+        version=version,
+        diagnostic="OCR 识别引擎已就绪" if available else "OCR 引擎（RapidOCR）未安装",
+    )
+
+
+@router.post("/ocr/recognize", response_model=OcrResultResponse)
+async def ocr_recognize(
+    file: Annotated[UploadFile, File()],
+    language: Annotated[str, Form()] = "zh+en",
+    keep_layout: Annotated[bool, Form()] = True,  # noqa: FBT002
+    auto_correct: Annotated[bool, Form()] = False,  # noqa: FBT002
+    high_precision: Annotated[bool, Form()] = False,  # noqa: FBT002
+    svc: Annotated[ConversionService, Depends(get_svc)] = None,
+) -> OcrResultResponse:
+    filename = Path(recover_filename(file.filename or "image.png")).name
+    suffix = Path(filename).suffix.lower()
+    if not image_ocr.supported_extension(suffix):
+        raise HTTPException(status_code=400, detail=f"不支持的图片格式: {suffix or '无扩展名'}")
+    try:
+        content = await _read_upload_limited(file, svc.max_file_size)
+    finally:
+        await file.close()
+
+    # language / auto_correct / high_precision 为兼容参数：当前 RapidOCR
+    # 模型为中英混合，暂不支持切换语言、内置纠错与多模型投票。
+    log.info(
+        f"OCR 识别: 文件={filename}, language={language}, "
+        f"keep_layout={keep_layout}, auto_correct={auto_correct}, "
+        f"high_precision={high_precision}"
+    )
+    loop = asyncio.get_running_loop()
+    with tempfile.TemporaryDirectory(prefix="markflow-ocr-") as temp_dir:
+        image_path = Path(temp_dir) / f"image{suffix}"
+        image_path.write_bytes(content)
+        result = await loop.run_in_executor(
+            None,
+            functools.partial(image_ocr.recognize_image, image_path, keep_layout=keep_layout),
+        )
+    return OcrResultResponse(
+        text=result.text,
+        lines=[OcrLineResponse(**line.__dict__) for line in result.lines],
+        confidence=result.confidence,
+        line_count=result.line_count,
+        duration_ms=result.duration_ms,
+        width=result.width,
+        height=result.height,
+    )
 
 
 # ========== Markdown 文件转换 ==========

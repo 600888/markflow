@@ -13,6 +13,8 @@ import type {
   WordPdfQuality,
   ToMarkdownEngineId,
   ToMarkdownStatus,
+  OcrResult,
+  OcrStatus,
   WordToPdfEngineId,
   WordToPdfStatus,
 } from "../types";
@@ -197,6 +199,30 @@ export async function submitToMarkdown(
 
 export async function fetchMarkdownPreview(taskId: string): Promise<string> {
   return api().get(`tasks/${taskId}/markdown`).text();
+}
+
+// ==== 图片 OCR ====
+
+export async function fetchOcrStatus(): Promise<OcrStatus> {
+  return api().get("ocr/status").json();
+}
+
+export async function recognizeImage(
+  file: File,
+  options: {
+    language: string;
+    keepLayout: boolean;
+    autoCorrect: boolean;
+    highPrecision: boolean;
+  },
+): Promise<OcrResult> {
+  const body = new FormData();
+  body.set("file", file, file.name);
+  body.set("language", options.language);
+  body.set("keep_layout", String(options.keepLayout));
+  body.set("auto_correct", String(options.autoCorrect));
+  body.set("high_precision", String(options.highPrecision));
+  return api().post("ocr/recognize", { body, timeout: 120_000 }).json();
 }
 
 export function streamProgress(

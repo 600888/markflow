@@ -61,6 +61,33 @@ export interface ToMarkdownStatus {
   engines: ToMarkdownEngineStatus[];
 }
 
+// ===== 图片 OCR =====
+export interface OcrStatus {
+  available: boolean;
+  engine: string;
+  version: string;
+  diagnostic: string;
+}
+
+export interface OcrLine {
+  text: string;
+  score: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface OcrResult {
+  text: string;
+  lines: OcrLine[];
+  confidence: number;
+  line_count: number;
+  duration_ms: number;
+  width: number;
+  height: number;
+}
+
 export interface WordToPdfEngineStatus {
   id: WordToPdfEngineId;
   name: string;

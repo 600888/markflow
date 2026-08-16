@@ -18,6 +18,7 @@ import {
   type MainTab,
 } from "./components/MainNavigationTabs";
 import { HistoryPage } from "./components/HistoryPage";
+import { OcrPage } from "./components/OcrPage";
 import { ToMarkdownPage } from "./components/ToMarkdownPage";
 import { WordToPdfPage } from "./components/WordToPdfPage";
 
@@ -70,6 +71,12 @@ export default function App() {
           aria-hidden={activeTab !== "to-markdown"}
         >
           <ToMarkdownPage />
+        </div>
+        <div
+          className={activeTab === "ocr" ? "contents" : "hidden"}
+          aria-hidden={activeTab !== "ocr"}
+        >
+          <OcrPage />
         </div>
         <div
           className={activeTab === "word-to-pdf" ? "contents" : "hidden"}

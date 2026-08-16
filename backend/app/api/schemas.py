@@ -106,6 +106,33 @@ class ToMarkdownStatusResponse(BaseModel):
     engines: list[ToMarkdownEngineStatusResponse] = Field(default_factory=list)
 
 
+# ========== 图片 OCR ==========
+class OcrStatusResponse(BaseModel):
+    available: bool = False
+    engine: str = "rapidocr"
+    version: str = ""
+    diagnostic: str = ""
+
+
+class OcrLineResponse(BaseModel):
+    text: str
+    score: float
+    x: int
+    y: int
+    width: int
+    height: int
+
+
+class OcrResultResponse(BaseModel):
+    text: str
+    lines: list[OcrLineResponse] = Field(default_factory=list)
+    confidence: float = 0.0
+    line_count: int = 0
+    duration_ms: int = 0
+    width: int = 0
+    height: int = 0
+
+
 # ========== 历史记录 ==========
 class HistoryArtifactResponse(BaseModel):
     kind: str

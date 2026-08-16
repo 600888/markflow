@@ -40,3 +40,7 @@ class WordEngineUnavailableError(MarkflowError):
 
 class ToMarkdownUnavailableError(MarkflowError):
     """Word/PDF 转 Markdown 引擎未安装或不可用。"""
+
+
+class OcrUnavailableError(MarkflowError):
+    """OCR 引擎未安装或不可用。"""
