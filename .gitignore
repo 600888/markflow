@@ -234,3 +234,4 @@ src-tauri/binaries/
 
 .reasonix/
 reasonix.toml
+tools/upx/

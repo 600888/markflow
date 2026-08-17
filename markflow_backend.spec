@@ -3,6 +3,8 @@
 import os
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_data_files
+
 
 PROJECT_ROOT = Path(SPECPATH).resolve()
 BACKEND_DIR = PROJECT_ROOT / "backend"
@@ -24,6 +26,9 @@ datas = [
     (str(BACKEND_DIR / "static"), "static"),
     (str(BACKEND_DIR / "migrations"), "migrations"),
 ]
+# RapidOCR 的 ONNX 模型与配置、magika 的文件类型检测模型均为运行时必需的数据文件
+datas += collect_data_files("rapidocr_onnxruntime")
+datas += collect_data_files("magika")
 
 hiddenimports = [
     "uvicorn.logging",
@@ -44,6 +49,18 @@ hiddenimports = [
     "alembic.ddl.sqlite",
     "alembic.runtime.migration",
     "mako",
+    # Word/PDF 转 Markdown（MarkItDown 及其转换器）
+    "markitdown",
+    "mammoth",
+    "pdfminer",
+    "pdfminer.high_level",
+    "magika",
+    "onnxruntime",
+    "fitz",
+    "pymupdf",
+    # 图片 OCR（RapidOCR）
+    "rapidocr_onnxruntime",
+    "cv2",
 ]
 
 a = Analysis(
@@ -59,7 +76,6 @@ a = Analysis(
         "PySide6",
         "scipy",
         "pandas",
-        "numpy",
         "matplotlib",
         "tkinter",
         "_tkinter",
@@ -67,6 +83,12 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+# OCR 仅使用 cv2 的图像处理能力，剔除视频 I/O DLL（约 30MB）
+a.binaries = [
+    item
+    for item in a.binaries
+    if "opencv_videoio_ffmpeg" not in item[0].lower()
+]
 pyz = PYZ(a.pure)
 
 if BUILD_MODE == "onefile":

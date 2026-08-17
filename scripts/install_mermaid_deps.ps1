@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   配置 Mermaid 渲染所需的 mermaid.js 静态资源

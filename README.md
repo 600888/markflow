@@ -5,7 +5,8 @@ MarkFlow 是一个基于 React、FastAPI、Pandoc 和 Tauri 的 Markdown 转 Wor
 ## 环境要求
 
 - Windows 10/11
-- Python 3.11+
+- Python 3.11（由 [uv](https://docs.astral.sh/uv/) 管理，`uv sync` 会自动匹配）
+- uv
 - Node.js 20+
 - Rust stable
 - Pandoc（开发环境使用；安装包可携带 MSI 安装程序）
@@ -13,17 +14,17 @@ MarkFlow 是一个基于 React、FastAPI、Pandoc 和 Tauri 的 Markdown 转 Wor
 ## 开发
 
 ```powershell
-# 后端依赖
-pip install -e ".\backend[dev]"
+# 后端依赖（uv 管理，创建 backend/.venv 并生成 uv.lock）
+uv --project backend sync --extra dev
 
 # 前端依赖
 npm --prefix frontend install
 
 # 根目录启动后端，默认端口为 62581
-python .\start_back_end.py
+uv --project backend run python .\start_back_end.py
 
 # 指定端口或数据目录
-python .\start_back_end.py --port 62581 --data-dir .\data
+uv --project backend run python .\start_back_end.py --port 62581 --data-dir .\data
 
 # 前端
 npm --prefix frontend run dev
@@ -32,12 +33,15 @@ npm --prefix frontend run dev
 .\build.ps1 tauri-dev
 ```
 
+> 后端依赖由 [uv](https://docs.astral.sh/uv/) 管理（`backend/pyproject.toml` + `backend/uv.lock`），
+> 虚拟环境位于 `backend/.venv`。旧流程的 `pip install -e ".\backend[dev]"` 已废弃。
+
 ## Windows 打包
 
-先安装后端构建依赖：
+先安装后端构建依赖（含 PyInstaller）：
 
 ```powershell
-pip install -e ".\backend[build]"
+uv --project backend sync --extra dev --extra build
 ```
 
 一条命令构建前端、Python sidecar 和 Windows 安装包：

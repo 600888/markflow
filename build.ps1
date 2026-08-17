@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   MarkFlow Windows development and packaging entry point.
@@ -38,8 +38,10 @@ $FrontendDir = Join-Path $ProjectRoot "frontend"
 $TauriDir = Join-Path $ProjectRoot "src-tauri"
 $BinariesDir = Join-Path $TauriDir "binaries"
 $BuildDir = Join-Path $ProjectRoot "build"
-$PythonExe = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+# uv 管理的后端虚拟环境（uv sync 默认创建 backend/.venv）
 $BackendPythonExe = Join-Path $BackendDir ".venv\Scripts\python.exe"
+# 旧 pip 流程遗留的根目录虚拟环境（仅作兼容回退）
+$PythonExe = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 
 function Write-Step([string]$Message) {
     Write-Host "[STEP] $Message" -ForegroundColor Cyan
@@ -62,8 +64,11 @@ function Invoke-Checked([scriptblock]$Action, [string]$Message) {
 }
 
 function Get-Python {
-    if (Test-Path -LiteralPath $PythonExe -PathType Leaf) {
-        return $PythonExe
+    # 优先 uv 管理的后端环境，其次兼容旧根目录虚拟环境
+    foreach ($candidate in @($BackendPythonExe, $PythonExe)) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return $candidate
+        }
     }
 
     $python = Get-Command python -ErrorAction SilentlyContinue
@@ -71,17 +76,14 @@ function Get-Python {
         return $python.Source
     }
 
-    Fail "Python was not found. Create .venv or install Python 3.11+."
+    Fail "Python 环境未找到。请先运行: uv --project backend sync --extra dev"
 }
 
 function Get-BuildPython {
-    $candidates = @()
-    if (Test-Path -LiteralPath $PythonExe -PathType Leaf) {
-        $candidates += $PythonExe
-    }
-    if (Test-Path -LiteralPath $BackendPythonExe -PathType Leaf) {
-        $candidates += $BackendPythonExe
-    }
+    $candidates = @(
+        $BackendPythonExe,
+        $PythonExe
+    )
     $systemPython = Get-Command python -ErrorAction SilentlyContinue
     if ($systemPython) {
         $candidates += $systemPython.Source
@@ -98,7 +100,7 @@ function Get-BuildPython {
         }
     }
 
-    Fail "No Python environment has the build dependencies. Run: pip install -e `".\backend[build]`""
+    Fail "后端构建依赖缺失。请先运行: uv --project backend sync --extra dev --extra build"
 }
 
 function Get-RustTargetTriple {
@@ -164,6 +166,15 @@ function Build-Backend {
     $env:MARKFLOW_PYINSTALLER_NAME = "markflow-service"
     $env:MARKFLOW_PYINSTALLER_CONTENTS_DIR = "markflow-service-runtime"
     $env:MARKFLOW_PYINSTALLER_CONSOLE = "0"
+
+    # UPX 压缩可显著减小打包体积（约 55%）；tools/upx/upx.exe 为本地工具
+    $upxDir = Join-Path $ProjectRoot "tools\upx"
+    if (-not [string]::IsNullOrEmpty($upxDir) -and (Test-Path -LiteralPath (Join-Path $upxDir "upx.exe") -PathType Leaf)) {
+        $env:PATH = "$upxDir;$env:PATH"
+        Write-Step "UPX 压缩已启用（tools\upx）"
+    } else {
+        Write-Step "未找到 tools\upx\upx.exe，打包体积将增大（可选安装 UPX）"
+    }
 
     Invoke-Checked {
         & $python -m PyInstaller `

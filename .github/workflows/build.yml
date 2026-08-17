@@ -127,9 +127,7 @@ jobs:
 
       - name: Install Python build dependencies
         working-directory: backend
-        run: |
-          uv sync --extra dev
-          uv pip install pyinstaller
+        run: uv sync --extra dev --extra build
 
       - name: Download bundled Pandoc installer
         shell: pwsh

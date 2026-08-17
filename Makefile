@@ -3,20 +3,20 @@
 # ========= 后端 =========
 
 backend-install:
-	cd backend && pip install -e ".[dev]"
+	uv --project backend sync --extra dev
 
 backend-dev:
-	cd backend && uvicorn app.main:app --reload --port 62581
+	cd backend && uv run uvicorn app.main:app --reload --port 62581
 
 backend-lint:
-	cd backend && ruff check . && ruff format --check .
+	cd backend && uv run ruff check . && uv run ruff format --check .
 
 backend-test:
-	cd backend && pytest --cov=app --cov-report=term-missing
+	cd backend && uv run pytest --cov=app --cov-report=term-missing
 
-# 使用 PyInstaller 打包后端为独立可执行文件
+# 使用 PyInstaller 打包后端为独立可执行文件（与 build.ps1 backend-pack 等效）
 backend-pack:
-	cd backend && pyinstaller --onedir \
+	cd backend && uv run pyinstaller --onedir \
 		--name markflow-service \
 		--distpath ../src-tauri/binaries \
 		--workpath build/pyinstaller \
