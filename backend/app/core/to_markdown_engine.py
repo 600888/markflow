@@ -23,6 +23,7 @@ from uuid import uuid4
 from app.core import pdf_ocr
 from app.core.interfaces import ConversionEngine, ProgressCallback
 from app.core.office_suite_check import NativeOfficeManager, word_manager, wps_manager
+from app.core.pdf_layout import convert_pdf_layout
 from app.models import ConversionResult, OutputFormat
 from app.services.log import log
 from app.utils.config import AppSettings
@@ -206,6 +207,7 @@ class MarkItDownEngine(ConversionEngine):
             raise ToMarkdownUnavailableError("MarkItDown 引擎未安装，无法转换文档")
 
         opts = options or {}
+        extract_tables = bool(opts.get("extract_tables", True))
         extract_images = bool(opts.get("extract_images", True))
         extract_formulas = bool(opts.get("extract_formulas", True))
 
@@ -243,10 +245,25 @@ class MarkItDownEngine(ConversionEngine):
                 )
             raise ConversionError("未能从文档中提取到任何内容")
 
+        pdf_layout_applied = False
+        if suffix == ".pdf" and extract_tables:
+            layout_text = await loop.run_in_executor(
+                None,
+                lambda: convert_pdf_layout(
+                    source,
+                    work_dir / "assets" / "media",
+                    extract_tables=True,
+                    extract_images=extract_images,
+                ),
+            )
+            if layout_text.strip():
+                text = layout_text
+                pdf_layout_applied = True
+
         if extract_formulas and suffix == ".docx" and self._docx_has_omml(source):
             log.warning("文档包含 OMML 公式，MarkItDown 无法保留公式，转换结果可能不完整")
 
-        if extract_images:
+        if extract_images and not pdf_layout_applied:
             if on_progress:
                 await on_progress(0.6, "正在提取图片资源")
             text = self._extract_images(text, source, work_dir, suffix)
