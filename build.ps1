@@ -248,25 +248,65 @@ function Build-Package {
 }
 
 function Build-Docs {
-    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-        Fail "Required command not found: uv"
+    $greatDocsExe = Join-Path $BackendDir ".venv\Scripts\great-docs.exe"
+    if (-not (Test-Path -LiteralPath $greatDocsExe -PathType Leaf)) {
+        Fail "Great Docs not found. Run: uv --project backend sync --extra dev"
     }
-    if (-not (Get-Command quarto -ErrorAction SilentlyContinue)) {
+
+    $quarto = Get-Command quarto -ErrorAction SilentlyContinue
+    $quartoPath = if ($quarto) { $quarto.Source } else { $null }
+    if (-not $quartoPath) {
+        $quartoPath = @(
+            "D:\Quarto\bin\quarto.exe",
+            (Join-Path $env:ProgramFiles "Quarto\bin\quarto.exe")
+        ) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+    }
+    if (-not $quartoPath) {
         Fail "Quarto not found. Install Quarto and ensure it is available on PATH."
     }
 
     Write-Step "Building Great Docs site with UTF-8 mode"
-    $previousPythonUtf8 = $env:PYTHONUTF8
-    $env:PYTHONUTF8 = "1"
+    # Quarto/Pandoc 在 Windows 上无法可靠处理缓存和临时路径中的中文用户名。
+    # 仅在文档构建进程内将相关目录定向到仓库中的纯 ASCII 路径。
+    $docsRuntimeDir = Join-Path $BackendDir ".quarto-runtime"
+    $environmentOverrides = @{
+        "PYTHONUTF8" = "1"
+        "QUARTO_PYTHON" = $BackendPythonExe
+        "LOCALAPPDATA" = (Join-Path $docsRuntimeDir "local")
+        "APPDATA" = (Join-Path $docsRuntimeDir "roaming")
+        "TEMP" = (Join-Path $docsRuntimeDir "temp")
+        "TMP" = (Join-Path $docsRuntimeDir "temp")
+        "MARKFLOW_QUARTO_PATH" = $quartoPath
+    }
+    New-Item -ItemType Directory -Force -Path `
+        $environmentOverrides["LOCALAPPDATA"], `
+        $environmentOverrides["APPDATA"], `
+        $environmentOverrides["TEMP"] | Out-Null
+    $previousEnvironment = @{}
+    foreach ($name in $environmentOverrides.Keys) {
+        $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable(
+            $name,
+            [EnvironmentVariableTarget]::Process
+        )
+        [Environment]::SetEnvironmentVariable(
+            $name,
+            $environmentOverrides[$name],
+            [EnvironmentVariableTarget]::Process
+        )
+    }
     Push-Location $BackendDir
     try {
-        Invoke-Checked { uv run great-docs build } "Great Docs build failed."
+        Invoke-Checked {
+            & $BackendPythonExe (Join-Path $BackendDir "scripts\build_great_docs.py")
+        } "Great Docs build failed."
     } finally {
         Pop-Location
-        if ($null -eq $previousPythonUtf8) {
-            Remove-Item Env:PYTHONUTF8 -ErrorAction SilentlyContinue
-        } else {
-            $env:PYTHONUTF8 = $previousPythonUtf8
+        foreach ($name in $environmentOverrides.Keys) {
+            [Environment]::SetEnvironmentVariable(
+                $name,
+                $previousEnvironment[$name],
+                [EnvironmentVariableTarget]::Process
+            )
         }
     }
     Write-Ok "Great Docs site ready: backend\great-docs\_site"

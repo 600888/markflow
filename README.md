@@ -43,8 +43,8 @@ uv --project backend sync --extra dev
 .\build.ps1 docs-build
 ```
 
-该入口会为文档生成进程启用 Python UTF-8 模式，避免 Windows 默认代码页导致中文
-docstring 生成的 API 页面无法被 Great Docs 重新读取。
+该入口会为文档生成进程启用 Python UTF-8 模式，并把 Quarto 的缓存和临时文件定向到
+仓库内的纯 ASCII 路径，避免 Windows 默认代码页或中文用户名导致构建失败。
 
 > 后端依赖由 [uv](https://docs.astral.sh/uv/) 管理（`backend/pyproject.toml` + `backend/uv.lock`），
 > 虚拟环境位于 `backend/.venv`。旧流程的 `pip install -e ".\backend[dev]"` 已废弃。
