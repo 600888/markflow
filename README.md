@@ -33,6 +33,19 @@ npm --prefix frontend run dev
 .\build.ps1 tauri-dev
 ```
 
+## 构建 API 文档
+
+Great Docs 需要单独安装 [Quarto](https://quarto.org/)，并确保 `quarto` 命令位于 PATH 中。
+安装开发依赖后，使用项目入口构建文档：
+
+```powershell
+uv --project backend sync --extra dev
+.\build.ps1 docs-build
+```
+
+该入口会为文档生成进程启用 Python UTF-8 模式，避免 Windows 默认代码页导致中文
+docstring 生成的 API 页面无法被 Great Docs 重新读取。
+
 > 后端依赖由 [uv](https://docs.astral.sh/uv/) 管理（`backend/pyproject.toml` + `backend/uv.lock`），
 > 虚拟环境位于 `backend/.venv`。旧流程的 `pip install -e ".\backend[dev]"` 已废弃。
 

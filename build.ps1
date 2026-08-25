@@ -16,6 +16,7 @@ param(
         "backend-dev",
         "frontend-dev",
         "tauri-dev",
+        "docs-build",
         "lint",
         "test",
         "sync-version",
@@ -246,6 +247,31 @@ function Build-Package {
     Write-Host "Artifacts: $bundleDir" -ForegroundColor Yellow
 }
 
+function Build-Docs {
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        Fail "Required command not found: uv"
+    }
+    if (-not (Get-Command quarto -ErrorAction SilentlyContinue)) {
+        Fail "Quarto not found. Install Quarto and ensure it is available on PATH."
+    }
+
+    Write-Step "Building Great Docs site with UTF-8 mode"
+    $previousPythonUtf8 = $env:PYTHONUTF8
+    $env:PYTHONUTF8 = "1"
+    Push-Location $BackendDir
+    try {
+        Invoke-Checked { uv run great-docs build } "Great Docs build failed."
+    } finally {
+        Pop-Location
+        if ($null -eq $previousPythonUtf8) {
+            Remove-Item Env:PYTHONUTF8 -ErrorAction SilentlyContinue
+        } else {
+            $env:PYTHONUTF8 = $previousPythonUtf8
+        }
+    }
+    Write-Ok "Great Docs site ready: backend\great-docs\_site"
+}
+
 function Clean-Build {
     $targets = @(
         (Join-Path $ProjectRoot "build"),
@@ -280,6 +306,9 @@ switch ($Command) {
         Push-Location $TauriDir
         try { cargo tauri dev } finally { Pop-Location }
     }
+    "docs-build" {
+        Build-Docs
+    }
     "lint" {
         $python = Get-Python
         Push-Location $BackendDir
@@ -308,6 +337,7 @@ MarkFlow Windows build
   .\build.ps1 backend-dev
   .\build.ps1 frontend-dev
   .\build.ps1 tauri-dev
+  .\build.ps1 docs-build
   .\build.ps1 lint
   .\build.ps1 test
   .\build.ps1 sync-version
