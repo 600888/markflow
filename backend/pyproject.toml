@@ -36,6 +36,7 @@ dev = [
     "coverage>=7.6.0",
     "python-docx>=1.1",
     "pre-commit>=4.0.0",
+    "great-docs>=0.16.0",
 ]
 build = ["pyinstaller>=6.11.0"]
 
