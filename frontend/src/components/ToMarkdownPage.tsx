@@ -98,6 +98,7 @@ export function ToMarkdownPage() {
   const [markdownText, setMarkdownText] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"render" | "source">("render");
   const [saving, setSaving] = useState(false);
+  const [savingBundle, setSavingBundle] = useState(false);
   const [taskId, setTaskId] = useState("");
 
   const refreshEngineStatus = useCallback(async () => {
@@ -269,15 +270,16 @@ export function ToMarkdownPage() {
   };
 
   const handleSave = async () => {
-    if (!taskId) return;
+    if (!markdownText) return;
     setSaving(true);
     try {
-      const response = await fetch(getDownloadUrl(taskId));
-      if (!response.ok) throw new Error("读取转换结果失败");
-      const blob = await response.blob();
-      const fallback =
+      const preferredName =
         outputFileName.trim() || outputNameFor(file?.name || "document.docx");
-      await saveBlob(blob, getResponseFileName(response, fallback));
+      const markdownFileName = preferredName.toLowerCase().endsWith(".md")
+        ? preferredName
+        : `${preferredName.replace(/\.[^.]+$/, "") || "document"}.md`;
+      const blob = new Blob([markdownText], { type: "text/markdown" });
+      await saveBlob(blob, markdownFileName);
       toast("Markdown 保存成功", "success");
     } catch (saveError) {
       if (
@@ -287,6 +289,28 @@ export function ToMarkdownPage() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveBundle = async () => {
+    if (!taskId) return;
+    setSavingBundle(true);
+    try {
+      const response = await fetch(getDownloadUrl(taskId));
+      if (!response.ok) throw new Error("读取转换结果失败");
+      const blob = await response.blob();
+      const fallback =
+        outputFileName.trim() || outputNameFor(file?.name || "document.docx");
+      await saveBlob(blob, getResponseFileName(response, fallback));
+      toast("完整结果保存成功", "success");
+    } catch (saveError) {
+      if (
+        !(saveError instanceof DOMException && saveError.name === "AbortError")
+      ) {
+        toast("完整结果保存失败", "error");
+      }
+    } finally {
+      setSavingBundle(false);
     }
   };
 
@@ -616,7 +640,7 @@ export function ToMarkdownPage() {
               variant="outline"
               size="sm"
               className="gap-1.5"
-              disabled={!markdownText || saving}
+              disabled={!markdownText || saving || savingBundle}
               onClick={() => void handleSave()}
             >
               {saving ? (
@@ -625,6 +649,22 @@ export function ToMarkdownPage() {
                 <Download size={14} />
               )}
               保存 Markdown
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!taskId || saving || savingBundle}
+              onClick={() => void handleSaveBundle()}
+              title="包含 Markdown 与 assets 图片资源；有资源时保存为 ZIP"
+            >
+              {savingBundle ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FileDown size={14} />
+              )}
+              保存完整结果
             </Button>
           </div>
         </div>
