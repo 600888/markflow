@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import threading
 import time
 import zipfile
 from uuid import uuid4
@@ -93,6 +94,17 @@ class FakeRegistry:
         return engine_id or "markitdown"
 
 
+class ThreadRecordingRegistry(FakeRegistry):
+    """记录状态检测实际运行的线程。"""
+
+    def __init__(self) -> None:
+        self.thread_id: int | None = None
+
+    def get_info(self, *, refresh=False):
+        self.thread_id = threading.get_ident()
+        return super().get_info(refresh=refresh)
+
+
 def _build_app(tmp_path) -> tuple[FastAPI, ConversionService, ConversionRepository]:
     database = Database(tmp_path)
     database.initialize()
@@ -122,6 +134,20 @@ def test_to_markdown_status(tmp_path) -> None:
     assert body["available"] is True
     assert body["default_engine"] == "markitdown"
     assert [item["id"] for item in body["engines"]] == ["markitdown", "word-com"]
+
+
+def test_to_markdown_status_runs_detection_in_worker_thread(tmp_path) -> None:
+    app, _, _ = _build_app(tmp_path)
+    registry = ThreadRecordingRegistry()
+    app.dependency_overrides[get_to_markdown_registry] = lambda: registry
+
+    with TestClient(app) as client:
+        request_thread_id = client.portal.call(threading.get_ident)
+        response = client.get("/to-markdown/status")
+
+    assert response.status_code == 200
+    assert registry.thread_id is not None
+    assert registry.thread_id != request_thread_id
 
 
 def test_to_markdown_convert_submit(tmp_path) -> None:

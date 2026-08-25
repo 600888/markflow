@@ -448,7 +448,8 @@ async def convert_word_to_pdf(
 async def to_markdown_status(
     registry: Annotated[ToMarkdownEngineRegistry, Depends(get_to_markdown_registry)],
 ) -> ToMarkdownStatusResponse:
-    return ToMarkdownStatusResponse(**registry.get_info(refresh=True))
+    info = await asyncio.to_thread(registry.get_info, refresh=True)
+    return ToMarkdownStatusResponse(**info)
 
 
 @router.post("/to-markdown/convert", response_model=ConvertResponse)
@@ -471,8 +472,16 @@ async def convert_to_markdown(
     finally:
         await file.close()
 
-    selected_engine = registry.resolve_engine_id(engine, refresh=True)
-    engine_info = registry.get_engine_info(selected_engine, refresh=True)
+    selected_engine = await asyncio.to_thread(
+        registry.resolve_engine_id,
+        engine,
+        refresh=True,
+    )
+    engine_info = await asyncio.to_thread(
+        registry.get_engine_info,
+        selected_engine,
+        refresh=True,
+    )
     if not engine_info["available"]:
         raise ToMarkdownUnavailableError(str(engine_info["diagnostic"]))
 

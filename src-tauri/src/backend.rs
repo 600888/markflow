@@ -190,7 +190,7 @@ fn try_spawn_python_direct(port: u16) -> Option<Child> {
     };
 
     for py in &python_cmds {
-        if let Ok(child) = Command::new(py)
+        if let Ok(child) = new_detached_cmd(py)
             .args([
                 launcher_arg.as_str(),
                 "--port",
