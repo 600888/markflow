@@ -87,6 +87,10 @@ export async function saveBlob(blob: Blob, fileName: string): Promise<void> {
   const extension = fileName.includes(".")
     ? `.${fileName.split(".").pop() ?? ""}`
     : "";
+  // File System Access API 的 accept 键只允许纯 MIME 类型，不能包含
+  // `charset` 等参数（例如 OCR 文本的 text/plain;charset=utf-8）。
+  const mimeType =
+    blob.type.split(";", 1)[0]?.trim() || "application/octet-stream";
   const handle = await window.showSaveFilePicker({
     suggestedName: fileName,
     types: [
@@ -95,9 +99,7 @@ export async function saveBlob(blob: Blob, fileName: string): Promise<void> {
           ? `${extension.slice(1).toUpperCase()} 文件`
           : "文件",
         accept: {
-          [blob.type || "application/octet-stream"]: extension
-            ? [extension]
-            : [],
+          [mimeType]: extension ? [extension] : [],
         },
       },
     ],
