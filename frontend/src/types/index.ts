@@ -21,7 +21,9 @@ export type OutputFormat =
   | "latex"
   | "md"
   | "odt"
-  | "rtf";
+  | "rtf"
+  | "confluence"
+  | "confluence_storage";
 
 export type ConversionStatus =
   | "pending"

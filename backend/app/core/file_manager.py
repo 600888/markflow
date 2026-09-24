@@ -48,7 +48,7 @@ class TempFileManager(FileManager):
     def get_output_path(self, base_name: str, fmt: OutputFormat) -> Path:
         """生成输出路径"""
         safe = Path(base_name).stem
-        return (self.settings.output_dir / f"{safe}.{fmt.value}").resolve()
+        return (self.settings.output_dir / f"{safe}.{fmt.file_extension}").resolve()
 
 
 def _safe_filename(filename: str) -> str:

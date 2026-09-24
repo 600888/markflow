@@ -1,7 +1,10 @@
 import { useStore } from "../stores/useStore";
 
 function outputExtension(format: string): string {
-  return format === "latex" ? "tex" : format;
+  if (format === "latex") return "tex";
+  if (format === "confluence") return "wiki";
+  if (format === "confluence_storage") return "xml";
+  return format;
 }
 
 export function OutputFileName() {

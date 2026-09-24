@@ -37,6 +37,7 @@ from app.models.templates import ConversionOptions
 from app.services.template_service import TemplateService
 from app.utils.config import AppSettings
 from app.utils.exceptions import ConversionError, PandocNotFoundError, UnsupportedFormatError
+from config.paths import FILTERS_DIR
 
 # ── 字号映射 ──────────────────────────────────────────────
 SIZE_MAP: dict[str, float] = {
@@ -331,6 +332,8 @@ class PandocEngine(ConversionEngine):
         OutputFormat.MARKDOWN: "gfm",
         OutputFormat.ODT: "odt",
         OutputFormat.RTF: "rtf",
+        OutputFormat.CONFLUENCE: "jira",
+        OutputFormat.CONFLUENCE_STORAGE: "html5",
     }
 
     def __init__(
@@ -398,11 +401,16 @@ class PandocEngine(ConversionEngine):
                 mark_for_docx=output_format == OutputFormat.DOCX,
             )
             if convert_mermaid
+            and output_format not in (OutputFormat.CONFLUENCE, OutputFormat.CONFLUENCE_STORAGE)
             else []
         )
-        created_dirs.extend(self._preprocess_images(input_path, convert_images))
+        if not convert_images or output_format not in (
+            OutputFormat.CONFLUENCE,
+            OutputFormat.CONFLUENCE_STORAGE,
+        ):
+            created_dirs.extend(self._preprocess_images(input_path, convert_images))
 
-        output_path = input_path.with_suffix(f".{output_format.value}")
+        output_path = input_path.with_suffix(f".{output_format.file_extension}")
         args = list(extra_args or [])
 
         # 组装模版参数
@@ -421,6 +429,8 @@ class PandocEngine(ConversionEngine):
             args,
             {TITLE_PAGE_METADATA, PAGE_HEADER_METADATA},
         )
+        if output_format in (OutputFormat.CONFLUENCE, OutputFormat.CONFLUENCE_STORAGE):
+            pandoc_args = self._confluence_args(pandoc_args, output_format)
 
         start = time.monotonic()
 
@@ -438,7 +448,11 @@ class PandocEngine(ConversionEngine):
                 return pypandoc.convert_file(
                     source_file=str(input_path),
                     to=target,
-                    format="markdown",
+                    format=(
+                        "markdown-raw_html"
+                        if output_format == OutputFormat.CONFLUENCE_STORAGE
+                        else "markdown"
+                    ),
                     outputfile=str(destination),
                     extra_args=conversion_args,
                 )
@@ -488,6 +502,15 @@ class PandocEngine(ConversionEngine):
                         output_path,
                         pandoc_args,
                     )
+                )
+
+            if output_format == OutputFormat.CONFLUENCE_STORAGE:
+                fragment = output_path.read_text(encoding="utf-8")
+                output_path.write_text(
+                    '<div xmlns:ac="http://atlassian.com/content" '
+                    'xmlns:ri="http://atlassian.com/resource/identifier">\n'
+                    f"{fragment.rstrip()}\n</div>\n",
+                    encoding="utf-8",
                 )
 
             # 后处理：应用表格样式（仅 docx）
@@ -579,6 +602,29 @@ class PandocEngine(ConversionEngine):
     async def validate_format(self, output_format: OutputFormat) -> bool:
         """校验格式是否支持"""
         return output_format in self.FORMAT_MAP
+
+    @staticmethod
+    def _confluence_args(args: list[str], output_format: OutputFormat) -> list[str]:
+        """移除文档专用参数；存储格式使用 Confluence 宏过滤器。"""
+        filtered: list[str] = []
+        index = 0
+        while index < len(args):
+            option = args[index].partition("=")[0]
+            if option in {"--reference-doc", "--toc-depth"}:
+                index += 1 if "=" in args[index] else 2
+            elif option == "--toc":
+                index += 1
+            else:
+                filtered.append(args[index])
+                index += 1
+        filter_name = (
+            "confluence_storage.lua"
+            if output_format == OutputFormat.CONFLUENCE_STORAGE
+            else "confluence_wiki.lua"
+        )
+        filter_path = (FILTERS_DIR / filter_name).resolve()
+        filtered.extend(["--lua-filter", str(filter_path)])
+        return filtered
 
     async def _run_with_timeout(self, awaitable: Awaitable[Any]) -> Any:
         if self.settings.pandoc_timeout > 0:

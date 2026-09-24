@@ -737,6 +737,8 @@ async def download_result(
         OutputFormat.HTML: "text/html; charset=utf-8",
         OutputFormat.EPUB: "application/epub+zip",
         OutputFormat.MARKDOWN: "text/markdown; charset=utf-8",
+        OutputFormat.CONFLUENCE: "text/plain; charset=utf-8",
+        OutputFormat.CONFLUENCE_STORAGE: "application/xml; charset=utf-8",
     }
     media_type = media_types.get(task.output_format, "application/octet-stream")
     if task.output_path.suffix.lower() == ".zip":

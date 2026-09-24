@@ -20,6 +20,10 @@ class TestOutputFormat:
         assert OutputFormat.MARKDOWN.value == "md"
         assert OutputFormat.ODT.value == "odt"
         assert OutputFormat.RTF.value == "rtf"
+        assert OutputFormat.CONFLUENCE.value == "confluence"
+        assert OutputFormat.CONFLUENCE_STORAGE.value == "confluence_storage"
+        assert OutputFormat.CONFLUENCE.file_extension == "wiki"
+        assert OutputFormat.CONFLUENCE_STORAGE.file_extension == "xml"
 
     def test_from_string(self) -> None:
         assert OutputFormat("docx") == OutputFormat.DOCX

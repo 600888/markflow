@@ -21,6 +21,16 @@ class OutputFormat(StrEnum):
     MARKDOWN = "md"
     ODT = "odt"
     RTF = "rtf"
+    CONFLUENCE = "confluence"
+    CONFLUENCE_STORAGE = "confluence_storage"
+
+    @property
+    def file_extension(self) -> str:
+        """下载文件使用的扩展名。"""
+        return {
+            OutputFormat.CONFLUENCE: "wiki",
+            OutputFormat.CONFLUENCE_STORAGE: "xml",
+        }.get(self, self.value)
 
 
 class ConversionPipeline(StrEnum):

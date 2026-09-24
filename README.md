@@ -2,6 +2,8 @@
 
 MarkFlow 是一个基于 React、FastAPI、Pandoc 和 Tauri 的 Markdown 转 Word / PDF / HTML 桌面工具。
 
+Markdown 转换也支持 Confluence：**Confluence Wiki** 导出传统 Wiki 标记（`.wiki`，适用于旧版编辑器）；**Confluence 存储** 导出页面存储 XML（`.xml`，可用作 Confluence API 的 `body.storage.value` 或在存储格式源码编辑器中使用）。两种格式中的本地图片引用均需先上传为目标页面的同名附件；Mermaid 代码块会保留为代码而非渲染为图片。文档模板样式、标题页、页眉与目录设置不适用于 Confluence。新版 Confluence Cloud 编辑器不支持直接插入传统 Wiki 标记。
+
 ## 环境要求
 
 - Windows 10/11

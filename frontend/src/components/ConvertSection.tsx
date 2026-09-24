@@ -12,7 +12,14 @@ import { cn } from "../lib/utils";
 import { getResponseFileName, saveBlob } from "../services/history";
 
 function getOutputFileName(sourceFileName: string, format: string): string {
-  const extension = format === "latex" ? "tex" : format;
+  const extension =
+    format === "latex"
+      ? "tex"
+      : format === "confluence"
+        ? "wiki"
+        : format === "confluence_storage"
+          ? "xml"
+          : format;
   const baseName = sourceFileName.replace(/\.[^.]+$/, "") || "output";
   return `${baseName}.${extension}`;
 }
@@ -202,7 +209,7 @@ export function ConvertSection() {
             >
               {downloadProgress !== null && downloadProgress < 100
                 ? "⏳ 下载中..."
-                : `⬇ 下载 ${format.toUpperCase()}`}
+                : `⬇ 下载 ${format === "confluence" ? "Confluence Wiki" : format === "confluence_storage" ? "Confluence 存储" : format.toUpperCase()}`}
             </div>
             <div
               onClick={clearFile}

@@ -54,7 +54,10 @@ class ArtifactStorage:
         target_name = generated_path.name
         if output_file_name and output_file_name.strip():
             safe_name = _safe_filename(output_file_name.strip())
-            known_suffixes = {".docx", ".pdf", ".html", ".epub", ".tex", ".md", ".odt", ".rtf"}
+            known_suffixes = {
+                ".docx", ".pdf", ".html", ".epub", ".tex", ".md",
+                ".odt", ".rtf", ".wiki", ".xml",
+            }
             safe_path = Path(safe_name)
             base_name = safe_path.stem if safe_path.suffix.lower() in known_suffixes else safe_name
             target_name = f"{base_name}{generated_path.suffix}"

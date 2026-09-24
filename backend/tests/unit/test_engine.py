@@ -501,6 +501,21 @@ class TestPandocEngine:
         for fmt in OutputFormat:
             assert await engine.validate_format(fmt), f"{fmt} 应该被支持"
 
+    def test_confluence_args_remove_document_only_options(self) -> None:
+        args = [
+            "--reference-doc", "template.docx", "--toc", "--toc-depth", "3",
+            "--metadata", "title=报告", "--lua-filter", "custom.lua",
+        ]
+        wiki_args = PandocEngine._confluence_args(args, OutputFormat.CONFLUENCE)
+        assert wiki_args[:4] == ["--metadata", "title=报告", "--lua-filter", "custom.lua"]
+        assert wiki_args[4] == "--lua-filter"
+        assert wiki_args[5].endswith("confluence_wiki.lua")
+
+        storage_args = PandocEngine._confluence_args(args, OutputFormat.CONFLUENCE_STORAGE)
+        assert storage_args[:4] == wiki_args[:4]
+        assert storage_args[4] == "--lua-filter"
+        assert storage_args[5].endswith("confluence_storage.lua")
+
     @patch("pypandoc.get_pandoc_path", return_value="/usr/bin/pandoc")
     async def test_convert_success(self, mock_pandoc_path, tmp_path: Path) -> None:
         """正常转换应返回 ConversionResult"""
