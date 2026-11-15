@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { Button } from "./components/ui/button";
 import { useStore } from "./stores/useStore";
 import { checkHealth } from "./services/api";
 import { Titlebar } from "./components/Titlebar";
@@ -27,17 +29,66 @@ export default function App() {
   const initBackend = useStore((s) => s.initBackend);
   const refreshMermaidStatus = useStore((s) => s.refreshMermaidStatus);
   const [activeTab, setActiveTab] = useState<MainTab>("convert");
+  const [backendReady, setBackendReady] = useState(false);
+  const [startupFailed, setStartupFailed] = useState(false);
+
+  // 等待本地后端就绪后再渲染功能页面：
+  // Python sidecar 冷启动需要数秒，直接挂载页面会触发
+  // "无法连接后端服务"。这里统一轮询健康检查，就绪后才放行。
+  const waitForBackend = useCallback(async () => {
+    setStartupFailed(false);
+    await initBackend();
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < 60_000) {
+      try {
+        await checkHealth();
+        setBackendOnline(true);
+        setBackendReady(true);
+        refreshMermaidStatus();
+        return;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+    }
+    setStartupFailed(true);
+  }, [initBackend, setBackendOnline, refreshMermaidStatus]);
 
   useEffect(() => {
-    initBackend().then(() => {
-      checkHealth()
-        .then(() => {
-          setBackendOnline(true);
-          refreshMermaidStatus();
-        })
-        .catch(() => setBackendOnline(false));
-    });
-  }, [initBackend, setBackendOnline, refreshMermaidStatus]);
+    void waitForBackend();
+  }, [waitForBackend]);
+
+  if (!backendReady) {
+    return (
+      <ToastProvider>
+        <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
+          {startupFailed ? (
+            <>
+              <AlertCircle size={28} className="text-destructive" />
+              <p className="text-sm font-semibold">无法连接本地转换服务</p>
+              <p className="text-xs text-muted-foreground">
+                后端启动超时，请检查 Python 环境后重试
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1 gap-1.5"
+                onClick={() => void waitForBackend()}
+              >
+                <RefreshCw size={14} /> 重新连接
+              </Button>
+            </>
+          ) : (
+            <>
+              <Loader2 size={28} className="animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                正在启动本地转换服务...
+              </p>
+            </>
+          )}
+        </div>
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>
